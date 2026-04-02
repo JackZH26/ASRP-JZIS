@@ -3,19 +3,46 @@
   "description": "Skills for system monitoring, maintenance, and reliability",
   "skills": {
     "openclaw": [
-      {"name": "healthcheck", "required": true, "reason": "Host security hardening and health monitoring"},
-      {"name": "discord", "required": true, "reason": "Alert channel for system notifications"}
+      {
+        "name": "healthcheck",
+        "required": true,
+        "reason": "Host security hardening and health monitoring"
+      }
     ],
     "clawhub": [],
     "python": [
-      {"name": "psutil", "required": true, "reason": "System resource monitoring (CPU, memory, disk)"},
-      {"name": "requests", "required": true, "reason": "Health check HTTP endpoints"}
+      {
+        "name": "psutil",
+        "required": true,
+        "reason": "System resource monitoring (CPU, memory, disk)"
+      },
+      {
+        "name": "requests",
+        "required": true,
+        "reason": "Health check HTTP endpoints"
+      }
     ],
     "system": [
-      {"name": "rclone", "required": true, "reason": "Cloud backup to Google Drive, S3, etc."},
-      {"name": "git", "required": true, "reason": "Version control for workspace"},
-      {"name": "cron", "required": true, "reason": "Scheduled maintenance tasks"},
-      {"name": "logrotate", "required": false, "reason": "System-level log rotation"}
+      {
+        "name": "rclone",
+        "required": true,
+        "reason": "Cloud backup to Google Drive, S3, etc."
+      },
+      {
+        "name": "git",
+        "required": true,
+        "reason": "Version control for workspace"
+      },
+      {
+        "name": "cron",
+        "required": true,
+        "reason": "Scheduled maintenance tasks"
+      },
+      {
+        "name": "logrotate",
+        "required": false,
+        "reason": "System-level log rotation"
+      }
     ]
   }
 }

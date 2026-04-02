@@ -3,20 +3,46 @@
   "description": "Skills for literature search, reference management, and email tracking",
   "skills": {
     "openclaw": [
-      {"name": "himalaya", "required": true, "reason": "Email access for submission tracking and correspondence"},
-      {"name": "discord", "required": true, "reason": "Communication channel"}
+      {
+        "name": "himalaya",
+        "required": true,
+        "reason": "Email access for submission tracking and correspondence"
+      }
     ],
     "clawhub": [
-      {"name": "deep-research-pro", "required": true, "reason": "Core tool for multi-source literature search"},
-      {"name": "wechat-reader", "required": false, "reason": "Extract WeChat articles (Chinese research community)"}
+      {
+        "name": "deep-research-pro",
+        "required": true,
+        "reason": "Core tool for multi-source literature search"
+      },
+      {
+        "name": "wechat-reader",
+        "required": false,
+        "reason": "Extract WeChat articles (Chinese research community)"
+      }
     ],
     "python": [
-      {"name": "opendataloader-pdf", "required": true, "reason": "Parse PDF papers with high accuracy (tables, equations)"},
-      {"name": "requests", "required": true, "reason": "API access for arXiv, CrossRef, Semantic Scholar"}
+      {
+        "name": "opendataloader-pdf",
+        "required": true,
+        "reason": "Parse PDF papers with high accuracy (tables, equations)"
+      },
+      {
+        "name": "requests",
+        "required": true,
+        "reason": "API access for arXiv, CrossRef, Semantic Scholar"
+      }
     ],
     "system": [
-      {"name": "jq", "required": true, "reason": "Process JSON from academic APIs"},
-      {"name": "curl", "required": true}
+      {
+        "name": "jq",
+        "required": true,
+        "reason": "Process JSON from academic APIs"
+      },
+      {
+        "name": "curl",
+        "required": true
+      }
     ]
   }
 }
