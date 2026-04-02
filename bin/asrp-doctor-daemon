@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# ASRP ITDoctor Daemon
+# Runs periodic health checks and maintenance tasks
+# Usage: asrp-doctor-daemon [--interval SECONDS] [--workspace PATH]
+
+set -e
+
+INTERVAL="${1:-300}"  # Default: every 5 minutes
+ASRP_ROOT="${2:-$(pwd)}"
+LOG_FILE="$ASRP_ROOT/workspace/logs/itdoctor.log"
+
+mkdir -p "$ASRP_ROOT/workspace/logs"
+mkdir -p "$ASRP_ROOT/backups"
+
+log() {
+    echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $1" >> "$LOG_FILE"
+    echo "[$(date -u +%H:%M:%S)] $1"
+}
+
+audit() {
+    echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"agent\":\"itdoctor\",\"type\":\"$1\",\"action\":\"$2\",\"details\":\"$3\"}" >> "$ASRP_ROOT/workspace/audit/audit.jsonl"
+}
+
+check_disk() {
+    local pct=$(df "$ASRP_ROOT" 2>/dev/null | tail -1 | awk '{print $5}' | tr -d '%')
+    if [ -n "$pct" ] && [ "$pct" -gt 90 ]; then
+        log "CRITICAL: Disk usage at ${pct}%"
+        audit "health" "alert" "Disk usage critical: ${pct}%"
+        return 1
+    elif [ -n "$pct" ] && [ "$pct" -gt 80 ]; then
+        log "WARNING: Disk usage at ${pct}%"
+    fi
+    return 0
+}
+
+check_audit_integrity() {
+    local audit_file="$ASRP_ROOT/workspace/audit/audit.jsonl"
+    if [ -f "$audit_file" ]; then
+        local errors=$(python3 -c "
+import json
+errors = 0
+with open('$audit_file') as f:
+    for line in f:
+        try: json.loads(line.strip())
+        except: errors += 1
+print(errors)
+" 2>/dev/null || echo "0")
+        if [ "$errors" -gt 0 ]; then
+            log "WARNING: Audit log has $errors malformed entries"
+            audit "health" "warning" "Audit log integrity: $errors malformed entries"
+        fi
+    fi
+}
+
+check_stale_messages() {
+    local stale=$(find "$ASRP_ROOT/workspace/messages" -name "*.json" -mmin +120 2>/dev/null | wc -l)
+    if [ "$stale" -gt 0 ]; then
+        log "WARNING: $stale stale messages (>2 hours old)"
+        audit "health" "warning" "$stale stale messages detected"
+    fi
+}
+
+cleanup_logs() {
+    # Rotate logs older than 7 days
+    find "$ASRP_ROOT/workspace/logs" -name "*.log" -mtime +7 -exec gzip {} \; 2>/dev/null
+    # Remove compressed logs older than 30 days
+    find "$ASRP_ROOT/workspace/logs" -name "*.log.gz" -mtime +30 -delete 2>/dev/null
+    # Clean temp files older than 24 hours
+    find "$ASRP_ROOT/workspace" -name "*.tmp" -mmin +1440 -delete 2>/dev/null
+}
+
+run_backup() {
+    local backup_dir="$ASRP_ROOT/backups"
+    local timestamp=$(date -u +%Y%m%d_%H%M%S)
+    local backup_file="$backup_dir/workspace_${timestamp}.tar.gz"
+    
+    tar -czf "$backup_file" \
+        -C "$ASRP_ROOT" \
+        --exclude="workspace/logs" \
+        --exclude="*.tmp" \
+        workspace/ 2>/dev/null
+    
+    if [ $? -eq 0 ]; then
+        log "Backup created: $backup_file ($(du -h "$backup_file" | cut -f1))"
+        audit "backup" "completed" "Backup: $backup_file"
+        
+        # Keep only last 7 daily backups
+        ls -t "$backup_dir"/workspace_*.tar.gz 2>/dev/null | tail -n +8 | xargs rm -f 2>/dev/null
+    else
+        log "ERROR: Backup failed"
+        audit "backup" "failed" "Backup creation error"
+    fi
+}
+
+# Main loop
+log "ITDoctor daemon started (interval: ${INTERVAL}s)"
+audit "system" "started" "ITDoctor daemon started"
+
+cycle=0
+while true; do
+    cycle=$((cycle + 1))
+    log "Health check cycle #$cycle"
+    
+    check_disk
+    check_audit_integrity
+    check_stale_messages
+    cleanup_logs
+    
+    # Run backup every 12 cycles (hourly at 5-min interval)
+    if [ $((cycle % 12)) -eq 0 ]; then
+        run_backup
+    fi
+    
+    sleep "$INTERVAL"
+done
