@@ -1,0 +1,24 @@
+{
+  "role": "theorist",
+  "description": "Skills for hypothesis generation, paper writing, and theoretical reasoning",
+  "skills": {
+    "openclaw": [
+      {"name": "coding-agent", "required": true, "reason": "Delegate complex coding tasks to sub-agents"},
+      {"name": "discord", "required": true, "reason": "Communication channel for team collaboration"}
+    ],
+    "clawhub": [
+      {"name": "deep-research-pro", "required": true, "reason": "Multi-source deep research for literature and theory exploration"},
+      {"name": "skill-creator", "required": false, "reason": "Create custom research skills as needed"}
+    ],
+    "python": [
+      {"name": "numpy", "required": true},
+      {"name": "scipy", "required": true},
+      {"name": "matplotlib", "required": true},
+      {"name": "sympy", "required": true, "reason": "Symbolic math for theoretical derivations"}
+    ],
+    "system": [
+      {"name": "tectonic", "required": true, "reason": "LaTeX compilation for paper writing"},
+      {"name": "git", "required": true}
+    ]
+  }
+}

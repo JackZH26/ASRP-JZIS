@@ -1,0 +1,28 @@
+{
+  "role": "engineer",
+  "description": "Skills for computation, code development, and data processing",
+  "skills": {
+    "openclaw": [
+      {"name": "coding-agent", "required": true, "reason": "Spawn sub-agents for complex coding tasks"},
+      {"name": "discord", "required": true, "reason": "Communication channel"},
+      {"name": "video-frames", "required": false, "reason": "Extract frames from research videos"}
+    ],
+    "clawhub": [
+      {"name": "deep-research-pro", "required": false, "reason": "Research context for implementations"}
+    ],
+    "python": [
+      {"name": "numpy", "required": true},
+      {"name": "scipy", "required": true},
+      {"name": "matplotlib", "required": true},
+      {"name": "iDEA-latest", "required": true, "reason": "Exact DFT solver for benchmark computations"},
+      {"name": "pandas", "required": true, "reason": "Data analysis and tabulation"},
+      {"name": "tqdm", "required": true, "reason": "Progress bars for long computations"},
+      {"name": "jupyterlab", "required": false, "reason": "Interactive computation notebooks"}
+    ],
+    "system": [
+      {"name": "git", "required": true},
+      {"name": "jq", "required": true, "reason": "JSON processing for experiment data"},
+      {"name": "python3-venv", "required": true, "reason": "Isolated Python environments per experiment"}
+    ]
+  }
+}

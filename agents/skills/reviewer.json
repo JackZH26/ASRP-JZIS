@@ -1,0 +1,22 @@
+{
+  "role": "reviewer",
+  "description": "Skills for independent review, validation, and quality control",
+  "skills": {
+    "openclaw": [
+      {"name": "discord", "required": true, "reason": "Communication channel for review delivery"}
+    ],
+    "clawhub": [
+      {"name": "deep-research-pro", "required": true, "reason": "Independent literature verification"}
+    ],
+    "python": [
+      {"name": "numpy", "required": true, "reason": "Verify numerical results independently"},
+      {"name": "scipy", "required": true},
+      {"name": "matplotlib", "required": true, "reason": "Reproduce figures for verification"},
+      {"name": "iDEA-latest", "required": true, "reason": "Independent reproduction of DFT results"}
+    ],
+    "system": [
+      {"name": "git", "required": true, "reason": "Access code history for audit"},
+      {"name": "tectonic", "required": false, "reason": "Verify paper compilation"}
+    ]
+  }
+}
