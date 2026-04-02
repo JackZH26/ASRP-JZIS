@@ -74,7 +74,7 @@ Key metrics: 449 views, 364 downloads on figshare. 7 papers currently under peer
 
 ## License
 
-MIT
+Apache 2.0
 
 ## Author
 

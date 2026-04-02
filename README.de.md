@@ -63,7 +63,7 @@ Siehe [`examples/portfolio/`](examples/portfolio/) — 20 Papers in 16 Tagen, mi
 
 ## Lizenz
 
-MIT
+Apache 2.0
 
 ## Autor
 
