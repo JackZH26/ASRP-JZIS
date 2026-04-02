@@ -2,160 +2,194 @@
 
 ## Overview
 
-ASRP is designed as a multi-agent scientific research framework with built-in quality controls. This document describes the system architecture, deployment options, and communication patterns.
+ASRP runs multiple AI agent roles on a single machine with a shared filesystem. This is the default and recommended deployment for individual researchers and small teams.
+
+## System Layout
+
+```
+/asrp/                          # ASRP root (configurable)
+├── config.yaml                 # Configuration (gitignored)
+├── .env                        # API keys (gitignored)
+├── workspace/                  # Shared research workspace
+│   ├── data/                   # Experimental data
+│   ├── registry/               # Pre-registered experiments
+│   ├── papers/                 # Paper drafts
+│   ├── audit/                  # Decision audit logs (append-only)
+│   ├── messages/               # Inter-agent message queue (file-based)
+│   ├── literature/             # Reference papers and notes
+│   └── logs/                   # Agent execution logs
+├── backups/                    # ITDoctor managed backups
+└── agents/                     # Agent-specific state
+    ├── theorist/
+    ├── engineer/
+    ├── reviewer/
+    ├── librarian/
+    └── itdoctor/
+```
 
 ## Agent Roles
 
-| Role | Responsibility | Access Level | Model Tier |
-|------|---------------|-------------|------------|
-| **Theorist** | Hypothesis generation, reasoning, paper writing | Read/write workspace | Opus (deep reasoning) |
-| **Engineer** | Code, computation, data pipelines | Read/write workspace + code execution | Sonnet (speed/quality) |
-| **Reviewer** | Independent peer review, cross-validation | **Read-only** workspace | Opus (critical analysis) |
-| **Librarian** | Literature search, reference management | Read workspace + web access | Flash (speed + search) |
-| **ITDoctor** | System monitoring, backups, agent lifecycle | System-level, no research data access | Flash (lightweight) |
+| Role | Responsibility | Workspace Access | Model Tier |
+|------|---------------|-----------------|------------|
+| **Theorist** | Hypothesis generation, reasoning, paper writing | Read/Write | Opus |
+| **Engineer** | Code, computation, data pipelines | Read/Write + Execute | Sonnet |
+| **Reviewer** | Independent peer review, cross-validation | **Read-Only** | Opus |
+| **Librarian** | Literature search, reference management | Read + Web | Flash |
+| **ITDoctor** | Monitoring, backups, agent lifecycle | System-level | Flash |
 
-### Key Design Principle: Reviewer Isolation
+### Reviewer Isolation Principle
 
-The Reviewer agent has **read-only access** to the workspace. It cannot modify experimental data or influence ongoing experiments. This ensures independent evaluation — the same principle as double-blind peer review.
+The Reviewer agent has **read-only access** to the workspace. It cannot modify experimental data or influence ongoing experiments. This ensures independent evaluation — the same principle as blind peer review.
 
-## Deployment Options
-
-### Option A: Single Environment (Development / Solo Researcher)
+## Single-Machine Deployment (Default)
 
 ```
-┌─────────────────────────────────────┐
-│           Host Machine              │
-│  ┌──────────┐ ┌──────────┐        │
-│  │ Theorist │ │ Engineer │        │
-│  └──────────┘ └──────────┘        │
-│  ┌──────────┐ ┌──────────┐        │
-│  │ Reviewer │ │Librarian │        │
-│  └──────────┘ └──────────┘        │
-│  ┌──────────┐                      │
-│  │ITDoctor  │ ← watchdog process   │
-│  └──────────┘                      │
-│       ↕ shared filesystem          │
-│  /asrp/workspace/                  │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│                Host Machine                   │
+│                                               │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │Theorist  │  │Engineer  │  │Reviewer  │   │
+│  │(OpenClaw │  │(OpenClaw │  │(OpenClaw │   │
+│  │ agent 1) │  │ agent 2) │  │ agent 3) │   │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘   │
+│       │              │              │  (R/O)  │
+│  ┌────┴──────────────┴──────────────┴────┐   │
+│  │     Shared Filesystem: /asrp/workspace │   │
+│  └───────────────────────────────────────┘   │
+│                                               │
+│  ┌──────────┐  ┌──────────┐                  │
+│  │Librarian │  │ITDoctor  │ ← cron/systemd   │
+│  └──────────┘  └──────────┘                  │
+└──────────────────────────────────────────────┘
 ```
 
-- All agents run as separate processes on one machine
-- File-based communication via shared workspace
-- ITDoctor runs as a systemd service or cron job
-- **Best for:** Individual researchers, development, testing
+Each agent runs as a separate OpenClaw instance (or any LLM agent platform). All agents share the same filesystem, making file-based communication natural and zero-config.
 
-### Option B: Docker Multi-Container (Production / Team)
+### How Agents Communicate
 
-```
-┌────────────────────────────────────────────┐
-│              Docker Compose                 │
-│  ┌────────────┐  ┌────────────┐           │
-│  │ theorist   │  │ engineer   │           │
-│  │ container  │  │ container  │           │
-│  └─────┬──────┘  └─────┬──────┘           │
-│        │               │                   │
-│  ┌─────┴───────────────┴──────┐           │
-│  │    Shared Volume           │           │
-│  │    /asrp/workspace/        │           │
-│  └─────┬───────────────┬──────┘           │
-│        │               │                   │
-│  ┌─────┴──────┐  ┌─────┴──────┐           │
-│  │ reviewer   │  │ librarian  │           │
-│  │ container  │  │ container  │           │
-│  │ (read-only)│  │            │           │
-│  └────────────┘  └────────────┘           │
-└──────────────────────┬─────────────────────┘
-                       │
-┌──────────────────────┴─────────────────────┐
-│  ITDoctor (host-level, monitors containers) │
-│  - docker healthcheck integration           │
-│  - restart policy: unless-stopped           │
-│  - volume backup cron                       │
-└────────────────────────────────────────────┘
-```
-
-- Each agent in its own container
-- Shared Docker volume for workspace
-- Redis/NATS for real-time messaging (optional)
-- ITDoctor runs on the host, monitors all containers
-- **Best for:** Teams, production deployments, multi-project
-
-### Option C: Hybrid (Recommended)
-
-- Core agents (Theorist + Engineer) share a container
-- Reviewer in a separate container (isolation guarantee)
-- ITDoctor on the host
-- Scales up by adding containers
-
-## Communication Patterns
-
-### File-Based (Default)
+**File-based message passing** (no external dependencies):
 
 ```
-Agent A writes → /workspace/messages/to-reviewer-001.json
-Agent B polls  → /workspace/messages/to-reviewer-*.json
+# Agent A sends a task to Agent B:
+workspace/messages/
+├── theorist-to-reviewer-2026-04-02T08-30-001.json
+├── engineer-to-theorist-2026-04-02T09-15-002.json
+└── itdoctor-alert-2026-04-02T10-00-003.json
 ```
 
-Simple, debuggable, works everywhere. Recommended for solo use.
-
-### Message Queue (Scaling)
-
+Message format:
+```json
+{
+  "id": "msg-001",
+  "from": "theorist",
+  "to": "reviewer",
+  "type": "review_request",
+  "priority": "normal",
+  "timestamp": "2026-04-02T08:30:00Z",
+  "payload": {
+    "paper_path": "workspace/papers/dd-study/paper_v2.tex",
+    "review_standard": "PRL",
+    "deadline": "2026-04-02T12:00:00Z"
+  },
+  "status": "pending"
+}
 ```
-Agent A publishes → Redis channel "asrp:theorist:results"
-Agent B subscribes → Redis channel "asrp:theorist:results"
+
+Receiving agent polls `workspace/messages/` for messages addressed to it. After processing, updates `status` to `"completed"` with response.
+
+### File Locking
+
+For concurrent writes to shared files, use advisory file locking:
+- Each agent writes to its own subdirectory (`agents/<role>/scratch/`)
+- Only moves finalized files to shared `workspace/` directories
+- Registry and audit files use append-only mode with file locks
+
+### Process Management
+
+**Option 1: Systemd (Linux)**
+```ini
+# /etc/systemd/system/asrp-theorist.service
+[Unit]
+Description=ASRP Theorist Agent
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/openclaw start --config /asrp/agents/theorist/config.json
+Restart=on-failure
+RestartSec=30
+User=asrp
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-Real-time, decoupled. Recommended for team/Docker deployments.
+**Option 2: PM2 (Node.js)**
+```json
+{
+  "apps": [
+    {"name": "asrp-theorist", "script": "openclaw", "args": "start --config /asrp/agents/theorist/config.json"},
+    {"name": "asrp-engineer", "script": "openclaw", "args": "start --config /asrp/agents/engineer/config.json"},
+    {"name": "asrp-reviewer", "script": "openclaw", "args": "start --config /asrp/agents/reviewer/config.json"},
+    {"name": "asrp-itdoctor", "script": "openclaw", "args": "start --config /asrp/agents/itdoctor/config.json"}
+  ]
+}
+```
+
+**Option 3: Simple shell script**
+```bash
+#!/bin/bash
+# start-asrp.sh
+openclaw start --config /asrp/agents/theorist/config.json &
+openclaw start --config /asrp/agents/engineer/config.json &
+openclaw start --config /asrp/agents/reviewer/config.json &
+openclaw start --config /asrp/agents/itdoctor/config.json &
+wait
+```
 
 ## Research Orchestration
 
 ### Serial Pipeline (within a research line)
 
 ```
-Hypothesis → Design → Implement → Execute → Validate → Analyze → Write
+Pre-register → Design → Implement → Execute → Validate → Analyze → Write → Review
+     │                                                                        │
+     └────────────────────── Iterate if review fails ────────────────────────┘
 ```
 
-Each step depends on the previous. Managed by a pipeline controller.
+Each step produces files in `workspace/` that the next step reads.
 
 ### Parallel Execution (across research lines)
 
 ```
-Line A (Superconductivity): ═══════════════►
-Line B (Riemann Hypothesis): ═══════════════►
-Line C (Fine Structure):     ═══════════════►
+Line A (Superconductivity): ═══════════════════►
+Line B (Riemann Hypothesis): ═══════════════════►
+Line C (Fine Structure):     ═══════════════════►
+                                                  ├── Cross-reference
+                                                  └── Paper writing
 ```
 
-Independent research lines run in parallel. Join points at:
-- Cross-validation (results compared across agents)
-- Paper writing (may reference multiple lines)
+Independent lines run in parallel. Each has its own subdirectory under `workspace/data/`.
 
-### Fork-Join (cross-validation)
+### Fork-Join Cross-Validation
 
 ```
-               ┌─ Agent 1 runs experiment ─┐
-Hypothesis ────┤                           ├── Compare → Accept/Reject
-               └─ Agent 2 runs experiment ─┘
+               ┌─ Engineer runs experiment ─┐
+Hypothesis ────┤                            ├── Compare → Accept/Reject
+               └─ Reviewer re-runs independently ─┘
 ```
+
+Both agents work from the same pre-registered experiment spec. Results compared automatically.
 
 ## Security
 
-- **No hardcoded keys/tokens** — all credentials via environment variables or encrypted config
-- `config.example.yaml` provided as template; actual `config.yaml` in `.gitignore`
-- `asrp init` wizard guides credential setup
-- Reviewer agent has no write access to prevent contamination
-- Audit logs are append-only (ITDoctor enforces)
+- **No hardcoded keys/tokens** in any file
+- All credentials via `.env` or `config.yaml` (both gitignored)
+- `asrp init` wizard for first-time setup
+- Reviewer agent: read-only filesystem access
+- Audit logs: append-only (enforced by ITDoctor)
+- Backups: encrypted at rest (optional)
 
-## Data Layout
+## Future: Docker Deployment
 
-```
-/asrp/workspace/
-├── config.yaml          # User config (gitignored)
-├── .env                 # API keys (gitignored)
-├── data/                # Experimental data (versioned)
-├── registry/            # Pre-registered experiments
-├── papers/              # Paper drafts
-├── audit/               # Decision audit logs (append-only)
-├── messages/            # Inter-agent communication
-├── backups/             # ITDoctor managed backups
-└── logs/                # Agent logs
-```
+For teams needing stronger isolation, a Docker Compose configuration is planned. Each agent runs in its own container with shared volumes. See roadmap in project issues.
