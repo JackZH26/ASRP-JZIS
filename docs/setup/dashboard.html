@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASRP Research Dashboard</title>
+<style>
+:root{--bg:#0a0a0f;--card:#12121a;--border:#1e1e2e;--text:#e0e0e8;--muted:#8888a0;--accent:#6c8cff;--green:#4ade80;--yellow:#fbbf24;--red:#f87171;--orange:#fb923c}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.dashboard{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.sidebar{background:var(--card);border-right:1px solid var(--border);padding:20px}
+.sidebar .logo{font-size:18px;font-weight:700;margin-bottom:24px;background:linear-gradient(135deg,#6c8cff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sidebar nav a{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;color:var(--muted);font-size:14px;text-decoration:none;margin-bottom:2px}
+.sidebar nav a:hover,.sidebar nav a.active{background:rgba(108,140,255,.1);color:var(--text)}
+.main{padding:24px;overflow-y:auto}
+.main h1{font-size:24px;margin-bottom:20px}
+
+/* Stats row */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.stat-card .label{font-size:12px;color:var(--muted);margin-bottom:4px}
+.stat-card .value{font-size:28px;font-weight:700}
+.stat-card .sub{font-size:11px;color:var(--muted);margin-top:2px}
+.stat-card.green .value{color:var(--green)}
+.stat-card.yellow .value{color:var(--yellow)}
+.stat-card.red .value{color:var(--red)}
+.stat-card.accent .value{color:var(--accent)}
+
+/* Grid sections */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px}
+.panel h3{font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.panel h3 .badge{font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(108,140,255,.15);color:var(--accent)}
+
+/* Agent status */
+.agent-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.agent-row:last-child{border:none}
+.agent-row .dot{width:8px;height:8px;border-radius:50%}
+.agent-row .dot.online{background:var(--green)}
+.agent-row .dot.offline{background:var(--red)}
+.agent-row .dot.idle{background:var(--yellow)}
+.agent-row .name{font-size:14px;font-weight:500;flex:1}
+.agent-row .role{font-size:12px;color:var(--muted)}
+.agent-row .model{font-size:11px;color:var(--muted);background:rgba(255,255,255,.05);padding:2px 6px;border-radius:4px}
+
+/* Experiment list */
+.exp-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.exp-row:last-child{border:none}
+.exp-status{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px}
+.exp-status.completed{background:rgba(74,222,128,.12);color:var(--green)}
+.exp-status.running{background:rgba(108,140,255,.12);color:var(--accent)}
+.exp-status.refuted{background:rgba(248,113,113,.12);color:var(--red)}
+.exp-status.registered{background:rgba(251,191,36,.12);color:var(--yellow)}
+.exp-id{font-size:13px;font-family:monospace;color:var(--muted);width:160px}
+.exp-hyp{font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exp-outcome{font-size:12px;color:var(--muted)}
+
+/* Audit log */
+.audit-entry{padding:6px 0;border-bottom:1px solid rgba(30,30,46,.5);font-size:13px;display:flex;gap:8px}
+.audit-entry .time{color:var(--muted);font-family:monospace;font-size:11px;min-width:50px}
+.audit-entry .agent-tag{font-size:11px;font-weight:600;padding:1px 6px;border-radius:3px;min-width:70px;text-align:center}
+.audit-entry .agent-tag.theorist{background:rgba(167,139,250,.15);color:var(--accent2)}
+.audit-entry .agent-tag.engineer{background:rgba(108,140,255,.15);color:var(--accent)}
+.audit-entry .agent-tag.reviewer{background:rgba(74,222,128,.15);color:var(--green)}
+.audit-entry .agent-tag.system{background:rgba(255,255,255,.05);color:var(--muted)}
+.audit-entry .msg{flex:1}
+.audit-entry .severity-critical{color:var(--red)}
+
+/* Cost chart placeholder */
+.chart{height:120px;background:rgba(108,140,255,.03);border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px}
+.bar-row .label{width:60px;color:var(--muted);font-size:12px}
+.bar-row .bar{height:18px;border-radius:4px;min-width:4px}
+.bar-row .val{color:var(--muted);font-size:12px;min-width:40px}
+
+/* Health */
+.health-item{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px}
+.health-item .icon{font-size:16px}
+
+/* Responsive */
+@media(max-width:768px){.dashboard{grid-template-columns:1fr}.sidebar{display:none}.stats{grid-template-columns:repeat(3,1fr)}.grid-2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="dashboard">
+<div class="sidebar">
+<div class="logo">🔬 ASRP</div>
+<nav>
+<a href="#" class="active">📊 Dashboard</a>
+<a href="#">🧪 Experiments</a>
+<a href="#">📄 Papers</a>
+<a href="#">🤖 Agents</a>
+<a href="#">📝 Audit Log</a>
+<a href="#">💰 Budget</a>
+<a href="#">⚙️ Settings</a>
+</nav>
+<div style="position:absolute;bottom:20px;left:20px;font-size:11px;color:var(--muted)">ASRP v0.1.0<br>Workspace: ~/my-research</div>
+</div>
+
+<div class="main">
+<h1>Research Dashboard</h1>
+
+<!-- Stats -->
+<div class="stats">
+<div class="stat-card accent"><div class="label">Experiments</div><div class="value">12</div><div class="sub">3 running, 2 registered</div></div>
+<div class="stat-card green"><div class="label">Confirmed</div><div class="value">5</div><div class="sub">71% success rate</div></div>
+<div class="stat-card red"><div class="label">Refuted</div><div class="value">2</div><div class="sub">Errors caught early</div></div>
+<div class="stat-card yellow"><div class="label">Papers</div><div class="value">3</div><div class="sub">1 submitted, 2 drafts</div></div>
+<div class="stat-card"><div class="label">Cost Today</div><div class="value" style="color:var(--orange)">$4.20</div><div class="sub">Budget: $15/day</div></div>
+</div>
+
+<!-- Agent Status + Recent Experiments -->
+<div class="grid-2">
+<div class="panel">
+<h3>🤖 Agent Status <span class="badge">5 agents</span></h3>
+<div class="agent-row"><span class="dot online"></span><span class="name">🧠 Albert</span><span class="role">Theorist</span><span class="model">Opus</span></div>
+<div class="agent-row"><span class="dot online"></span><span class="name">⚙️ Wall-E</span><span class="role">Engineer</span><span class="model">Sonnet</span></div>
+<div class="agent-row"><span class="dot idle"></span><span class="name">📋 Critic</span><span class="role">Reviewer</span><span class="model">Opus</span></div>
+<div class="agent-row"><span class="dot online"></span><span class="name">📚 Scholar</span><span class="role">Librarian</span><span class="model">Flash</span></div>
+<div class="agent-row"><span class="dot online"></span><span class="name">🏥 DocMario</span><span class="role">ITDoctor</span><span class="model">Flash</span></div>
+</div>
+
+<div class="panel">
+<h3>🧪 Recent Experiments <span class="badge">last 7</span></h3>
+<div class="exp-row"><span class="exp-status running">Running</span><span class="exp-id">EXP-2026-04-02-003</span><span class="exp-hyp">Multi-well DD with exact KS gap at d=5,6,7</span></div>
+<div class="exp-row"><span class="exp-status refuted">Refuted</span><span class="exp-id">EXP-2026-04-01-002</span><span class="exp-hyp">Prime-spaced wells produce negative DD</span></div>
+<div class="exp-row"><span class="exp-status completed">Confirmed</span><span class="exp-id">EXP-2026-04-01-001</span><span class="exp-hyp">LDA overestimates 2e atom binding by >1%</span></div>
+<div class="exp-row"><span class="exp-status completed">Confirmed</span><span class="exp-id">EXP-2026-03-31-005</span><span class="exp-hyp">Electron membrane model consistent with Stodolna 2013</span></div>
+<div class="exp-row"><span class="exp-status registered">Registered</span><span class="exp-id">EXP-2026-04-02-004</span><span class="exp-hyp">Fibonacci lattice reduces DFT ill-conditioning</span></div>
+</div>
+</div>
+
+<!-- Audit + Cost -->
+<div class="grid-2">
+<div class="panel">
+<h3>📝 Audit Trail <span class="badge">live</span></h3>
+<div class="audit-entry"><span class="time">10:03</span><span class="agent-tag engineer">Engineer</span><span class="msg">EXP-003: Exact KS gap computed for d=3.0, DD=+0.215</span></div>
+<div class="audit-entry"><span class="time">09:58</span><span class="agent-tag reviewer">Reviewer</span><span class="msg severity-critical">⚠ EXP-002: DD sign depends on KS gap definition — verify with exact potential</span></div>
+<div class="audit-entry"><span class="time">09:45</span><span class="agent-tag theorist">Theorist</span><span class="msg">Registered EXP-004: Fibonacci ill-conditioning hypothesis</span></div>
+<div class="audit-entry"><span class="time">09:30</span><span class="agent-tag system">System</span><span class="msg">Daily backup completed (workspace: 2.4 MB)</span></div>
+<div class="audit-entry"><span class="time">09:15</span><span class="agent-tag engineer">Engineer</span><span class="msg">EXP-003: iDEA reverse engineering started (tol=1e-6, mu=3.0)</span></div>
+<div class="audit-entry"><span class="time">09:00</span><span class="agent-tag system">System</span><span class="msg">Health check: all agents online, disk 23%</span></div>
+</div>
+
+<div class="panel">
+<h3>💰 Token Budget</h3>
+<div class="bar-row"><span class="label">Opus</span><div class="bar" style="width:180px;background:linear-gradient(90deg,#6c8cff,#a78bfa)"></div><span class="val">$2.80</span></div>
+<div class="bar-row"><span class="label">Sonnet</span><div class="bar" style="width:80px;background:#6c8cff"></div><span class="val">$1.10</span></div>
+<div class="bar-row"><span class="label">Flash</span><div class="bar" style="width:20px;background:var(--green)"></div><span class="val">$0.30</span></div>
+<div style="margin-top:16px">
+<div class="health-item"><span class="icon">✅</span> Budget utilization: 28% of daily limit</div>
+<div class="health-item"><span class="icon">📊</span> Opus used only for: paper writing (2), review (1)</div>
+<div class="health-item"><span class="icon">⚡</span> Sonnet used for: 8 computation tasks</div>
+</div>
+</div>
+</div>
+
+<!-- Health -->
+<div class="panel" style="margin-bottom:24px">
+<h3>🏥 System Health</h3>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+<div class="health-item"><span class="icon">✅</span> Disk: 23%</div>
+<div class="health-item"><span class="icon">✅</span> All 5 agents online</div>
+<div class="health-item"><span class="icon">✅</span> Audit: 847 entries, 0 errors</div>
+<div class="health-item"><span class="icon">✅</span> Last backup: 09:30</div>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>
