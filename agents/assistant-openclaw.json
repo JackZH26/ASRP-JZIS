@@ -1,0 +1,47 @@
+{
+  "$schema": "https://openclaw.ai/schema/config.json",
+  "version": "1.0",
+  "agent": {
+    "name": "ASRP Assistant",
+    "description": "Setup and onboarding assistant for the Agent Science Research Platform",
+    "emoji": "🛠️"
+  },
+  "model": {
+    "primary": "openrouter/anthropic/claude-sonnet-4-5",
+    "fallback": "openrouter/google/gemini-2.5-flash",
+    "thinking": "medium"
+  },
+  "providers": {
+    "openrouter": {
+      "apiKey": "${OPENROUTER_API_KEY}"
+    }
+  },
+  "workspace": {
+    "path": ".",
+    "bootstrapFiles": [
+      "agents/assistant-soul.md",
+      "agents/assistant-init.md"
+    ]
+  },
+  "soul": "agents/assistant-soul.md",
+  "skills": [],
+  "tools": {
+    "exec": true,
+    "read": true,
+    "write": true,
+    "web_search": true,
+    "web_fetch": true
+  },
+  "safety": {
+    "requireApproval": [
+      "exec:elevated",
+      "exec:destructive"
+    ],
+    "allowedPaths": [
+      ".",
+      "agents/",
+      "workspace/",
+      "bin/"
+    ]
+  }
+}
