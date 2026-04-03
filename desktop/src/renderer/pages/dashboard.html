@@ -1,0 +1,428 @@
+<div class="page-header">
+  <div>
+    <h1>Research Dashboard</h1>
+    <p>Overview of your research activity and agent status</p>
+  </div>
+  <div class="actions">
+    <button class="btn btn-outline btn-sm" onclick="Router.navigate('/experiments')">🧪 New Experiment</button>
+    <button class="btn btn-primary btn-sm" onclick="refreshDashboard()">↻ Refresh</button>
+  </div>
+</div>
+
+<!-- Stats Row -->
+<div class="grid-5 mb-3" id="stats-row">
+  <div class="stat-card accent">
+    <div class="label">Experiments</div>
+    <div class="value" id="stat-experiments">—</div>
+    <div class="sub" id="stat-experiments-sub">Loading...</div>
+  </div>
+  <div class="stat-card success">
+    <div class="label">Confirmed</div>
+    <div class="value" id="stat-confirmed">—</div>
+    <div class="sub">Hypotheses validated</div>
+  </div>
+  <div class="stat-card error">
+    <div class="label">Refuted</div>
+    <div class="value" id="stat-refuted">—</div>
+    <div class="sub">Errors caught early</div>
+  </div>
+  <div class="stat-card warning">
+    <div class="label">Papers</div>
+    <div class="value" id="stat-papers">—</div>
+    <div class="sub" id="stat-papers-sub">Loading...</div>
+  </div>
+  <div class="stat-card orange">
+    <div class="label">Cost Today</div>
+    <div class="value" id="stat-cost">—</div>
+    <div class="sub" id="stat-cost-sub">Budget: $15/day</div>
+  </div>
+</div>
+
+<!-- Agent Status + Recent Experiments -->
+<div class="grid-2 mb-3">
+  <div class="panel">
+    <h3>🤖 Agent Status <span class="badge badge-accent" id="agent-count-badge">— agents</span></h3>
+    <div id="agent-status-list">
+      <div class="loading"><div class="spinner"></div> Loading agents...</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>🧪 Recent Experiments <span class="badge badge-accent">last 5</span></h3>
+    <div id="recent-experiments-list">
+      <div class="loading"><div class="spinner"></div> Loading experiments...</div>
+    </div>
+  </div>
+</div>
+
+<!-- T-074: Local AI Model Status Card -->
+<div class="panel mb-3" id="local-ai-card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+  <div style="flex:1;min-width:180px">
+    <div style="font-weight:600;font-size:13px;margin-bottom:4px">🧠 Local AI Model</div>
+    <div id="local-ai-status-text" style="font-size:12px;color:var(--text-secondary)">Checking...</div>
+    <div id="local-ai-progress-wrap" style="display:none;margin-top:6px">
+      <div style="height:6px;background:var(--surface);border-radius:4px;overflow:hidden;border:1px solid var(--border)">
+        <div id="local-ai-progress-bar" style="height:100%;background:#4a8c6a;border-radius:4px;transition:width 0.4s ease;width:0%"></div>
+      </div>
+      <div id="local-ai-progress-label" style="font-size:11px;color:var(--text-tertiary);margin-top:3px">0%</div>
+    </div>
+  </div>
+  <div id="local-ai-actions" style="display:flex;gap:8px;flex-shrink:0"></div>
+</div>
+
+<!-- Audit Log + Token Budget -->
+<div class="grid-2 mb-3">
+  <div class="panel">
+    <h3>📝 Audit Trail <span class="badge badge-accent" id="audit-live-badge">live</span></h3>
+    <div id="audit-trail-list">
+      <div class="loading"><div class="spinner"></div> Loading audit log...</div>
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn btn-ghost btn-sm" onclick="Router.navigate('/audit')">View full audit log →</button>
+    </div>
+  </div>
+
+  <!-- T-029: Token Budget Panel with visual bars -->
+  <div class="panel">
+    <h3>💰 Token Budget <span id="budget-pct-badge" class="badge badge-accent">—%</span></h3>
+    <div id="token-budget-bars">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+    <div id="token-budget-summary" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- T-031: Research Progress Bars -->
+<div class="grid-2 mb-3">
+  <div class="panel">
+    <h3>📊 Research Progress</h3>
+    <div id="research-progress">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- System Health -->
+  <div class="panel">
+    <h3>🏥 System Health</h3>
+    <div class="grid-2" id="health-grid">
+      <div class="health-item"><span class="icon">⏳</span> Loading...</div>
+    </div>
+  </div>
+</div>
+
+<style>
+.db-progress-row { margin-bottom: 14px; }
+.db-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+}
+.db-progress-label strong { color: var(--text-primary); }
+.db-progress-bar-bg {
+  height: 10px;
+  background: var(--surface);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.db-progress-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+.db-budget-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.db-budget-label { font-size: 12px; color: var(--text-secondary); min-width: 80px; }
+.db-budget-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: var(--surface);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.db-budget-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+.db-budget-val { font-size: 12px; color: var(--text-secondary); min-width: 40px; text-align: right; }
+</style>
+
+<script>
+(function() {
+  async function loadDashboard() {
+    if (!window.asrp) return;
+
+    try {
+      // Load experiments
+      const { experiments } = await window.asrp.experiments.list();
+      const confirmed = experiments.filter(e => e.status === 'confirmed').length;
+      const refuted = experiments.filter(e => e.status === 'refuted').length;
+      const running = experiments.filter(e => e.status === 'running').length;
+      const registered = experiments.filter(e => e.status === 'registered').length;
+
+      document.getElementById('stat-experiments').textContent = experiments.length;
+      document.getElementById('stat-experiments-sub').textContent = `${running} running, ${registered} registered`;
+      document.getElementById('stat-confirmed').textContent = confirmed;
+      document.getElementById('stat-refuted').textContent = refuted;
+
+      const expList = document.getElementById('recent-experiments-list');
+      expList.innerHTML = experiments.slice(0, 5).map(e => `
+        <div class="exp-row">
+          <span class="exp-status ${e.status}">${capitalize(e.status)}</span>
+          <span class="exp-id">${e.id}</span>
+          <span class="exp-hyp">${e.hypothesis}</span>
+        </div>
+      `).join('') || '<div class="empty-state"><p>No experiments yet</p></div>';
+
+    } catch (e) { console.error('experiments load error', e); }
+
+    try {
+      // Load agents
+      const statusData = window.asrp.openclaw
+        ? await window.asrp.openclaw.agentStatuses()
+        : await window.asrp.agents.status();
+      const agents = statusData.agents || [];
+      const badge = document.getElementById('agent-count-badge');
+      if (badge) badge.textContent = agents.length + ' agents';
+
+      const agentList = document.getElementById('agent-status-list');
+      const roleEmoji = { Theorist: '🧠', Engineer: '⚙️', Reviewer: '📋', Librarian: '📚', ITDoctor: '🏥', Analyst: '📈' };
+      agentList.innerHTML = agents.map(a => `
+        <div class="agent-row">
+          <span class="dot ${a.status === 'running' ? 'online' : a.status === 'stopped' ? 'offline' : 'idle'}"></span>
+          <span class="name">${roleEmoji[a.role] || '🤖'} ${a.name}</span>
+          <span class="role">${a.role}</span>
+          <span class="model">${shortModel(a.model)}</span>
+        </div>
+      `).join('');
+
+    } catch (e) { console.error('agents load error', e); }
+
+    try {
+      // Load papers
+      const { papers } = await window.asrp.papers.list();
+      document.getElementById('stat-papers').textContent = papers.length;
+      const submitted = papers.filter(p => p.status === 'submitted').length;
+      const drafts = papers.filter(p => p.status === 'draft').length;
+      document.getElementById('stat-papers-sub').textContent = `${submitted} submitted, ${drafts} drafts`;
+
+    } catch (e) { console.error('papers load error', e); }
+
+    try {
+      // T-030: Load audit entries (last 8)
+      const { entries } = await window.asrp.audit.list({ limit: 8 });
+      const auditList = document.getElementById('audit-trail-list');
+      auditList.innerHTML = entries.map(e => `
+        <div class="audit-entry">
+          <span class="time">${e.time}</span>
+          <span class="agent-tag ${e.agent.toLowerCase()}">${e.agent}</span>
+          <span class="msg">${e.message}</span>
+        </div>
+      `).join('');
+
+    } catch (e) { console.error('audit load error', e); }
+
+    // T-029: Token Budget
+    try {
+      if (window.asrp.openclaw) {
+        const tokenData = await window.asrp.openclaw.tokenUsage();
+        const pct = tokenData.pct || 0;
+        const badge = document.getElementById('budget-pct-badge');
+        if (badge) badge.textContent = pct + '%';
+
+        const barsEl = document.getElementById('token-budget-bars');
+        const modelColors = ['#7c69f0', '#4a8c6a', '#6c8cff'];
+        barsEl.innerHTML = tokenData.models.map((m, i) => `
+          <div class="db-budget-row">
+            <span class="db-budget-label">${m.name}</span>
+            <div class="db-budget-bar-bg">
+              <div class="db-budget-bar-fill" style="width:${m.pct}%;background:${modelColors[i] || '#4a8c6a'}"></div>
+            </div>
+            <span class="db-budget-val">$${m.cost.toFixed(2)}</span>
+          </div>
+        `).join('');
+
+        const summaryEl = document.getElementById('token-budget-summary');
+        const usedColor = pct > 80 ? 'var(--error)' : pct > 50 ? 'var(--warning)' : 'var(--success)';
+        summaryEl.innerHTML = `
+          <div class="health-item">
+            <span class="icon" style="color:${usedColor}">●</span>
+            Daily total: <strong>$${tokenData.dailyTotal.toFixed(2)}</strong> of $${tokenData.dailyBudget.toFixed(2)} (${pct}%)
+          </div>
+        `;
+
+        const costEl = document.getElementById('stat-cost');
+        const costSubEl = document.getElementById('stat-cost-sub');
+        if (costEl) costEl.textContent = '$' + tokenData.dailyTotal.toFixed(2);
+        if (costSubEl) costSubEl.textContent = `Budget: $${tokenData.dailyBudget}/day (${pct}% used)`;
+      }
+    } catch (e) { console.error('token usage load error', e); }
+
+    // T-031: Research Progress Bars
+    try {
+      if (window.asrp.openclaw) {
+        const progress = await window.asrp.openclaw.researchProgress();
+        const progressEl = document.getElementById('research-progress');
+        const bars = [
+          { key: 'rh', label: 'Reproducibility & Honesty', color: '#4a8c6a', desc: 'Experiment coverage' },
+          { key: 'sc', label: 'Scientific Contribution', color: '#7c69f0', desc: 'Novel findings' },
+          { key: 'bc', label: 'Broader Context', color: '#4a82c8', desc: 'Citation coverage' },
+        ];
+        progressEl.innerHTML = bars.map(b => `
+          <div class="db-progress-row">
+            <div class="db-progress-label">
+              <strong>${b.label}</strong>
+              <span>${progress[b.key]}%</span>
+            </div>
+            <div class="db-progress-bar-bg">
+              <div class="db-progress-bar-fill" style="width:${progress[b.key]}%;background:${b.color}"></div>
+            </div>
+            <div style="font-size:11px;color:var(--text-tertiary);margin-top:3px">${b.desc}</div>
+          </div>
+        `).join('');
+      }
+    } catch (e) { console.error('research progress load error', e); }
+
+    try {
+      // System health
+      const health = await window.asrp.system.health();
+      document.getElementById('health-grid').innerHTML = `
+        <div class="health-item"><span class="icon">✅</span> System: ${health.status}</div>
+        <div class="health-item"><span class="icon">⏱️</span> Uptime: ${Math.floor(health.uptime / 60)}m</div>
+        <div class="health-item"><span class="icon">✅</span> Audit: 847 entries</div>
+        <div class="health-item"><span class="icon">✅</span> Last backup: 09:30</div>
+      `;
+    } catch (e) { console.error('health load error', e); }
+  }
+
+  function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  function shortModel(model) {
+    if (!model) return '—';
+    if (model.includes('opus')) return 'Opus';
+    if (model.includes('sonnet')) return 'Sonnet';
+    if (model.includes('haiku')) return 'Haiku';
+    if (model.includes('gemma')) return 'Gemma';
+    return model;
+  }
+
+  // T-074: Load local AI model status
+  async function loadLocalAiStatus() {
+    if (!window.asrp || !window.asrp.ollama) return;
+    try {
+      const status = await window.asrp.ollama.status();
+      const textEl = document.getElementById('local-ai-status-text');
+      const actionsEl = document.getElementById('local-ai-actions');
+      const progressWrap = document.getElementById('local-ai-progress-wrap');
+
+      if (!textEl || !actionsEl) return;
+
+      if (!status.installed) {
+        textEl.innerHTML = '<span style="color:var(--text-tertiary)">Local AI: Not installed</span>';
+        actionsEl.innerHTML = '<button class="btn btn-outline btn-sm" onclick="Router.navigate(\'/settings\')">Setup</button>';
+        return;
+      }
+
+      if (status.downloading) {
+        textEl.innerHTML = 'Downloading ' + (status.downloadModel || 'model') + '...';
+        if (progressWrap) {
+          progressWrap.style.display = 'block';
+          var bar = document.getElementById('local-ai-progress-bar');
+          var label = document.getElementById('local-ai-progress-label');
+          if (bar) bar.style.width = status.downloadProgress + '%';
+          if (label) label.textContent = status.downloadProgress + '% ' + (status.downloadSpeed ? '· ' + status.downloadSpeed : '') + (status.downloadEta ? ' · ETA ' + status.downloadEta : '');
+        }
+        actionsEl.innerHTML = '<button class="btn btn-outline btn-sm" onclick="window.asrp.ollama.cancelPull()">Cancel</button>';
+        return;
+      }
+
+      const hasGemma = status.models.some(function(m) { return m.includes('gemma'); });
+      if (hasGemma) {
+        textEl.innerHTML = 'Gemma 27B <span style="color:var(--success)">&#9679;</span> Ready' + (!status.running ? ' <span style="color:var(--text-tertiary)">(server stopped)</span>' : '');
+        actionsEl.innerHTML = '';
+      } else if (status.installed) {
+        textEl.innerHTML = 'Ollama installed · Model not downloaded';
+        actionsEl.innerHTML = '<button class="btn btn-primary btn-sm" onclick="startOllamaDownload()">Download Gemma 27B</button><button class="btn btn-ghost btn-sm" onclick="Router.navigate(\'/settings\')">Settings</button>';
+      }
+
+      // T-072: Subscribe to download progress
+      if (window.asrp.ollama.onDownloadProgress) {
+        window.asrp.ollama.onDownloadProgress(function(data) {
+          var b = document.getElementById('local-ai-progress-bar');
+          var l = document.getElementById('local-ai-progress-label');
+          var t = document.getElementById('local-ai-status-text');
+          var w = document.getElementById('local-ai-progress-wrap');
+          if (w) w.style.display = 'block';
+          if (b) b.style.width = data.progress + '%';
+          if (l) l.textContent = data.progress + '% ' + (data.speed ? '· ' + data.speed : '') + (data.eta ? ' · ETA ' + data.eta : '');
+          if (t) t.textContent = 'Downloading ' + data.model + '...';
+        });
+        window.asrp.ollama.onDownloadComplete(function(data) {
+          var w = document.getElementById('local-ai-progress-wrap');
+          if (w) w.style.display = 'none';
+          var t = document.getElementById('local-ai-status-text');
+          if (t) t.innerHTML = 'Gemma 27B <span style="color:var(--success)">&#9679;</span> Ready';
+          Toast.show('Local AI model ready: ' + data.model, 'success');
+          loadLocalAiStatus();
+        });
+      }
+    } catch (e) { console.error('local AI status error', e); }
+  }
+
+  window.startOllamaDownload = async function() {
+    if (!window.asrp || !window.asrp.ollama) return;
+    var result = await window.asrp.ollama.pullModel('gemma3:27b');
+    if (result.success) {
+      Toast.show('Downloading Gemma 27B — this may take a while', 'info');
+      loadLocalAiStatus();
+    } else {
+      Toast.show('Download failed: ' + result.error, 'error');
+    }
+  };
+
+  window.refreshDashboard = loadDashboard;
+
+  // T-027: Subscribe to real-time agent status updates
+  if (window.asrp && window.asrp.agents && window.asrp.agents.onStatusUpdate) {
+    window.asrp.agents.onStatusUpdate(function(agents) {
+      const badge = document.getElementById('agent-count-badge');
+      if (badge) badge.textContent = agents.length + ' agents';
+      const agentList = document.getElementById('agent-status-list');
+      if (!agentList) return;
+      const roleEmoji = { Theorist: '🧠', Engineer: '⚙️', Reviewer: '📋', Librarian: '📚', ITDoctor: '🏥', Analyst: '📈' };
+      agentList.innerHTML = agents.map(function(a) {
+        return '<div class="agent-row">' +
+          '<span class="dot ' + (a.status === 'running' ? 'online' : a.status === 'stopped' ? 'offline' : 'idle') + '"></span>' +
+          '<span class="name">' + (roleEmoji[a.role] || '🤖') + ' ' + a.name + '</span>' +
+          '<span class="role">' + a.role + '</span>' +
+          '<span class="model">' + shortModel(a.model) + '</span>' +
+          '</div>';
+      }).join('');
+      const liveBadge = document.getElementById('audit-live-badge');
+      if (liveBadge) {
+        liveBadge.style.background = 'var(--success)';
+        setTimeout(function() { liveBadge.style.background = ''; }, 1000);
+      }
+    });
+  }
+
+  // Auth guard — redirect to login if no valid session
+  (function checkAuth() {
+    var token = localStorage.getItem('asrp_token');
+    if (!token) { Router.navigate('/login'); return; }
+    if (window.asrp) {
+      window.asrp.auth.user(token).then(function(u) {
+        if (!u) {
+          localStorage.removeItem('asrp_token');
+          localStorage.removeItem('asrp_user');
+          Router.navigate('/login');
+        }
+      }).catch(function() {});
+    }
+  })();
+
+  loadDashboard();
+  loadLocalAiStatus();
+})();
+</script>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- T-082: ASRP Desktop app icon — mint green circle with ASRP text -->
+  <circle cx="128" cy="128" r="120" fill="#4a8c6a"/>
+  <circle cx="128" cy="128" r="108" fill="#3d7558"/>
+  <!-- Atom / research symbol -->
+  <ellipse cx="128" cy="128" rx="48" ry="18" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="3"/>
+  <ellipse cx="128" cy="128" rx="48" ry="18" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="3" transform="rotate(60 128 128)"/>
+  <ellipse cx="128" cy="128" rx="48" ry="18" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="3" transform="rotate(120 128 128)"/>
+  <circle cx="128" cy="128" r="8" fill="white"/>
+  <!-- ASRP label -->
+  <text x="128" y="192" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+        font-size="22" font-weight="700" fill="white" letter-spacing="2">ASRP</text>
+</svg>

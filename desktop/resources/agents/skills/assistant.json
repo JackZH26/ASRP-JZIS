@@ -1,0 +1,18 @@
+{
+  "role": "assistant",
+  "description": "Setup and onboarding assistant — guides users through ASRP installation",
+  "skills": {
+    "openclaw": [
+      {"name": "coding-agent", "required": true, "reason": "Spawn sub-agents for installation tasks"}
+    ],
+    "clawhub": [],
+    "python": [
+      {"name": "requests", "required": true, "reason": "Validate API keys"}
+    ],
+    "system": [
+      {"name": "git", "required": true},
+      {"name": "node", "required": true, "reason": "Check Node.js installation"},
+      {"name": "python3", "required": true, "reason": "Check Python installation"}
+    ]
+  }
+}

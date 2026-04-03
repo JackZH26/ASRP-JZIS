@@ -1,0 +1,470 @@
+<div class="page-header">
+  <div>
+    <h1>Files</h1>
+    <p>Browse, edit, and search workspace files</p>
+  </div>
+  <div class="actions">
+    <button class="btn btn-outline btn-sm" onclick="uploadFile()">⬆ Upload</button>
+    <button class="btn btn-outline btn-sm" onclick="openInExplorer()">Open in Explorer</button>
+  </div>
+</div>
+
+<!-- Search Bar -->
+<div class="panel mb-2" style="padding:10px 14px">
+  <div style="display:flex;gap:8px;align-items:center">
+    <span style="font-size:14px">🔍</span>
+    <input type="text" id="file-search-input" placeholder="Search file names and content..." style="flex:1;border:none;outline:none;background:transparent;font-size:13px;color:var(--text)" oninput="onSearchInput(this.value)" />
+    <button class="btn btn-ghost btn-sm" id="search-clear-btn" style="display:none" onclick="clearSearch()">✕</button>
+  </div>
+</div>
+
+<!-- File Type Filter -->
+<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+  <button class="file-filter-btn active" data-ext="all" onclick="setFileFilter('all')">All</button>
+  <button class="file-filter-btn" data-ext=".tex" onclick="setFileFilter('.tex')">📄 .tex</button>
+  <button class="file-filter-btn" data-ext=".py" onclick="setFileFilter('.py')">🐍 .py</button>
+  <button class="file-filter-btn" data-ext=".md" onclick="setFileFilter('.md')">📝 .md</button>
+  <button class="file-filter-btn" data-ext=".json" onclick="setFileFilter('.json')">📋 .json</button>
+  <button class="file-filter-btn" data-ext=".pdf" onclick="setFileFilter('.pdf')">📕 .pdf</button>
+</div>
+
+<!-- Main Layout: Tree + Preview -->
+<div style="display:flex;gap:12px;min-height:520px">
+
+  <!-- Left: Directory Tree -->
+  <div class="panel" style="width:280px;min-width:220px;overflow-y:auto;padding:0">
+    <div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:12px;font-weight:600;color:var(--text-secondary)">WORKSPACE</span>
+      <button class="btn btn-ghost btn-sm" style="padding:2px 6px" onclick="refreshTree()" title="Refresh">↻</button>
+    </div>
+    <div id="file-tree" style="padding:6px 0">
+      <div class="loading" style="padding:20px;justify-content:center"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Right: Preview / Edit -->
+  <div class="panel" style="flex:1;min-width:0;padding:0;display:flex;flex-direction:column">
+    <!-- Preview Header -->
+    <div id="preview-header" style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;min-height:44px">
+      <span id="preview-filename" style="font-size:13px;font-weight:600;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Select a file to preview</span>
+      <div id="preview-actions" style="display:none;gap:6px;display:none">
+        <button class="btn btn-outline btn-sm" id="edit-toggle-btn" onclick="toggleEditMode()">Edit</button>
+        <button class="btn btn-primary btn-sm" id="save-btn" style="display:none" onclick="saveFile()">Save</button>
+        <button class="btn btn-ghost btn-sm" onclick="downloadFile()" title="Download">⬇</button>
+      </div>
+    </div>
+    <!-- Preview Body -->
+    <div id="preview-body" style="flex:1;overflow:auto;padding:0">
+      <div id="preview-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-tertiary)">
+        <div style="font-size:36px;margin-bottom:12px">📂</div>
+        <p style="font-size:13px">Select a file from the tree</p>
+      </div>
+      <div id="preview-content" style="display:none"></div>
+      <div id="edit-content" style="display:none;height:100%">
+        <textarea id="edit-textarea" style="width:100%;height:100%;min-height:400px;box-sizing:border-box;border:none;outline:none;resize:none;padding:14px;font-family:var(--font-mono);font-size:12px;line-height:1.7;background:var(--bg-secondary);color:var(--text)" oninput="markUnsaved()"></textarea>
+      </div>
+      <div id="pdf-preview" style="display:none;height:100%;min-height:400px">
+        <iframe id="pdf-iframe" style="width:100%;height:100%;min-height:400px;border:none" title="PDF Preview"></iframe>
+        <div id="pdf-fallback" style="display:none;padding:24px;text-align:center">
+          <p style="color:var(--text-secondary);margin-bottom:12px">Cannot embed PDF in this view.</p>
+          <button class="btn btn-outline btn-sm" onclick="openCurrentInExplorer()">Open in System Viewer</button>
+        </div>
+      </div>
+    </div>
+    <!-- Unsaved banner -->
+    <div id="unsaved-banner" style="display:none;padding:8px 14px;background:var(--warning-bg,#fff8e1);border-top:1px solid var(--warning);font-size:12px;color:var(--text-secondary)">
+      ⚠ Unsaved changes — click Save to persist
+    </div>
+  </div>
+</div>
+
+<!-- Search Results Panel (shown over tree+preview when searching) -->
+<div id="search-results-panel" style="display:none" class="panel mt-2">
+  <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-secondary)" id="search-results-label">Search Results</div>
+  <div id="search-results-list" style="max-height:400px;overflow-y:auto"></div>
+</div>
+
+<style>
+.file-filter-btn {
+  padding:4px 10px;border-radius:12px;font-size:12px;border:1px solid var(--border);background:var(--bg-secondary);cursor:pointer;color:var(--text-secondary);transition:all 0.15s
+}
+.file-filter-btn.active,.file-filter-btn:hover {
+  background:var(--accent);color:#fff;border-color:var(--accent)
+}
+.tree-node { user-select:none }
+.tree-row {
+  display:flex;align-items:center;padding:3px 8px;cursor:pointer;border-radius:4px;font-size:13px;gap:4px;min-height:26px
+}
+.tree-row:hover { background:var(--hover-bg,rgba(0,0,0,0.04)) }
+.tree-row.selected { background:var(--accent-subtle,rgba(74,140,106,0.12));color:var(--accent) }
+.tree-toggle { font-size:10px;width:14px;text-align:center;color:var(--text-tertiary);flex-shrink:0 }
+.git-badge { font-size:10px;padding:1px 4px;border-radius:3px;margin-left:auto;font-weight:600;flex-shrink:0 }
+.git-badge.M { background:#fff3cd;color:#856404 }
+.git-badge.A { background:#d4edda;color:#155724 }
+.git-badge.ques { background:#f8d7da;color:#721c24 }
+/* Syntax highlighting */
+.syn-keyword { color:var(--accent) }
+.syn-string { color:var(--success,#2a7a4b) }
+.syn-comment { color:var(--text-tertiary);font-style:italic }
+.syn-number { color:var(--orange,#e06c00) }
+.syn-json-key { color:#7c4dff }
+.syn-tex-cmd { color:var(--accent) }
+.syn-md-header { font-weight:700 }
+.syn-md-code { background:var(--bg-secondary);border-radius:3px;font-family:var(--font-mono) }
+.code-block { font-family:var(--font-mono);font-size:12px;line-height:1.7;white-space:pre;overflow-x:auto }
+.line-num { display:inline-block;width:36px;text-align:right;padding-right:12px;color:var(--text-tertiary);user-select:none;font-size:11px }
+.search-result-row { padding:8px 14px;border-bottom:1px solid var(--border);cursor:pointer }
+.search-result-row:hover { background:var(--hover-bg,rgba(0,0,0,0.04)) }
+.search-result-file { font-weight:600;font-size:13px;color:var(--text) }
+.search-result-line { font-size:12px;color:var(--text-secondary);font-family:var(--font-mono);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
+</style>
+
+<script>
+(function() {
+  let workspacePath = '';
+  let treeData = {};
+  let currentFilePath = '';
+  let currentFileName = '';
+  let editMode = false;
+  let unsaved = false;
+  let activeFilter = 'all';
+  let searchTimeout = null;
+
+  // Mock git status (T-053)
+  const gitStatusMock = {
+    'PIPELINE_STATUS.json': 'M',
+    'registry/EXP-2026-04-02-003.json': 'M',
+    'papers/dd-paper/draft_v3.tex': 'A',
+    'notes.md': '?',
+  };
+
+  // File icons
+  function fileIcon(name) {
+    if (!name) return '📄';
+    const ext = name.split('.').pop().toLowerCase();
+    const m = { tex:'📄', py:'🐍', md:'📝', json:'📋', pdf:'📕', txt:'📄', csv:'📊', png:'🖼️', jpg:'🖼️', js:'📜', ts:'📘', yml:'⚙️', yaml:'⚙️', sh:'🔧' };
+    return m[ext] || '📄';
+  }
+
+  function filterMatch(name) {
+    if (activeFilter === 'all') return true;
+    return name.toLowerCase().endsWith(activeFilter);
+  }
+
+  // ---- Tree ----
+  async function loadTree(dirPath, container, depth) {
+    const { files, error } = await window.asrp.files.list(dirPath);
+    if (error || !files) { container.innerHTML = `<div style="padding:8px 12px;font-size:12px;color:var(--error)">Error: ${error}</div>`; return; }
+
+    const sorted = [...files].sort((a, b) => {
+      if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    const visible = sorted.filter(f => f.isDirectory || filterMatch(f.name));
+    if (!visible.length) { container.innerHTML = '<div style="padding:8px 16px;font-size:12px;color:var(--text-tertiary)">Empty</div>'; return; }
+
+    container.innerHTML = '';
+    visible.forEach(f => {
+      const relPath = f.path.replace(workspacePath, '').replace(/^[/\\]/, '');
+      const gitMark = Object.keys(gitStatusMock).find(k => relPath.endsWith(k));
+      const badge = gitMark ? gitStatusMock[gitMark] : null;
+
+      const node = document.createElement('div');
+      node.className = 'tree-node';
+      const indentPx = depth * 14 + 8;
+
+      if (f.isDirectory) {
+        const row = document.createElement('div');
+        row.className = 'tree-row';
+        row.style.paddingLeft = indentPx + 'px';
+        row.innerHTML = `<span class="tree-toggle">▶</span><span style="margin-right:4px">📂</span><span style="font-size:13px">${f.name}</span>`;
+        const children = document.createElement('div');
+        children.style.display = 'none';
+        let expanded = false;
+        row.onclick = async () => {
+          expanded = !expanded;
+          row.querySelector('.tree-toggle').textContent = expanded ? '▼' : '▶';
+          children.style.display = expanded ? 'block' : 'none';
+          if (expanded && !children.dataset.loaded) {
+            children.dataset.loaded = '1';
+            children.innerHTML = '<div style="padding:4px 16px;font-size:12px;color:var(--text-tertiary)">Loading...</div>';
+            await loadTree(f.path, children, depth + 1);
+          }
+        };
+        node.appendChild(row);
+        node.appendChild(children);
+      } else {
+        const row = document.createElement('div');
+        row.className = 'tree-row';
+        row.id = 'tree-' + f.path.replace(/[^a-zA-Z0-9]/g,'_');
+        row.style.paddingLeft = indentPx + 'px';
+        row.innerHTML = `<span class="tree-toggle"></span><span style="margin-right:4px">${fileIcon(f.name)}</span><span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</span>${badge ? `<span class="git-badge ${badge === '?' ? 'ques' : badge}">${badge === '?' ? '?' : badge}</span>` : ''}`;
+        row.onclick = () => openFile(f.path, f.name, row);
+        node.appendChild(row);
+      }
+      container.appendChild(node);
+    });
+  }
+
+  window.refreshTree = async function() {
+    if (!workspacePath) return;
+    const tree = document.getElementById('file-tree');
+    tree.innerHTML = '<div class="loading" style="padding:20px;justify-content:center"><div class="spinner"></div></div>';
+    await loadTree(workspacePath, tree, 0);
+  };
+
+  // ---- Open File ----
+  async function openFile(filePath, fileName, rowEl) {
+    if (unsaved) {
+      if (!confirm('You have unsaved changes. Discard?')) return;
+    }
+    unsaved = false;
+    editMode = false;
+    currentFilePath = filePath;
+    currentFileName = fileName;
+
+    // Deselect previous
+    document.querySelectorAll('.tree-row.selected').forEach(r => r.classList.remove('selected'));
+    if (rowEl) rowEl.classList.add('selected');
+
+    document.getElementById('preview-filename').textContent = fileName;
+    const acts = document.getElementById('preview-actions');
+    acts.style.display = 'flex';
+    document.getElementById('edit-toggle-btn').textContent = 'Edit';
+    document.getElementById('save-btn').style.display = 'none';
+    document.getElementById('unsaved-banner').style.display = 'none';
+    document.getElementById('preview-empty').style.display = 'none';
+    document.getElementById('preview-content').style.display = 'none';
+    document.getElementById('edit-content').style.display = 'none';
+    document.getElementById('pdf-preview').style.display = 'none';
+
+    const ext = fileName.split('.').pop().toLowerCase();
+
+    if (ext === 'pdf') {
+      // PDF Preview (T-051)
+      const pdfDiv = document.getElementById('pdf-preview');
+      pdfDiv.style.display = 'block';
+      const iframe = document.getElementById('pdf-iframe');
+      try {
+        iframe.src = 'file://' + filePath;
+        iframe.style.display = 'block';
+        document.getElementById('pdf-fallback').style.display = 'none';
+      } catch(e) {
+        iframe.style.display = 'none';
+        document.getElementById('pdf-fallback').style.display = 'block';
+      }
+      return;
+    }
+
+    // Text preview
+    document.getElementById('preview-content').style.display = 'block';
+    document.getElementById('preview-content').innerHTML = '<div class="loading" style="padding:20px"><div class="spinner"></div> Loading...</div>';
+
+    const result = await window.asrp.files.read(filePath);
+    if (!result.success) {
+      document.getElementById('preview-content').innerHTML = `<div class="alert error show" style="margin:14px">${result.error}</div>`;
+      return;
+    }
+
+    const raw = result.content || '';
+    renderPreview(raw, ext, fileName);
+    // Store for edit
+    document.getElementById('edit-textarea').value = raw;
+  }
+
+  function renderPreview(raw, ext, fileName) {
+    const lines = raw.split('\n');
+    const highlighted = lines.map(line => highlightLine(line, ext));
+    const withNums = highlighted.map((h, i) =>
+      `<div><span class="line-num">${i + 1}</span>${h}</div>`
+    ).join('');
+    document.getElementById('preview-content').innerHTML =
+      `<div class="code-block" style="padding:14px">${withNums}</div>`;
+  }
+
+  function highlightLine(line, ext) {
+    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const e = esc(line);
+    if (ext === 'py') return pyHighlight(e);
+    if (ext === 'json') return jsonHighlight(e);
+    if (ext === 'tex') return texHighlight(e);
+    if (ext === 'md') return mdHighlight(e);
+    return e;
+  }
+
+  function pyHighlight(s) {
+    const kw = ['def ','class ','import ','from ','return ','if ','else:','elif ','for ','while ','in ','not ','and ','or ','True','False','None','with ','as ','try:','except','raise ','pass','lambda ','yield '];
+    let r = s;
+    // Comments
+    const ci = r.indexOf('#');
+    if (ci >= 0) r = r.slice(0, ci) + `<span class="syn-comment">${r.slice(ci)}</span>`;
+    // Strings (simple)
+    r = r.replace(/(&#39;&#39;&#39;|&quot;&quot;&quot;|&#39;[^&#39;]*&#39;|&quot;[^&quot;]*&quot;)/g, m => `<span class="syn-string">${m}</span>`);
+    // Keywords
+    kw.forEach(k => { r = r.replace(new RegExp('\\b' + k.trim() + '\\b', 'g'), `<span class="syn-keyword">${k.trim()}</span>`); });
+    // Numbers
+    r = r.replace(/\b(\d+\.?\d*)\b/g, `<span class="syn-number">$1</span>`);
+    return r;
+  }
+
+  function jsonHighlight(s) {
+    return s
+      .replace(/("(?:\\.|[^"\\])*")(\s*:)/g, `<span class="syn-json-key">$1</span>$2`)
+      .replace(/:\s*("(?:\\.|[^"\\])*")/g, (m, v) => m.replace(v, `<span class="syn-string">${v}</span>`))
+      .replace(/:\s*(\d+\.?\d*)/g, (m, v) => m.replace(v, `<span class="syn-number">${v}</span>`))
+      .replace(/:\s*(true|false|null)/g, (m, v) => m.replace(v, `<span class="syn-keyword">${v}</span>`));
+  }
+
+  function texHighlight(s) {
+    return s
+      .replace(/(%.*)$/, `<span class="syn-comment">$1</span>`)
+      .replace(/(\\[a-zA-Z]+)/g, `<span class="syn-tex-cmd">$1</span>`)
+      .replace(/(\{|\})/g, `<span style="color:var(--orange)">$1</span>`);
+  }
+
+  function mdHighlight(s) {
+    if (/^#{1,6} /.test(s)) return `<span class="syn-md-header">${s}</span>`;
+    if (/^```/.test(s)) return `<span class="syn-md-code">${s}</span>`;
+    return s.replace(/(`[^`]+`)/g, `<span class="syn-md-code">$1</span>`);
+  }
+
+  // ---- Edit Mode (T-048) ----
+  window.toggleEditMode = function() {
+    if (!currentFilePath) return;
+    const ext = currentFileName.split('.').pop().toLowerCase();
+    if (ext === 'pdf') return;
+
+    editMode = !editMode;
+    document.getElementById('edit-toggle-btn').textContent = editMode ? 'Preview' : 'Edit';
+    document.getElementById('save-btn').style.display = editMode ? 'inline-flex' : 'none';
+    document.getElementById('preview-content').style.display = editMode ? 'none' : 'block';
+    document.getElementById('edit-content').style.display = editMode ? 'block' : 'none';
+  };
+
+  window.markUnsaved = function() {
+    if (!unsaved) {
+      unsaved = true;
+      document.getElementById('unsaved-banner').style.display = 'block';
+    }
+  };
+
+  window.saveFile = async function() {
+    const content = document.getElementById('edit-textarea').value;
+    const result = await window.asrp.files.write(currentFilePath, content);
+    if (result.success) {
+      unsaved = false;
+      document.getElementById('unsaved-banner').style.display = 'none';
+      // Refresh preview
+      const ext = currentFileName.split('.').pop().toLowerCase();
+      renderPreview(content, ext, currentFileName);
+      if (typeof Toast !== 'undefined') Toast.show('File saved', 'success');
+    } else {
+      if (typeof Toast !== 'undefined') Toast.show('Save failed: ' + result.error, 'error');
+    }
+  };
+
+  // ---- File Upload/Download (T-052) ----
+  window.uploadFile = async function() {
+    const result = await window.asrp.files.openDialog({ properties: ['openFile'], title: 'Upload to workspace' });
+    if (result.canceled || !result.filePaths.length) return;
+    const src = result.filePaths[0];
+    const name = src.split(/[/\\]/).pop();
+    const dest = workspacePath + '/' + name;
+    const readResult = await window.asrp.files.read(src);
+    if (!readResult.success) { if (typeof Toast !== 'undefined') Toast.show('Cannot read file', 'error'); return; }
+    const writeResult = await window.asrp.files.write(dest, readResult.content);
+    if (writeResult.success) {
+      if (typeof Toast !== 'undefined') Toast.show(`Uploaded: ${name}`, 'success');
+      refreshTree();
+    }
+  };
+
+  window.downloadFile = async function() {
+    if (!currentFilePath) return;
+    const result = await window.asrp.files.saveDialog({ defaultPath: currentFileName, title: 'Save file' });
+    if (result.canceled) return;
+    const content = document.getElementById('edit-textarea').value || '';
+    await window.asrp.files.write(result.filePath, content);
+    if (typeof Toast !== 'undefined') Toast.show('File downloaded', 'success');
+  };
+
+  window.openCurrentInExplorer = async function() {
+    if (currentFilePath) await window.asrp.system.openPath(currentFilePath);
+  };
+
+  window.openInExplorer = async function() {
+    await window.asrp.system.openPath(workspacePath);
+  };
+
+  // ---- Filter (T-050) ----
+  window.setFileFilter = function(ext) {
+    activeFilter = ext;
+    document.querySelectorAll('.file-filter-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-ext="${ext}"]`)?.classList.add('active');
+    refreshTree();
+  };
+
+  // ---- Search (T-049) ----
+  window.onSearchInput = function(val) {
+    clearTimeout(searchTimeout);
+    const clearBtn = document.getElementById('search-clear-btn');
+    if (val.trim()) {
+      clearBtn.style.display = 'inline-flex';
+      searchTimeout = setTimeout(() => doSearch(val.trim()), 400);
+    } else {
+      clearSearch();
+    }
+  };
+
+  window.clearSearch = function() {
+    document.getElementById('file-search-input').value = '';
+    document.getElementById('search-clear-btn').style.display = 'none';
+    document.getElementById('search-results-panel').style.display = 'none';
+    document.getElementById('file-tree').closest('div[style*="display:flex"]').style.display = 'flex';
+  };
+
+  async function doSearch(query) {
+    const resultsPanel = document.getElementById('search-results-panel');
+    const resultsList = document.getElementById('search-results-list');
+    const label = document.getElementById('search-results-label');
+    resultsPanel.style.display = 'block';
+    resultsList.innerHTML = '<div class="loading" style="padding:14px"><div class="spinner"></div> Searching...</div>';
+
+    // Search using IPC
+    const res = await window.asrp.files.search(query, workspacePath);
+    const results = res.results || [];
+
+    label.textContent = `${results.length} result${results.length !== 1 ? 's' : ''} for "${query}"`;
+    if (!results.length) {
+      resultsList.innerHTML = '<div style="padding:14px;font-size:13px;color:var(--text-secondary)">No matches found</div>';
+      return;
+    }
+
+    resultsList.innerHTML = results.slice(0, 100).map(r => `
+      <div class="search-result-row" onclick="openFileFromSearch('${r.filePath.replace(/'/g,"\\'")}', '${r.fileName.replace(/'/g,"\\'")}', ${r.lineNum || 0})">
+        <div class="search-result-file">${fileIcon(r.fileName)} ${r.fileName}</div>
+        ${r.lineNum ? `<div class="search-result-line">Line ${r.lineNum}: ${escHtml(r.lineText || '')}</div>` : `<div class="search-result-line" style="color:var(--text-tertiary)">File name match</div>`}
+      </div>
+    `).join('');
+  }
+
+  window.openFileFromSearch = function(filePath, fileName, lineNum) {
+    openFile(filePath, fileName, null);
+    // TODO: scroll to line after load
+  };
+
+  function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,120); }
+
+  // ---- Init ----
+  async function init() {
+    if (!window.asrp) return;
+    const ws = await window.asrp.system.workspace();
+    workspacePath = ws.path;
+    const tree = document.getElementById('file-tree');
+    await loadTree(workspacePath, tree, 0);
+  }
+
+  init();
+})();
+</script>

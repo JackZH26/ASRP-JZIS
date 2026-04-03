@@ -1,0 +1,40 @@
+{
+  "name": "asrp-desktop",
+  "version": "1.0.0",
+  "description": "ASRP Desktop — Agent Science Research Platform",
+  "main": "dist/main/index.js",
+  "author": "ASRP Contributors",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -p tsconfig.json --watch",
+    "start": "npm run build && electron .",
+    "dev": "concurrently \"npm run build:watch\" \"wait-on dist/main/index.js && electron . --dev\"",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.8.0",
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.3.9",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20.14.2",
+    "concurrently": "^8.2.2",
+    "electron": "^29.4.6",
+    "electron-builder": "^24.13.3",
+    "electron-reload": "^1.5.0",
+    "typescript": "^5.4.5",
+    "wait-on": "^7.2.0"
+  }
+}

@@ -1,0 +1,530 @@
+<div class="page-header">
+  <div>
+    <h1>Settings</h1>
+    <p>Configure ASRP Desktop preferences</p>
+  </div>
+  <div class="actions">
+    <button class="btn btn-outline btn-sm" onclick="resetSettings()">Reset to Defaults</button>
+    <button class="btn btn-primary btn-sm" onclick="saveSettings()">Save Changes</button>
+  </div>
+</div>
+
+<div class="alert" id="settings-alert"></div>
+
+<!-- Settings Sections -->
+<div style="display:flex;flex-direction:column;gap:20px">
+
+  <!-- Workspace -->
+  <div class="panel">
+    <h3>🗂️ Workspace</h3>
+    <div class="form-group">
+      <label>Research Directory</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="setting-workspace" placeholder="~/asrp-workspace" style="flex:1">
+        <button class="btn btn-outline" onclick="browseWorkspace()">Browse</button>
+      </div>
+      <div style="font-size:12px;color:var(--text-tertiary);margin-top:4px">
+        Where experiments, papers, and audit logs are stored
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Model -->
+  <div class="panel">
+    <h3>🤖 AI Model</h3>
+    <div class="form-group">
+      <label>Default Model</label>
+      <select id="setting-default-model">
+        <option value="claude-opus-4-6">Claude Opus 4.6 (Most capable)</option>
+        <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (Balanced)</option>
+        <option value="claude-haiku-4-5">Claude Haiku 4.5 (Fast)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>OpenRouter API Key</label>
+      <input type="password" id="setting-openrouter-key" placeholder="sk-or-v1-...">
+      <div style="font-size:12px;color:var(--text-tertiary);margin-top:4px">
+        Required for cloud AI models. Get a key at openrouter.ai
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Daily Budget Limit (USD)</label>
+      <input type="number" id="setting-budget-daily" min="1" max="1000" step="1" placeholder="15">
+    </div>
+  </div>
+
+  <!-- Appearance -->
+  <div class="panel">
+    <h3>🎨 Appearance</h3>
+    <div class="form-group">
+      <label>Language</label>
+      <select id="setting-language">
+        <option value="en">English</option>
+        <option value="zh">中文 (Simplified)</option>
+        <option value="zht">繁體中文 (Traditional)</option>
+        <option value="de">Deutsch</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Behavior -->
+  <div class="panel">
+    <h3>⚙️ Behavior</h3>
+    <div class="checkbox-group" style="margin-bottom:12px">
+      <input type="checkbox" id="setting-minimize-tray">
+      <label for="setting-minimize-tray">Minimize to system tray on close</label>
+    </div>
+    <div class="checkbox-group" style="margin-bottom:12px">
+      <input type="checkbox" id="setting-notifications">
+      <label for="setting-notifications">Show desktop notifications</label>
+    </div>
+    <div class="checkbox-group">
+      <input type="checkbox" id="setting-auto-start">
+      <label for="setting-auto-start">Launch ASRP at system startup</label>
+    </div>
+  </div>
+
+  <!-- T-075: Local AI Model -->
+  <div class="panel">
+    <h3>🧠 Local AI Model</h3>
+    <div id="local-ai-hw-info" style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;line-height:1.8">
+      Detecting hardware...
+    </div>
+
+    <div style="margin-bottom:12px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:4px">Gemma 3 27B (~17 GB)</div>
+      <div id="local-ai-model-status" style="font-size:12px;color:var(--text-secondary)">Checking...</div>
+      <div id="local-ai-dl-wrap" style="display:none;margin-top:8px">
+        <div style="height:8px;background:var(--surface);border-radius:4px;overflow:hidden;border:1px solid var(--border)">
+          <div id="local-ai-dl-bar" style="height:100%;background:#4a8c6a;border-radius:4px;transition:width 0.4s;width:0%"></div>
+        </div>
+        <div id="local-ai-dl-label" style="font-size:11px;color:var(--text-tertiary);margin-top:3px">0%</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="btn btn-primary btn-sm" id="btn-download-model" onclick="downloadLocalModel()">Download Model</button>
+      <button class="btn btn-outline btn-sm" id="btn-delete-model" onclick="deleteLocalModel()" style="display:none">Delete Model</button>
+      <button class="btn btn-outline btn-sm" id="btn-cancel-dl" onclick="cancelDownload()" style="display:none">Cancel</button>
+    </div>
+
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-weight:600;font-size:12px;margin-bottom:6px;color:var(--text-secondary)">Ollama Server</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="ollama-server-status" style="font-size:12px">Checking...</span>
+        <button class="btn btn-outline btn-sm" id="btn-ollama-start" onclick="startOllamaServer()" style="display:none">Start</button>
+        <button class="btn btn-outline btn-sm" id="btn-ollama-stop" onclick="stopOllamaServer()" style="display:none">Stop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- T-083: Updates -->
+  <div class="panel">
+    <h3>🔄 Updates</h3>
+    <div id="updater-status-text" style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">
+      Checking for updates...
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" onclick="checkForUpdates()">Check for Updates</button>
+      <button class="btn btn-primary btn-sm" id="btn-download-update" onclick="downloadUpdate()" style="display:none">Download Update</button>
+      <button class="btn btn-primary btn-sm" id="btn-install-update" onclick="installUpdate()" style="display:none">Restart &amp; Install</button>
+    </div>
+  </div>
+
+  <!-- T-088: Deployment Mode -->
+  <div class="panel">
+    <h3>🖥️ Deployment Mode</h3>
+    <div id="deployment-mode-info" style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+      Detecting environment...
+    </div>
+  </div>
+
+  <!-- T-086/T-087: Self-Test -->
+  <div class="panel">
+    <h3>🧪 Self-Test</h3>
+    <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">
+      Run a comprehensive programmatic test of all major app flows (auth, files, agents, settings, Ollama).
+    </div>
+    <button class="btn btn-outline btn-sm" id="btn-run-self-test" onclick="runSelfTest()">Run Self-Test</button>
+    <div id="self-test-summary" style="margin-top:10px;font-size:12px;display:none"></div>
+  </div>
+
+  <!-- About -->
+  <div class="panel">
+    <h3>ℹ️ About ASRP Desktop</h3>
+    <div id="about-info" style="font-size:13px;color:var(--text-secondary);line-height:2">
+      Loading version info...
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" onclick="window.asrp && window.asrp.system.openPath && Toast.show('Opening docs', 'info')">📖 Documentation</button>
+      <button class="btn btn-outline btn-sm" onclick="Toast.show('GitHub: JackZH26/agent-science-research-platform', 'info')">GitHub</button>
+      <button class="btn btn-outline btn-sm" onclick="Toast.show('Running setup wizard', 'info');setTimeout(()=>Router.navigate('/setup'), 600)">↻ Re-run Setup</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Self-Test Results Modal -->
+<div id="self-test-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:16px;padding:28px;max-width:560px;width:90%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 style="margin:0">🧪 Self-Test Results</h3>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('self-test-modal').style.display='none'">✕</button>
+    </div>
+    <div id="self-test-result-header" style="margin-bottom:16px;padding:12px;border-radius:8px;background:var(--surface)"></div>
+    <div id="self-test-result-list" style="flex:1;overflow-y:auto;font-size:12px;font-family:monospace;line-height:1.8"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  async function loadSettings() {
+    if (!window.asrp) return;
+
+    // Load system info
+    const info = await window.asrp.system.info();
+    const aboutEl = document.getElementById('about-info');
+    if (aboutEl) {
+      aboutEl.innerHTML = `
+        <div>ASRP Desktop v${info.version}</div>
+        <div>Electron v${info.electron} · Node.js v${info.node}</div>
+        <div>Platform: ${info.platform} (${info.arch})</div>
+        <div>Resources: <span style="font-family:monospace;font-size:11px">${info.resourcesPath}</span></div>
+      `;
+    }
+
+    // Load settings
+    const settings = await window.asrp.settings.get();
+
+    setValue('setting-workspace', settings.workspace || '');
+    setValue('setting-default-model', settings.defaultModel || 'claude-sonnet-4-6');
+    setValue('setting-openrouter-key', settings.openrouterKey || '');
+    setValue('setting-budget-daily', settings.budgetDaily || 15);
+    setValue('setting-language', settings.language || 'en');
+    setChecked('setting-minimize-tray', settings.minimizeToTray !== false);
+    setChecked('setting-notifications', settings.notifications !== false);
+    setChecked('setting-auto-start', !!settings.autoStart);
+  }
+
+  function setValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  }
+
+  function setChecked(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.checked = !!value;
+  }
+
+  window.saveSettings = async function() {
+    if (!window.asrp) return;
+    const alert = document.getElementById('settings-alert');
+
+    const updates = {
+      workspace: document.getElementById('setting-workspace').value,
+      defaultModel: document.getElementById('setting-default-model').value,
+      openrouterKey: document.getElementById('setting-openrouter-key').value,
+      budgetDaily: parseFloat(document.getElementById('setting-budget-daily').value) || 15,
+      language: document.getElementById('setting-language').value,
+      minimizeToTray: document.getElementById('setting-minimize-tray').checked,
+      notifications: document.getElementById('setting-notifications').checked,
+      autoStart: document.getElementById('setting-auto-start').checked,
+    };
+
+    const result = await window.asrp.settings.set(updates);
+    if (result.success) {
+      alert.textContent = '✅ Settings saved successfully';
+      alert.className = 'alert success show';
+      Toast.show('Settings saved', 'success');
+      setTimeout(() => { alert.className = 'alert'; }, 3000);
+    } else {
+      alert.textContent = '❌ Failed to save settings: ' + result.error;
+      alert.className = 'alert error show';
+    }
+  };
+
+  window.resetSettings = async function() {
+    if (!window.asrp) return;
+    if (!confirm('Reset all settings to defaults?')) return;
+    await window.asrp.settings.reset();
+    loadSettings();
+    Toast.show('Settings reset to defaults', 'info');
+  };
+
+  window.browseWorkspace = async function() {
+    if (!window.asrp) return;
+    const result = await window.asrp.system.selectDirectory();
+    if (!result.canceled && result.path) {
+      document.getElementById('setting-workspace').value = result.path;
+    }
+  };
+
+  // T-075: Load local AI / Ollama status
+  async function loadLocalAi() {
+    if (!window.asrp || !window.asrp.ollama) return;
+
+    // Hardware info
+    const hwResult = await window.asrp.ollama.detectHardware().catch(() => null);
+    const hwEl = document.getElementById('local-ai-hw-info');
+    if (hwEl && hwResult && hwResult.hardware) {
+      const hw = hwResult.hardware;
+      const ramOk = hw.ram >= 16;
+      const gpuOk = hw.gpuVram >= 8 || hw.gpu !== 'none';
+      const recText = { recommended: '✅ Recommended', possible_slow: '⚠️ May be slow', not_recommended: '❌ Not recommended' }[hwResult.recommendation || 'not_recommended'];
+      hwEl.innerHTML = [
+        '<span>RAM: ' + hw.ram + ' GB ' + (ramOk ? '✅' : '⚠️') + '</span>',
+        '<span style="margin-left:12px">GPU: ' + (hw.gpu !== 'none' ? hw.gpu + (hw.gpuVram ? ' (' + hw.gpuVram + ' GB VRAM) ' : ' ') + (gpuOk ? '✅' : '⚠️') : 'CPU only ⚠️') + '</span>',
+        '<div style="margin-top:4px;font-weight:600">' + recText + '</div>',
+      ].join('');
+    }
+
+    // Model status
+    const status = await window.asrp.ollama.status().catch(() => null);
+    if (!status) return;
+
+    const statusEl = document.getElementById('local-ai-model-status');
+    const btnDl = document.getElementById('btn-download-model');
+    const btnDel = document.getElementById('btn-delete-model');
+    const btnCancel = document.getElementById('btn-cancel-dl');
+    const dlWrap = document.getElementById('local-ai-dl-wrap');
+
+    const hasGemma = status.models.some(function(m) { return m.includes('gemma'); });
+
+    if (!status.installed) {
+      if (statusEl) statusEl.textContent = 'Ollama not installed. ' + window.asrp.ollama.installInstructions ? '' : '';
+      if (btnDl) btnDl.textContent = 'Install Ollama';
+      if (btnDl) btnDl.onclick = async function() {
+        const inst = await window.asrp.ollama.installInstructions();
+        Toast.show(inst.instructions, 'info');
+      };
+    } else if (status.downloading) {
+      if (statusEl) statusEl.textContent = 'Downloading...';
+      if (dlWrap) dlWrap.style.display = 'block';
+      if (btnDl) btnDl.style.display = 'none';
+      if (btnCancel) btnCancel.style.display = '';
+    } else if (hasGemma) {
+      if (statusEl) statusEl.innerHTML = 'Ready <span style="color:var(--success)">&#9679;</span>';
+      if (btnDl) btnDl.style.display = 'none';
+      if (btnDel) btnDel.style.display = '';
+    } else {
+      if (statusEl) statusEl.textContent = 'Not downloaded';
+    }
+
+    // Ollama server status
+    const serverEl = document.getElementById('ollama-server-status');
+    const btnStart = document.getElementById('btn-ollama-start');
+    const btnStop = document.getElementById('btn-ollama-stop');
+    if (serverEl) {
+      if (!status.installed) {
+        serverEl.textContent = 'Ollama not installed';
+      } else if (status.running) {
+        serverEl.innerHTML = '<span style="color:var(--success)">&#9679;</span> Running (localhost:11434)';
+        if (btnStart) btnStart.style.display = 'none';
+        if (btnStop) btnStop.style.display = '';
+      } else {
+        serverEl.innerHTML = '<span style="color:var(--text-tertiary)">&#9679;</span> Stopped';
+        if (btnStart) btnStart.style.display = '';
+        if (btnStop) btnStop.style.display = 'none';
+      }
+    }
+
+    // Subscribe to progress events
+    if (window.asrp.ollama.onDownloadProgress) {
+      window.asrp.ollama.onDownloadProgress(function(data) {
+        var bar = document.getElementById('local-ai-dl-bar');
+        var label = document.getElementById('local-ai-dl-label');
+        var wrap = document.getElementById('local-ai-dl-wrap');
+        if (wrap) wrap.style.display = 'block';
+        if (bar) bar.style.width = data.progress + '%';
+        if (label) label.textContent = data.progress + '% ' + (data.speed ? '· ' + data.speed : '') + (data.eta ? ' · ETA ' + data.eta : '');
+      });
+      window.asrp.ollama.onDownloadComplete(function() {
+        loadLocalAi();
+        Toast.show('Gemma 27B downloaded successfully', 'success');
+      });
+    }
+  }
+
+  window.downloadLocalModel = async function() {
+    if (!window.asrp || !window.asrp.ollama) return;
+    const r = await window.asrp.ollama.pullModel('gemma3:27b');
+    if (r.success) {
+      Toast.show('Downloading Gemma 27B (~17 GB)...', 'info');
+      const btnDl = document.getElementById('btn-download-model');
+      const btnCancel = document.getElementById('btn-cancel-dl');
+      if (btnDl) btnDl.style.display = 'none';
+      if (btnCancel) btnCancel.style.display = '';
+    } else {
+      Toast.show('Failed: ' + r.error, 'error');
+    }
+  };
+
+  window.deleteLocalModel = async function() {
+    if (!confirm('Delete Gemma 27B model from disk?')) return;
+    if (!window.asrp || !window.asrp.ollama) return;
+    const r = await window.asrp.ollama.deleteModel('gemma3:27b');
+    if (r.success) {
+      Toast.show('Model deleted', 'success');
+      loadLocalAi();
+    } else {
+      Toast.show('Delete failed: ' + r.error, 'error');
+    }
+  };
+
+  window.cancelDownload = async function() {
+    if (!window.asrp || !window.asrp.ollama) return;
+    await window.asrp.ollama.cancelPull();
+    Toast.show('Download cancelled', 'info');
+    loadLocalAi();
+  };
+
+  window.startOllamaServer = async function() {
+    if (!window.asrp || !window.asrp.ollama) return;
+    Toast.show('Starting Ollama server...', 'info');
+    await window.asrp.ollama.start();
+    setTimeout(loadLocalAi, 2500);
+  };
+
+  window.stopOllamaServer = async function() {
+    if (!window.asrp || !window.asrp.ollama) return;
+    await window.asrp.ollama.stop();
+    Toast.show('Ollama server stopped', 'info');
+    setTimeout(loadLocalAi, 500);
+  };
+
+  // T-083: Updater functions
+  async function loadUpdaterStatus() {
+    if (!window.asrp || !window.asrp.updater) return;
+    const status = await window.asrp.updater.status().catch(() => null);
+    if (!status) return;
+    updateUpdaterUI(status);
+
+    window.asrp.updater.onStatus(function(s) { updateUpdaterUI(s); });
+  }
+
+  function updateUpdaterUI(status) {
+    const el = document.getElementById('updater-status-text');
+    const btnDl = document.getElementById('btn-download-update');
+    const btnInstall = document.getElementById('btn-install-update');
+
+    if (!el) return;
+
+    if (status.checking) {
+      el.textContent = 'Checking for updates...';
+    } else if (status.ready) {
+      el.textContent = 'Version ' + status.version + ' ready to install';
+      if (btnInstall) btnInstall.style.display = '';
+      if (btnDl) btnDl.style.display = 'none';
+    } else if (status.downloading) {
+      el.textContent = 'Downloading v' + status.version + '... ' + status.progress + '%';
+    } else if (status.available) {
+      el.textContent = 'Update available: v' + status.version;
+      if (btnDl) btnDl.style.display = '';
+    } else if (status.error) {
+      el.textContent = 'Update check failed: ' + status.error;
+    } else {
+      el.textContent = 'ASRP Desktop is up to date';
+    }
+  }
+
+  window.checkForUpdates = async function() {
+    if (!window.asrp || !window.asrp.updater) return;
+    const el = document.getElementById('updater-status-text');
+    if (el) el.textContent = 'Checking...';
+    await window.asrp.updater.check();
+  };
+
+  window.downloadUpdate = async function() {
+    if (!window.asrp || !window.asrp.updater) return;
+    await window.asrp.updater.download();
+    Toast.show('Downloading update...', 'info');
+  };
+
+  window.installUpdate = function() {
+    if (!window.asrp || !window.asrp.updater) return;
+    window.asrp.updater.install();
+  };
+
+  // T-088: Deployment mode detection
+  async function loadDeploymentMode() {
+    if (!window.asrp || !window.asrp.system.isHeadless) return;
+    const el = document.getElementById('deployment-mode-info');
+    try {
+      const res = await window.asrp.system.isHeadless();
+      if (!el) return;
+      if (res.headless) {
+        el.innerHTML = [
+          '<span style="font-weight:600;color:var(--warning)">⚠️ Headless / VPS Mode</span>',
+          '<div style="margin-top:6px;line-height:1.6">No display detected (DISPLAY=' + (res.display || 'unset') + ').',
+          'Running in CLI/headless mode. GUI features are unavailable.',
+          'Use the OpenClaw CLI for agent management.</div>',
+        ].join('');
+      } else {
+        el.innerHTML = '<span style="color:var(--success)">✅ Desktop Mode</span> — GUI display active (' + res.platform + ')';
+      }
+    } catch (err) {
+      if (el) el.textContent = 'Unable to detect deployment mode.';
+    }
+  }
+
+  // T-086/T-087: Self-test runner
+  window.runSelfTest = async function() {
+    if (!window.asrp || !window.asrp.system.selfTest) {
+      Toast.show('Self-test not available', 'error');
+      return;
+    }
+    var btn = document.getElementById('btn-run-self-test');
+    var summary = document.getElementById('self-test-summary');
+    if (btn) { btn.disabled = true; btn.textContent = 'Running…'; }
+    if (summary) summary.style.display = 'none';
+
+    try {
+      var res = await window.asrp.system.selfTest();
+      if (!res.success || !res.result) {
+        Toast.show('Self-test failed to run: ' + (res.error || 'unknown'), 'error');
+        return;
+      }
+      var r = res.result;
+      var allPass = r.failed === 0;
+
+      // Show inline summary
+      if (summary) {
+        summary.style.display = 'block';
+        summary.innerHTML = (allPass
+          ? '<span style="color:var(--success)">✅ All ' + r.passed + ' tests passed</span>'
+          : '<span style="color:var(--error)">❌ ' + r.failed + ' failed / ' + r.passed + ' passed</span>')
+          + ' <span style="color:var(--text-tertiary)">(' + r.durationMs + 'ms)</span>';
+      }
+
+      // Show modal with details
+      var modal = document.getElementById('self-test-modal');
+      var header = document.getElementById('self-test-result-header');
+      var list = document.getElementById('self-test-result-list');
+      if (header) {
+        header.style.background = allPass ? 'rgba(74,140,106,0.1)' : 'rgba(200,92,92,0.1)';
+        header.innerHTML = '<strong>' + (allPass ? '✅ All tests passed' : '❌ ' + r.failed + ' test(s) failed') + '</strong>'
+          + ' &nbsp;|&nbsp; ' + r.passed + ' passed · ' + r.failed + ' failed · ' + r.durationMs + 'ms';
+      }
+      if (list) {
+        list.innerHTML = r.details.map(function(d) {
+          var icon = d.status === 'pass' ? '<span style="color:var(--success)">✓</span>' : '<span style="color:var(--error)">✗</span>';
+          var err = d.error ? ' <span style="color:var(--error);font-size:11px">— ' + d.error + '</span>' : '';
+          return '<div style="padding:2px 0">' + icon + ' ' + d.name + err + '</div>';
+        }).join('');
+      }
+      if (modal) modal.style.display = 'flex';
+
+      Toast.show(allPass ? 'Self-test passed (' + r.passed + ' tests)' : 'Self-test: ' + r.failed + ' failed', allPass ? 'success' : 'error');
+    } catch (err) {
+      Toast.show('Self-test error: ' + err, 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Run Self-Test'; }
+    }
+  };
+
+  loadSettings();
+  loadLocalAi();
+  loadUpdaterStatus();
+  loadDeploymentMode();
+})();
+</script>
