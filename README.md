@@ -61,16 +61,16 @@ ASRP is not a general-purpose agent platform — it's a **science-specific skill
 
 🚧 **Early Development** — Framework design phase. Contributions welcome.
 
-## Case Study: 20 Papers in 16 Days
+## Case Study: 8 Papers in One Week
 
 See [`examples/portfolio/`](examples/portfolio/) for the complete analysis of our founding case study: a researcher + 2 AI agents producing 8 papers across 4 subdisciplines and submitting to leading physics and mathematics journals, including:
-- Fine-structure constant (10 papers)
-- Riemann Hypothesis (2 papers)
-- Superconductivity (3 papers)
+- Fine-structure constant (4 papers)
+- Riemann Hypothesis (1 paper)
+- Superconductivity (1 paper)
 - Membrane models (2 papers)
-- Number theory & mathematical physics (3 papers)
+- Mathematical physics (1 paper)
 
-Key metrics: 449 views, 364 downloads on figshare. 7 papers currently under peer review at journals including Physical Review D, SUST, Foundations of Physics, IJNT, and Experimental Mathematics.
+6 papers submitted to peer-reviewed journals including Physical Review D, SUST, Foundations of Physics, IJNT, and Experimental Mathematics.
 
 ## Community
 
