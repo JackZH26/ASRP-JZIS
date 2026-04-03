@@ -78,4 +78,4 @@ Apache 2.0
 
 ## Author
 
-JZIS — JZ Institute of Science
+[JZIS — JZ Institute of Science](https://www.jzis.org/)

@@ -64,4 +64,4 @@ Apache 2.0
 
 ## 作者
 
-JZIS — JZ Institute of Science
+[JZIS — JZ Institute of Science](https://www.jzis.org/)
