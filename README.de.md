@@ -8,7 +8,7 @@
 
 ## Warum ASRP?
 
-Im März 2026 produzierte ein einzelner Forscher mit Bachelor-Abschluss und zwei KI-Agenten 20 theoretische Physik-Papers in 16 Tagen. Einige wurden abgelehnt. Einige befinden sich im Review. Ein kritisches Experiment wurde während des Prozesses selbst korrigiert — als die Agenten entdeckten, dass sie eine falsche Definition verwendet hatten.
+Im März 2026 produzierten ein Forscher und zwei KI-Agenten 8 Arbeiten in theoretischer Physik und Mathematik innerhalb einer Woche. 6 davon wurden bei Fachzeitschriften eingereicht, darunter Physical Review D, Foundations of Physics und Experimental Mathematics. Ein kritisches Experiment wurde während des Prozesses selbst korrigiert — als die Agenten entdeckten, dass sie eine falsche Definition verwendet hatten.
 
 **Geschwindigkeit ohne Strenge ist Rauschen. ASRP fügt die Strenge hinzu.**
 
@@ -59,7 +59,7 @@ Vollständige Anleitung: [`docs/quickstart.md`](docs/quickstart.md)
 
 ## Fallstudie
 
-Siehe [`examples/portfolio/`](examples/portfolio/) — 20 Papers in 16 Tagen, mit vollständiger Fehleranalyse.
+Siehe [`examples/portfolio/`](examples/portfolio/) — 8 Arbeiten in einer Woche, mit vollständiger Fehleranalyse.
 
 ## Community
 

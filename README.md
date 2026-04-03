@@ -9,7 +9,7 @@
 
 ## Why ASRP?
 
-In March 2026, a single researcher with a bachelor's degree and two AI agents produced 20 theoretical physics papers in 16 days. Some were rejected. Some are under review. One critical experiment was self-corrected mid-process when agents discovered they had used an incorrect definition.
+In March 2026, a researcher and two AI agents produced 8 theoretical physics and mathematics papers in one week, submitting 6 to peer-reviewed journals including Physical Review D, Foundations of Physics, and Experimental Mathematics. Multiple papers are currently under review. One critical experiment was self-corrected mid-process when agents discovered they had used an incorrect definition.
 
 **Speed without rigor is noise. ASRP adds the rigor.**
 
@@ -40,7 +40,7 @@ asrp/
 │   └── template/          # Template for adding new domains
 ├── examples/              # Complete case studies
 │   ├── dd-study/          # Derivative discontinuity study (with error→correction)
-│   └── portfolio/         # 20-paper portfolio analysis
+│   └── portfolio/         # research portfolio analysis
 └── docs/                  # Documentation
     ├── quickstart.md
     ├── methodology.md     # Scientific methodology guide
@@ -63,7 +63,7 @@ ASRP is not a general-purpose agent platform — it's a **science-specific skill
 
 ## Case Study: 20 Papers in 16 Days
 
-See [`examples/portfolio/`](examples/portfolio/) for the complete analysis of our founding case study: a non-physicist researcher + 2 AI agents producing 20 theoretical physics papers across 5 subdisciplines, including:
+See [`examples/portfolio/`](examples/portfolio/) for the complete analysis of our founding case study: a researcher + 2 AI agents producing 8 papers across 4 subdisciplines and submitting to leading physics and mathematics journals, including:
 - Fine-structure constant (10 papers)
 - Riemann Hypothesis (2 papers)
 - Superconductivity (3 papers)
