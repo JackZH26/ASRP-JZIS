@@ -1,0 +1,235 @@
+<div class="auth-page-wrapper">
+  <!-- Nav bar -->
+  <div class="auth-page-nav">
+    <div class="logo-text">ASRP Desktop</div>
+    <span style="font-size:12px;color:var(--text-tertiary)" id="login-version">v0.1.0</span>
+  </div>
+
+  <!-- Centered auth card -->
+  <div class="auth-page-body">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1>Welcome to ASRP</h1>
+        <p id="auth-subtitle">Sign in to continue to your research platform</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" style="margin-bottom:1.5rem">
+        <button class="tab active" id="tab-login" onclick="switchAuthTab('login')">Login</button>
+        <button class="tab" id="tab-register" onclick="switchAuthTab('register')">Register</button>
+      </div>
+
+      <!-- Alert -->
+      <div class="alert" id="login-alert"></div>
+
+      <!-- Login Form -->
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" placeholder="your@email.com" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" required>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="login-remember" checked>
+          <label for="login-remember">Remember me</label>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="login-btn">Sign In</button>
+      </form>
+
+      <!-- Register Form (hidden by default) -->
+      <form id="register-form" style="display:none" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label for="reg-name">Full Name</label>
+          <input type="text" id="reg-name" placeholder="Dr. Jane Smith" autocomplete="name" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-email">Email</label>
+          <input type="email" id="reg-email" placeholder="your@email.com" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-password">Password</label>
+          <input type="password" id="reg-password" placeholder="At least 6 characters" autocomplete="new-password" required minlength="6">
+          <div id="pw-hint" style="font-size:11px;color:var(--text-tertiary);margin-top:4px">Minimum 6 characters</div>
+        </div>
+        <div class="form-group">
+          <label for="reg-confirm">Confirm Password</label>
+          <input type="password" id="reg-confirm" placeholder="Re-enter password" autocomplete="new-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="register-btn">Create Account</button>
+      </form>
+
+      <!-- Local mode note -->
+      <div style="margin-top:1.5rem;text-align:center;font-size:12px;color:var(--text-tertiary)">
+        🔒 Your data stays local. ASRP Desktop works offline.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const STORAGE_TOKEN = 'asrp_token';
+  const STORAGE_USER  = 'asrp_user';
+
+  // ── Helpers ──────────────────────────────────────────────
+  function showAlert(message, type) {
+    const el = document.getElementById('login-alert');
+    if (!el) return;
+    el.textContent = message;
+    el.className = 'alert ' + type + ' show';
+  }
+  function hideAlert() {
+    const el = document.getElementById('login-alert');
+    if (el) el.className = 'alert';
+  }
+  function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.disabled = loading;
+    if (loading) btn.style.opacity = '0.7';
+    else btn.style.opacity = '';
+  }
+
+  // ── Version ───────────────────────────────────────────────
+  if (window.asrp) {
+    window.asrp.system.info().then(function(info) {
+      var el = document.getElementById('login-version');
+      if (el) el.textContent = 'v' + info.version;
+    });
+  }
+
+  // ── Auto-login check ──────────────────────────────────────
+  (async function checkExistingSession() {
+    if (!window.asrp) return;
+    var token = localStorage.getItem(STORAGE_TOKEN);
+    if (!token) return;
+    var user = await window.asrp.auth.user(token);
+    if (!user) {
+      localStorage.removeItem(STORAGE_TOKEN);
+      localStorage.removeItem(STORAGE_USER);
+      return;
+    }
+    if (user.setupComplete) {
+      Router.navigate('/dashboard');
+    } else {
+      Router.navigate('/setup');
+    }
+  })();
+
+  // ── Tab switching ─────────────────────────────────────────
+  window.switchAuthTab = function(tab) {
+    hideAlert();
+    var loginForm = document.getElementById('login-form');
+    var regForm   = document.getElementById('register-form');
+    var subtitle  = document.getElementById('auth-subtitle');
+    var tabLogin  = document.getElementById('tab-login');
+    var tabReg    = document.getElementById('tab-register');
+
+    if (tab === 'login') {
+      loginForm.style.display = 'block';
+      regForm.style.display   = 'none';
+      subtitle.textContent    = 'Sign in to continue to your research platform';
+      tabLogin.classList.add('active');
+      tabReg.classList.remove('active');
+    } else {
+      loginForm.style.display = 'none';
+      regForm.style.display   = 'block';
+      subtitle.textContent    = 'Create your ASRP account';
+      tabLogin.classList.remove('active');
+      tabReg.classList.add('active');
+    }
+  };
+
+  // ── Login handler ─────────────────────────────────────────
+  window.handleLogin = async function(e) {
+    e.preventDefault();
+    if (!window.asrp) { showAlert('IPC not available', 'error'); return; }
+    hideAlert();
+
+    var email    = document.getElementById('login-email').value.trim();
+    var password = document.getElementById('login-password').value;
+
+    if (!email) { showAlert('Please enter your email address', 'error'); return; }
+    if (!password) { showAlert('Please enter your password', 'error'); return; }
+
+    setLoading('login-btn', true);
+    try {
+      var result = await window.asrp.auth.login(email, password);
+      if (!result.success) {
+        showAlert(result.error || 'Login failed', 'error');
+        return;
+      }
+      localStorage.setItem(STORAGE_TOKEN, result.token);
+      localStorage.setItem(STORAGE_USER, JSON.stringify(result.user));
+      showAlert('Login successful! Loading...', 'success');
+      setTimeout(function() {
+        if (result.user) {
+          // Check setup complete via fresh user fetch
+          window.asrp.auth.user(result.token).then(function(u) {
+            if (u && u.setupComplete) {
+              Router.navigate('/dashboard');
+            } else {
+              Router.navigate('/setup');
+            }
+          });
+        }
+      }, 400);
+    } catch (err) {
+      showAlert('Login error: ' + String(err), 'error');
+    } finally {
+      setLoading('login-btn', false);
+    }
+  };
+
+  // ── Register handler ──────────────────────────────────────
+  window.handleRegister = async function(e) {
+    e.preventDefault();
+    if (!window.asrp) { showAlert('IPC not available', 'error'); return; }
+    hideAlert();
+
+    var name     = document.getElementById('reg-name').value.trim();
+    var email    = document.getElementById('reg-email').value.trim();
+    var password = document.getElementById('reg-password').value;
+    var confirm  = document.getElementById('reg-confirm').value;
+
+    if (!name)     { showAlert('Please enter your name', 'error'); return; }
+    if (!email)    { showAlert('Please enter your email', 'error'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showAlert('Please enter a valid email address', 'error'); return;
+    }
+    if (password.length < 6) {
+      showAlert('Password must be at least 6 characters', 'error'); return;
+    }
+    if (password !== confirm) {
+      showAlert('Passwords do not match', 'error'); return;
+    }
+
+    setLoading('register-btn', true);
+    try {
+      var result = await window.asrp.auth.register(name, email, password);
+      if (!result.success) {
+        showAlert(result.error || 'Registration failed', 'error');
+        return;
+      }
+      // Store session
+      localStorage.setItem(STORAGE_TOKEN, result.token);
+      localStorage.setItem(STORAGE_USER, JSON.stringify(result.user));
+
+      // Assign trial key in background
+      if (result.user) {
+        window.asrp.keys.assignTrial(result.user.id).catch(function() {});
+      }
+
+      showAlert('Account created! Redirecting to setup...', 'success');
+      setTimeout(function() { Router.navigate('/setup'); }, 600);
+    } catch (err) {
+      showAlert('Registration error: ' + String(err), 'error');
+    } finally {
+      setLoading('register-btn', false);
+    }
+  };
+})();
+</script>

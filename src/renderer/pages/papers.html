@@ -1,0 +1,550 @@
+<div class="page-header">
+  <div>
+    <h1>Papers</h1>
+    <p>Research papers with version management, pipeline tracking, and submission history</p>
+  </div>
+  <div class="actions">
+    <button class="btn btn-primary btn-sm" onclick="showNewPaperWizard()">+ New Paper</button>
+  </div>
+</div>
+
+<!-- Papers Grid -->
+<div id="papers-list-view">
+  <div id="papers-grid">
+    <div class="loading"><div class="spinner"></div> Loading papers...</div>
+  </div>
+</div>
+
+<!-- Paper Detail View (hidden until card clicked) -->
+<div id="paper-detail-view" style="display:none">
+  <div style="margin-bottom:14px">
+    <button class="btn btn-ghost btn-sm" onclick="backToList()">← Back to Papers</button>
+    <span id="detail-title" style="font-size:16px;font-weight:700;margin-left:12px;color:var(--text)"></span>
+  </div>
+
+  <!-- Tabs -->
+  <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px">
+    <button class="paper-tab active" data-tab="pipeline" onclick="switchTab('pipeline')">Pipeline</button>
+    <button class="paper-tab" data-tab="versions" onclick="switchTab('versions')">Versions</button>
+    <button class="paper-tab" data-tab="diff" onclick="switchTab('diff')">Diff</button>
+    <button class="paper-tab" data-tab="reviews" onclick="switchTab('reviews')">Reviews</button>
+    <button class="paper-tab" data-tab="submission" onclick="switchTab('submission')">Submission</button>
+    <button class="paper-tab" data-tab="preview" onclick="switchTab('preview')">PDF Preview</button>
+  </div>
+
+  <!-- Pipeline Tab (T-055) -->
+  <div id="tab-pipeline" class="paper-tab-content">
+    <div class="panel">
+      <h3 style="margin-bottom:20px">Pipeline Status</h3>
+      <div id="pipeline-viz" style="overflow-x:auto;padding-bottom:8px"></div>
+      <p style="font-size:12px;color:var(--text-tertiary);margin-top:16px" id="pipeline-note"></p>
+    </div>
+  </div>
+
+  <!-- Versions Tab (T-056) -->
+  <div id="tab-versions" class="paper-tab-content" style="display:none">
+    <div style="display:flex;gap:12px">
+      <div class="panel" style="width:220px;min-width:180px;padding:0">
+        <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-secondary)">VERSION HISTORY</div>
+        <div id="versions-timeline" style="padding:8px 0"></div>
+      </div>
+      <div class="panel" style="flex:1;min-width:0">
+        <div id="version-preview-content" style="font-family:var(--font-mono);font-size:12px;line-height:1.7;white-space:pre-wrap;color:var(--text-secondary);padding:4px">Select a version to preview</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diff Tab (T-057) -->
+  <div id="tab-diff" class="paper-tab-content" style="display:none">
+    <div class="panel mb-2" style="padding:12px 14px">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:13px;font-weight:500">Version A:</label>
+          <select id="diff-version-a" class="select-sm"></select>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <label style="font-size:13px;font-weight:500">Version B:</label>
+          <select id="diff-version-b" class="select-sm"></select>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="runDiff()">Compare →</button>
+      </div>
+    </div>
+    <div id="diff-result" class="panel" style="padding:0;overflow:auto">
+      <div style="padding:20px;color:var(--text-tertiary);font-size:13px;text-align:center">Select two versions and click Compare</div>
+    </div>
+  </div>
+
+  <!-- Reviews Tab (T-058) -->
+  <div id="tab-reviews" class="paper-tab-content" style="display:none">
+    <div id="reviews-accordion"></div>
+  </div>
+
+  <!-- Submission Tab (T-060) -->
+  <div id="tab-submission" class="paper-tab-content" style="display:none">
+    <div class="panel" style="padding:0">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-weight:600;font-size:14px">Submission History</span>
+        <button class="btn btn-primary btn-sm" onclick="addSubmissionRow()">+ Add Entry</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="submission-table">
+          <thead><tr>
+            <th>Journal</th>
+            <th>Submitted</th>
+            <th>Status</th>
+            <th>Response Date</th>
+            <th>Notes</th>
+            <th style="width:60px">Save</th>
+          </tr></thead>
+          <tbody id="submission-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Preview Tab (T-059) -->
+  <div id="tab-preview" class="paper-tab-content" style="display:none">
+    <div class="panel" style="padding:0;min-height:500px">
+      <iframe id="paper-pdf-iframe" style="width:100%;height:550px;border:none" title="Paper PDF"></iframe>
+      <div id="paper-pdf-fallback" style="padding:32px;text-align:center">
+        <div style="font-size:32px;margin-bottom:12px">📕</div>
+        <p style="color:var(--text-secondary);margin-bottom:12px">No compiled PDF found for this paper.</p>
+        <button class="btn btn-outline btn-sm" onclick="openPaperInExplorer()">Open Paper Directory</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Paper Wizard Modal (T-061) -->
+<div id="new-paper-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center">
+  <div class="panel" style="width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;padding:0">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <h3 style="margin:0">New Paper Wizard</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeWizard()">✕</button>
+    </div>
+    <div style="padding:20px">
+      <div class="alert" id="wizard-alert"></div>
+      <div class="form-group">
+        <label>Paper Title <span style="color:var(--error)">*</span></label>
+        <input type="text" id="wiz-title" placeholder="e.g. Double-Delta DFT Corrections for Multi-Well Systems">
+      </div>
+      <div class="form-group">
+        <label>Core Claims (one per line, up to 3)</label>
+        <textarea id="wiz-claims" rows="3" placeholder="1. LDA over-binds by >1% in multi-well case&#10;2. DD correction with exact KS gap restores accuracy&#10;3. Result scales to N-well systems" style="resize:vertical"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Target Journal</label>
+        <input type="text" id="wiz-journal" placeholder="e.g. Physical Review B, J. Chem. Phys.">
+      </div>
+      <div class="form-group">
+        <label>Evidence Level per Claim</label>
+        <div style="display:flex;gap:16px;margin-top:4px">
+          <label style="font-size:13px"><input type="radio" name="evidence" value="A" checked> A — Strong (confirmed experiments)</label>
+          <label style="font-size:13px"><input type="radio" name="evidence" value="B"> B — Moderate (preliminary)</label>
+          <label style="font-size:13px"><input type="radio" name="evidence" value="C"> C — Weak (hypothesis only)</label>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-primary" onclick="submitWizard()">Create Paper & Start Pipeline</button>
+        <button class="btn btn-outline" onclick="closeWizard()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.paper-tab {
+  padding:8px 16px;border:none;background:transparent;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px
+}
+.paper-tab.active,.paper-tab:hover { color:var(--accent);border-bottom-color:var(--accent) }
+.paper-tab-content { }
+.select-sm { padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg-secondary);color:var(--text) }
+.pipeline-stage {
+  display:flex;flex-direction:column;align-items:center;min-width:80px
+}
+.pipeline-circle {
+  width:36px;height:36px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;background:var(--bg-secondary);color:var(--text-tertiary);transition:all 0.2s
+}
+.pipeline-circle.done { background:var(--success,#2a7a4b);color:#fff;border-color:var(--success) }
+.pipeline-circle.current { background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 0 0 3px rgba(74,140,106,0.2) }
+.pipeline-label { font-size:11px;text-align:center;margin-top:5px;color:var(--text-secondary);max-width:72px }
+.pipeline-line { height:2px;flex:1;background:var(--border);min-width:16px;align-self:center;margin-bottom:20px }
+.pipeline-line.done { background:var(--success) }
+.version-item {
+  padding:8px 14px;cursor:pointer;border-left:3px solid transparent;font-size:13px
+}
+.version-item:hover { background:var(--hover-bg,rgba(0,0,0,0.04)) }
+.version-item.current-v { border-left-color:var(--accent);background:var(--accent-subtle,rgba(74,140,106,0.07)) }
+.diff-line { font-family:var(--font-mono);font-size:12px;line-height:1.6;white-space:pre;padding:0 14px }
+.diff-added { background:#d4edda;color:#155724 }
+.diff-removed { background:#f8d7da;color:#721c24 }
+.diff-changed { background:#fff3cd;color:#856404 }
+.diff-header { background:var(--bg-secondary);color:var(--text-secondary);padding:4px 14px;font-size:11px;font-family:var(--font-mono) }
+.review-section { border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden }
+.review-header {
+  padding:12px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;background:var(--bg-secondary);user-select:none
+}
+.review-header:hover { background:var(--hover-bg) }
+.review-body { padding:16px;border-top:1px solid var(--border);display:none }
+.review-body.open { display:block }
+.sub-status { padding:3px 8px;border-radius:10px;font-size:11px;font-weight:600 }
+.sub-status.Submitted { background:#cce5ff;color:#004085 }
+.sub-status.Accepted { background:#d4edda;color:#155724 }
+.sub-status.Rejected { background:#f8d7da;color:#721c24 }
+.sub-status.Revision { background:#fff3cd;color:#856404 }
+.sub-status.Review { background:#e2d9f3;color:#4a0080 }
+.sub-status.Desk { background:#fde;color:#7a0020 }
+.sub-editable { border:1px solid transparent;border-radius:4px;padding:2px 4px;background:transparent;min-width:60px;font-size:13px;cursor:pointer }
+.sub-editable:hover,.sub-editable:focus { border-color:var(--border);background:var(--bg-secondary);outline:none;cursor:text }
+</style>
+
+<script>
+(function() {
+  let papers = [];
+  let currentPaper = null;
+  let paperVersions = [];
+  let submissionData = [];
+  const workspacePath = { path: '' };
+
+  // Pipeline stage definitions
+  const STAGES = [
+    { label: 'Pre-write', short: 'PW' },
+    { label: 'Draft', short: 'Dr' },
+    { label: 'Self-Review', short: 'SR' },
+    { label: 'Albert\nReview', short: 'AR' },
+    { label: 'Revision', short: 'Rv' },
+    { label: 'Tech QA', short: 'QA' },
+    { label: 'Submit', short: 'Sub' },
+  ];
+
+  // Mock versions data
+  const MOCK_VERSIONS = {
+    'paper-001': [
+      { ver: 'v0', date: '2026-03-28', size: '4.2 KB', note: 'Initial outline from experiments' },
+      { ver: 'v1', date: '2026-03-30', size: '8.7 KB', note: 'Draft introduction + methods' },
+      { ver: 'v2', date: '2026-04-01', size: '14.3 KB', note: 'Results section added' },
+      { ver: 'v3', date: '2026-04-02', size: '17.8 KB', note: 'Self-review corrections' },
+    ],
+    'paper-002': [
+      { ver: 'v0', date: '2026-03-20', size: '3.1 KB', note: 'Outline' },
+      { ver: 'v1', date: '2026-03-25', size: '11.5 KB', note: 'Full draft' },
+    ],
+  };
+
+  const MOCK_VERSION_CONTENT = {
+    'v0': `\\documentclass{article}\n\\title{Double-Delta DFT Corrections}\n\\begin{document}\n\\maketitle\n\n\\section{Introduction}\nOutline: LDA binding energy corrections for multi-well potential...\n\n% TODO: expand\n\\end{document}`,
+    'v1': `\\documentclass{article}\n\\title{Double-Delta DFT Corrections}\n\\author{ASRP System}\n\\begin{document}\n\\maketitle\n\n\\section{Introduction}\nDensity functional theory (DFT) systematically over-binds in multi-well systems.\nThe double-delta (DD) correction addresses this via the exact Kohn-Sham gap.\n\n\\section{Methods}\nWe use the iDEA code to compute reverse-engineered KS potentials.\nThe DD correction is $\\Delta E = E_{DD} - E_{LDA}$.\n\n\\end{document}`,
+    'v2': `\\documentclass{article}\n\\title{Double-Delta DFT Corrections for Multi-Well Systems}\n\\author{ASRP System}\n\\date{\\today}\n\\begin{document}\n\\maketitle\n\n\\section{Introduction}\nDensity functional theory (DFT) systematically over-binds in multi-well systems.\nThe double-delta (DD) correction addresses this via the exact Kohn-Sham gap.\n\n\\section{Methods}\nWe use the iDEA code with tolerance $10^{-6}$ to compute the exact KS potential.\nThe correction is applied per equation (3).\n\n\\section{Results}\nFor $d = 5, 6, 7$: $\\Delta E_{DD} = +0.215, +0.198, +0.176$ Hartree respectively.\nLDA over-binds by $1.3\\%$ relative to exact result.\n\n\\end{document}`,
+    'v3': `\\documentclass{article}\n\\title{Double-Delta DFT Corrections for Multi-Well Systems}\n\\author{ASRP System}\n\\date{\\today}\n\\begin{document}\n\\maketitle\n\n\\section{Introduction}\nDensity functional theory (DFT) systematically over-binds in multi-well systems.\nThe double-delta (DD) correction addresses this via the exact Kohn-Sham gap [1].\nHere we demonstrate the correction for $N$-well systems with $N=1\\ldots7$.\n\n\\section{Methods}\nWe use the iDEA reverse-KS code with convergence tolerance $10^{-6}$.\nCorrection term: $\\Delta E_{DD} = -\\frac{1}{2}\\Delta v_{xc} \\cdot N_e$.\n\n\\section{Results}\nFor well separations $d = 5, 6, 7$ Bohr:\n$\\Delta E_{DD} = +0.215, +0.198, +0.176$ Hartree.\nLDA over-binds by $1.3\\%$; DD correction restores accuracy to $<0.01\\%$.\n\n\\section{Conclusion}\nDD corrections are necessary for multi-well DFT; exact KS gap is obtainable via iDEA.\n\n\\end{document}`,
+  };
+
+  // Mock reviews
+  const MOCK_REVIEWS = [
+    { title: 'Self-Review R1 (Structure)', status: 'Passed', content: '## Structure Review\n\n**Introduction**: Clear motivation, appropriate length.\n\n**Methods**: iDEA code version pinned. Tolerance stated.\n\n**Results**: Figures needed for $d$-series plot.\n\n**Conclusion**: Matches claims. ✓\n\n*Overall: Minor revisions — add figures.*' },
+    { title: 'Self-Review R2 (Adversarial)', status: 'Minor Issues', content: '## Adversarial Review\n\n**Claim 1** (LDA over-binds >1%): Confirmed by EXP-001. ✓\n\n**Claim 2** (DD restores accuracy): EXP-003 in progress — cannot fully confirm yet.\n\n**Potential critique**: DD sign depends on KS gap definition (see Reviewer comment in EXP-002). Needs clarification.\n\n*Hold for EXP-003 completion.*' },
+    { title: 'Albert Review', status: 'Major Issues', content: '## Theorist Review (Albert)\n\n**Theoretical consistency**: DD correction derivation needs to cite original Perdew 1982 framework.\n\n**Numerical**: iDEA tolerance $10^{-6}$ — verify this is tight enough for 5-digit accuracy in DD value.\n\n**Issue**: Equation (3) has sign ambiguity. Please clarify convention.\n\n*Recommend: Revise before submission.*' },
+    { title: 'Revision Response', status: 'Minor Issues', content: '## Response to Albert Review\n\n1. Added Perdew 1982 citation in §1.\n2. Verified: $10^{-6}$ tolerance gives DD accurate to $\\pm 0.0001$ Hartree.\n3. Equation (3) sign convention clarified with footnote.\n\n*Ready for Tech QA.*' },
+  ];
+
+  // Mock submissions
+  const MOCK_SUBMISSIONS = {
+    'paper-002': [
+      { journal: 'Physical Review B', submitted: '2026-03-28', status: 'Under Review', response: '', notes: 'Preprint on arXiv 2026.03.123' },
+    ],
+  };
+
+  // ---- Load papers ----
+  async function loadPapers() {
+    if (!window.asrp) return;
+    const ws = await window.asrp.system.workspace();
+    workspacePath.path = ws.path;
+    const { papers: p } = await window.asrp.papers.list();
+    papers = p;
+    renderPapers(papers);
+  }
+
+  function renderPapers(list) {
+    const container = document.getElementById('papers-grid');
+    if (!list.length) {
+      container.innerHTML = `<div class="empty-state"><span class="icon">📄</span><h3>No papers yet</h3><p>Create your first paper to begin the pipeline</p><button class="btn btn-primary" onclick="showNewPaperWizard()">+ New Paper</button></div>`;
+      return;
+    }
+    const statusColor = { draft:'var(--warning)', submitted:'var(--accent)', published:'var(--success)', reviewing:'var(--orange)', 'self-review':'var(--orange)', revision:'#e06c00' };
+    const stageMap = { draft: 1, 'self-review': 2, reviewing: 3, revision: 4, submitted: 5, published: 6 };
+
+    container.innerHTML = '<div class="grid-2">' + list.map(p => {
+      const stage = stageMap[p.status] || 1;
+      const versions = MOCK_VERSIONS[p.id] || [];
+      return `<div class="card" style="cursor:pointer" onclick="openPaperDetail('${p.id}')">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:28px">📄</div>
+          <span class="badge" style="background:rgba(0,0,0,0.04);color:${statusColor[p.status]||'var(--text-secondary)'};border:1px solid currentColor">${capitalize(p.status)}</span>
+        </div>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:6px;line-height:1.4">${p.title}</h3>
+        <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px">Stage ${stage}/6 · ${versions.length} version${versions.length !== 1 ? 's' : ''} · ${p.created}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          ${STAGES.slice(0,7).map((s, i) => `<span style="font-size:10px;padding:2px 6px;border-radius:8px;background:${i < stage ? 'var(--success)' : i === stage ? 'var(--accent)' : 'var(--bg-secondary)'};color:${i <= stage ? '#fff' : 'var(--text-tertiary)'}">${s.short}</span>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openPaperDetail('${p.id}')">Open →</button>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+  }
+
+  // ---- Detail View ----
+  window.openPaperDetail = function(paperId) {
+    currentPaper = papers.find(p => p.id === paperId);
+    if (!currentPaper) return;
+    document.getElementById('papers-list-view').style.display = 'none';
+    document.getElementById('paper-detail-view').style.display = 'block';
+    document.getElementById('detail-title').textContent = currentPaper.title;
+    switchTab('pipeline');
+    loadPipelineTab(paperId);
+  };
+
+  window.backToList = function() {
+    document.getElementById('paper-detail-view').style.display = 'none';
+    document.getElementById('papers-list-view').style.display = 'block';
+    currentPaper = null;
+  };
+
+  window.switchTab = function(name) {
+    document.querySelectorAll('.paper-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.paper-tab-content').forEach(t => t.style.display = 'none');
+    document.querySelector(`[data-tab="${name}"]`).classList.add('active');
+    document.getElementById('tab-' + name).style.display = 'block';
+    if (name === 'versions') loadVersionsTab();
+    if (name === 'diff') loadDiffTab();
+    if (name === 'reviews') loadReviewsTab();
+    if (name === 'submission') loadSubmissionTab();
+    if (name === 'preview') loadPDFPreviewTab();
+  };
+
+  // Pipeline Tab
+  function loadPipelineTab(paperId) {
+    const stageMap = { draft: 1, 'self-review': 2, reviewing: 3, revision: 4, submitted: 5, published: 6 };
+    const current = stageMap[currentPaper.status] || 1;
+    const viz = document.getElementById('pipeline-viz');
+
+    let html = '<div style="display:flex;align-items:flex-start;gap:0">';
+    STAGES.forEach((s, i) => {
+      const done = i < current;
+      const active = i === current;
+      html += `<div class="pipeline-stage"><div class="pipeline-circle ${done ? 'done' : active ? 'current' : ''}">${done ? '✓' : i}</div><div class="pipeline-label">${s.label}</div></div>`;
+      if (i < STAGES.length - 1) html += `<div class="pipeline-line ${done ? 'done' : ''}"></div>`;
+    });
+    html += '</div>';
+    viz.innerHTML = html;
+    document.getElementById('pipeline-note').textContent = `Current stage: ${STAGES[current]?.label || STAGES[current-1]?.label} (Stage ${current}/6)`;
+  }
+
+  // Versions Tab
+  function loadVersionsTab() {
+    if (!currentPaper) return;
+    paperVersions = MOCK_VERSIONS[currentPaper.id] || [];
+    const timeline = document.getElementById('versions-timeline');
+    if (!paperVersions.length) { timeline.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--text-tertiary)">No versions yet</div>'; return; }
+    const lastVer = paperVersions[paperVersions.length - 1].ver;
+    timeline.innerHTML = paperVersions.slice().reverse().map(v => `
+      <div class="version-item ${v.ver === lastVer ? 'current-v' : ''}" onclick="loadVersionContent('${v.ver}')">
+        <div style="font-weight:600;color:var(--text)">${v.ver} ${v.ver === lastVer ? '<span style="font-size:10px;color:var(--accent)">(current)</span>' : ''}</div>
+        <div style="font-size:12px;color:var(--text-secondary)">${v.date}</div>
+        <div style="font-size:11px;color:var(--text-tertiary)">${v.size} · ${v.note}</div>
+      </div>
+    `).join('');
+  }
+
+  window.loadVersionContent = function(ver) {
+    const content = MOCK_VERSION_CONTENT[ver] || `% Version ${ver} content not available`;
+    document.getElementById('version-preview-content').textContent = content;
+    document.querySelectorAll('.version-item').forEach(item => {
+      item.classList.toggle('current-v', item.textContent.includes(ver + ' '));
+    });
+  };
+
+  // Diff Tab
+  function loadDiffTab() {
+    if (!currentPaper) return;
+    const versions = MOCK_VERSIONS[currentPaper.id] || [];
+    const vA = document.getElementById('diff-version-a');
+    const vB = document.getElementById('diff-version-b');
+    vA.innerHTML = versions.map(v => `<option value="${v.ver}">${v.ver}</option>`).join('');
+    vB.innerHTML = versions.map(v => `<option value="${v.ver}">${v.ver}</option>`).join('');
+    if (versions.length >= 2) {
+      vA.value = versions[versions.length - 2].ver;
+      vB.value = versions[versions.length - 1].ver;
+    }
+  }
+
+  // LCS-based line diff (T-057, no external deps)
+  function computeDiff(textA, textB) {
+    const linesA = textA.split('\n');
+    const linesB = textB.split('\n');
+    const m = linesA.length, n = linesB.length;
+    // Build LCS table
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        dp[i][j] = linesA[i-1] === linesB[j-1] ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+      }
+    }
+    // Trace back
+    const ops = [];
+    let i = m, j = n;
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && linesA[i-1] === linesB[j-1]) { ops.unshift({ type: 'same', lineA: i, lineB: j, text: linesA[i-1] }); i--; j--; }
+      else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) { ops.unshift({ type: 'added', lineB: j, text: linesB[j-1] }); j--; }
+      else { ops.unshift({ type: 'removed', lineA: i, text: linesA[i-1] }); i--; }
+    }
+    return ops;
+  }
+
+  window.runDiff = function() {
+    const verA = document.getElementById('diff-version-a').value;
+    const verB = document.getElementById('diff-version-b').value;
+    const textA = MOCK_VERSION_CONTENT[verA] || '';
+    const textB = MOCK_VERSION_CONTENT[verB] || '';
+    const ops = computeDiff(textA, textB);
+    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    let left = '', right = '';
+    const leftNums = [], rightNums = [];
+    let la = 0, lb = 0;
+    ops.forEach(op => {
+      if (op.type === 'same') {
+        la++; lb++;
+        left += `<div class="diff-line"><span style="color:var(--text-tertiary);user-select:none;display:inline-block;width:32px;text-align:right;padding-right:10px;font-size:10px">${la}</span>${esc(op.text)}</div>`;
+        right += `<div class="diff-line"><span style="color:var(--text-tertiary);user-select:none;display:inline-block;width:32px;text-align:right;padding-right:10px;font-size:10px">${lb}</span>${esc(op.text)}</div>`;
+      } else if (op.type === 'removed') {
+        la++;
+        left += `<div class="diff-line diff-removed"><span style="user-select:none;display:inline-block;width:32px;text-align:right;padding-right:10px;font-size:10px">${la}</span>${esc(op.text)}</div>`;
+        right += `<div class="diff-line" style="opacity:0.3"><span style="display:inline-block;width:32px">&nbsp;</span>&nbsp;</div>`;
+      } else {
+        lb++;
+        left += `<div class="diff-line" style="opacity:0.3"><span style="display:inline-block;width:32px">&nbsp;</span>&nbsp;</div>`;
+        right += `<div class="diff-line diff-added"><span style="user-select:none;display:inline-block;width:32px;text-align:right;padding-right:10px;font-size:10px">${lb}</span>${esc(op.text)}</div>`;
+      }
+    });
+
+    document.getElementById('diff-result').innerHTML = `
+      <div class="diff-header" style="display:flex"><div style="flex:1;border-right:1px solid var(--border);padding:6px 14px">${verA}</div><div style="flex:1;padding:6px 14px">${verB}</div></div>
+      <div style="display:flex">
+        <div style="flex:1;overflow-x:auto;border-right:1px solid var(--border)">${left}</div>
+        <div style="flex:1;overflow-x:auto">${right}</div>
+      </div>`;
+  };
+
+  // Reviews Tab
+  function loadReviewsTab() {
+    const container = document.getElementById('reviews-accordion');
+    const reviewStatusColor = { 'Passed': 'var(--success)', 'Minor Issues': 'var(--warning)', 'Major Issues': 'var(--error)' };
+    container.innerHTML = MOCK_REVIEWS.map((r, i) => `
+      <div class="review-section">
+        <div class="review-header" onclick="toggleReview(${i})">
+          <span style="font-weight:600;font-size:14px">${r.title}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="badge" style="background:rgba(0,0,0,0.05);color:${reviewStatusColor[r.status]||'var(--text-secondary)'};border:1px solid currentColor">${r.status}</span>
+            <span id="review-toggle-${i}" style="color:var(--text-tertiary)">▶</span>
+          </div>
+        </div>
+        <div class="review-body" id="review-body-${i}" style="display:none">
+          <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;color:var(--text-secondary)">${r.content}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window.toggleReview = function(i) {
+    const body = document.getElementById('review-body-' + i);
+    const tog = document.getElementById('review-toggle-' + i);
+    const open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    tog.textContent = open ? '▶' : '▼';
+  };
+
+  // Submission Tab
+  function loadSubmissionTab() {
+    if (!currentPaper) return;
+    submissionData = (MOCK_SUBMISSIONS[currentPaper.id] || []).map((s, i) => ({ ...s, id: i }));
+    renderSubmissions();
+  }
+
+  function renderSubmissions() {
+    const tbody = document.getElementById('submission-tbody');
+    const statusOptions = ['Submitted','Under Review','Revision Requested','Accepted','Rejected','Desk Reject'];
+    if (!submissionData.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-tertiary);padding:20px;font-size:13px">No submissions yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = submissionData.map((s, i) => {
+      const key = s.status.split(' ')[0];
+      return `<tr>
+        <td><input class="sub-editable" value="${escHtml(s.journal)}" onchange="updateSubField(${i},'journal',this.value)"></td>
+        <td><input class="sub-editable" type="date" value="${s.submitted}" onchange="updateSubField(${i},'submitted',this.value)" style="min-width:110px"></td>
+        <td><select class="sub-editable" onchange="updateSubField(${i},'status',this.value)">${statusOptions.map(o => `<option ${o===s.status?'selected':''}>${o}</option>`).join('')}</select></td>
+        <td><input class="sub-editable" type="date" value="${s.response||''}" onchange="updateSubField(${i},'response',this.value)" style="min-width:110px"></td>
+        <td><input class="sub-editable" value="${escHtml(s.notes||'')}" style="min-width:120px" onchange="updateSubField(${i},'notes',this.value)"></td>
+        <td><button class="btn btn-primary btn-sm" onclick="saveSubmission(${i})">Save</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  window.updateSubField = function(i, field, val) { submissionData[i][field] = val; };
+  window.saveSubmission = async function(i) {
+    if (window.asrp && currentPaper) {
+      await window.asrp.papers.update(currentPaper.id, { submissions: submissionData });
+      if (typeof Toast !== 'undefined') Toast.show('Submission saved', 'success');
+    }
+  };
+  window.addSubmissionRow = function() {
+    submissionData.push({ journal: '', submitted: new Date().toISOString().slice(0,10), status: 'Submitted', response: '', notes: '', id: submissionData.length });
+    renderSubmissions();
+  };
+
+  // PDF Preview Tab
+  function loadPDFPreviewTab() {
+    if (!currentPaper || !workspacePath.path) return;
+    const pdfPath = workspacePath.path + '/papers/' + currentPaper.id + '/paper.pdf';
+    const iframe = document.getElementById('paper-pdf-iframe');
+    iframe.src = 'file://' + pdfPath;
+    document.getElementById('paper-pdf-fallback').style.display = 'block';
+  }
+
+  window.openPaperInExplorer = async function() {
+    if (window.asrp && currentPaper && workspacePath.path) {
+      await window.asrp.system.openPath(workspacePath.path + '/papers/' + currentPaper.id);
+    }
+  };
+
+  // ---- Wizard (T-061) ----
+  window.showNewPaperWizard = function() {
+    document.getElementById('new-paper-modal').style.display = 'flex';
+  };
+  window.closeWizard = function() {
+    document.getElementById('new-paper-modal').style.display = 'none';
+  };
+  window.submitWizard = async function() {
+    const title = document.getElementById('wiz-title').value.trim();
+    const alertEl = document.getElementById('wizard-alert');
+    if (!title) {
+      alertEl.textContent = 'Title is required'; alertEl.className = 'alert error show'; return;
+    }
+    const claims = document.getElementById('wiz-claims').value.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 3);
+    const journal = document.getElementById('wiz-journal').value.trim();
+    const evidence = document.querySelector('input[name="evidence"]:checked')?.value || 'B';
+    if (!window.asrp) return;
+    const result = await window.asrp.papers.create({ title, claims, targetJournal: journal, evidenceLevel: evidence, status: 'draft', stage: 0 });
+    if (result.success) {
+      alertEl.textContent = `Paper created: ${result.paperId} — Pipeline Stage 0 initiated`;
+      alertEl.className = 'alert success show';
+      setTimeout(() => { closeWizard(); loadPapers(); }, 1400);
+    }
+  };
+
+  function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+
+  loadPapers();
+})();
+</script>

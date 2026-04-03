@@ -1,0 +1,554 @@
+<div class="auth-page-wrapper" id="setup-wrapper">
+  <!-- Nav -->
+  <div class="auth-page-nav">
+    <div class="logo-text">ASRP Desktop — Setup</div>
+    <span id="setup-step-label" style="font-size:12px;color:var(--text-tertiary)">Step 1 of 4</span>
+  </div>
+
+  <!-- Body -->
+  <div class="auth-page-body" style="align-items:flex-start;padding-top:24px">
+    <div style="width:100%;max-width:620px">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:44px;margin-bottom:10px">🔬</div>
+        <h1 style="font-size:24px;font-weight:700;margin-bottom:6px">Configure Your Research Environment</h1>
+        <p style="color:var(--text-secondary);font-size:14px">Set up ASRP Desktop to start running AI-powered experiments</p>
+      </div>
+
+      <!-- Step Progress Bar -->
+      <div style="display:flex;gap:6px;margin-bottom:28px;align-items:center">
+        <div class="sw-step sw-active" id="sw-dot-1">1</div>
+        <div class="sw-line" id="sw-line-1"></div>
+        <div class="sw-step" id="sw-dot-2">2</div>
+        <div class="sw-line" id="sw-line-2"></div>
+        <div class="sw-step" id="sw-dot-3">3</div>
+        <div class="sw-line" id="sw-line-3"></div>
+        <div class="sw-step" id="sw-dot-4">4</div>
+      </div>
+      <div id="sw-step-titles" style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-tertiary);margin-top:-20px;margin-bottom:24px;padding:0 2px">
+        <span style="width:25%;text-align:center">Research Profile</span>
+        <span style="width:25%;text-align:center">API Keys</span>
+        <span style="width:25%;text-align:center">Agent Init</span>
+        <span style="width:25%;text-align:center">Complete</span>
+      </div>
+
+      <!-- ═══════════════════════════════════════
+           STEP 1: Research Profile
+      ════════════════════════════════════════ -->
+      <div id="sw-step-1" class="panel">
+        <h3 style="margin-bottom:6px">👩‍🔬 Research Profile</h3>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">
+          Tell us about your research so ASRP agents can tailor their responses.
+        </p>
+
+        <div class="form-group">
+          <label for="s1-area">Research Area</label>
+          <select id="s1-area">
+            <option value="">— Select your primary field —</option>
+            <option value="Physics">Physics</option>
+            <option value="Chemistry">Chemistry</option>
+            <option value="Biology">Biology</option>
+            <option value="Mathematics">Mathematics</option>
+            <option value="Computer Science">Computer Science</option>
+            <option value="Engineering">Engineering</option>
+            <option value="Medicine">Medicine</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="s1-topic">Specific Topic / Sub-field</label>
+          <input type="text" id="s1-topic" placeholder="e.g. Density Functional Theory, Machine Learning, CRISPR…">
+        </div>
+
+        <div class="form-group">
+          <label for="s1-papername">Name for Papers &amp; Reports</label>
+          <input type="text" id="s1-papername" placeholder="e.g. Dr. Jane Smith">
+          <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">Used in paper authorship and citations</div>
+        </div>
+
+        <div class="form-group">
+          <label for="s1-institution">Institution <span style="font-weight:400;color:var(--text-tertiary)">(optional)</span></label>
+          <input type="text" id="s1-institution" placeholder="e.g. MIT, Cambridge, Independent Researcher…">
+        </div>
+
+        <div class="alert" id="s1-alert"></div>
+
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn btn-primary" onclick="swGoTo(2)">Continue →</button>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════
+           STEP 2: API Keys
+      ════════════════════════════════════════ -->
+      <div id="sw-step-2" class="panel" style="display:none">
+        <h3 style="margin-bottom:6px">🔑 API Configuration</h3>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">
+          Configure AI model access. A trial key has been pre-assigned.
+        </p>
+
+        <!-- Trial Key Display -->
+        <div style="background:var(--accent-light);border:1px solid var(--border-hover);border-radius:10px;padding:16px;margin-bottom:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-weight:600;font-size:14px;color:var(--accent)">☁️ OpenRouter — Trial Key Assigned</span>
+            <span style="font-size:11px;background:var(--accent);color:white;padding:2px 8px;border-radius:8px;font-weight:600">ACTIVE</span>
+          </div>
+          <div style="font-family:monospace;font-size:12px;color:var(--text-secondary);background:white;padding:6px 10px;border-radius:6px;border:1px solid var(--border)" id="s2-trial-key-display">
+            sk-or-trial-key-•••-placeholder
+          </div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-top:6px">
+            Trial key provides access to Claude models via OpenRouter. Use your own key for higher limits.
+          </div>
+        </div>
+
+        <!-- Own OpenRouter Key (optional) -->
+        <div class="form-group">
+          <label for="s2-or-key">Your OpenRouter Key <span style="font-weight:400;color:var(--text-tertiary)">(optional — overrides trial)</span></label>
+          <input type="password" id="s2-or-key" placeholder="sk-or-v1-…">
+        </div>
+
+        <!-- Anthropic Key (optional) -->
+        <div class="form-group">
+          <label for="s2-anthro-key">Anthropic API Key <span style="font-weight:400;color:var(--text-tertiary)">(optional)</span></label>
+          <div style="display:flex;gap:8px">
+            <input type="password" id="s2-anthro-key" placeholder="sk-ant-…" style="flex:1">
+            <button class="btn btn-outline btn-sm" onclick="swTestKey('anthropic')" style="white-space:nowrap;flex-shrink:0">Test</button>
+          </div>
+        </div>
+
+        <!-- Google Key (optional) -->
+        <div class="form-group">
+          <label for="s2-google-key">Google AI Key <span style="font-weight:400;color:var(--text-tertiary)">(optional)</span></label>
+          <div style="display:flex;gap:8px">
+            <input type="password" id="s2-google-key" placeholder="AIza…" style="flex:1">
+            <button class="btn btn-outline btn-sm" onclick="swTestKey('google')" style="white-space:nowrap;flex-shrink:0">Test</button>
+          </div>
+        </div>
+
+        <div class="alert" id="s2-alert"></div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+          <button class="btn btn-ghost btn-sm" onclick="swGoTo(1)">← Back</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-ghost btn-sm" onclick="swSkipKeys()" style="color:var(--text-tertiary)">Skip — use trial only</button>
+            <button class="btn btn-primary" onclick="swSaveKeys()">Continue →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════
+           STEP 3: Agent Initialization
+      ════════════════════════════════════════ -->
+      <div id="sw-step-3" class="panel" style="display:none">
+        <h3 style="margin-bottom:6px">🤖 Agent Initialization</h3>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">
+          Initializing your research team. This takes just a moment.
+        </p>
+
+        <!-- Overall progress -->
+        <div style="margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary);margin-bottom:6px">
+            <span id="sw-init-status">Preparing workspace…</span>
+            <span id="sw-init-pct">0%</span>
+          </div>
+          <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div id="sw-init-bar" style="height:100%;width:0%;background:var(--gradient);border-radius:3px;transition:width 0.4s ease"></div>
+          </div>
+        </div>
+
+        <!-- Agent cards -->
+        <div id="sw-agent-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+          <!-- Populated by JS -->
+        </div>
+
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn btn-primary" id="sw-step3-continue" disabled onclick="swGoTo(4)">Continue →</button>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════
+           STEP 4: Complete
+      ════════════════════════════════════════ -->
+      <div id="sw-step-4" class="panel" style="display:none">
+        <!-- Success Header -->
+        <div style="text-align:center;padding:20px 0 28px">
+          <div style="font-size:56px;margin-bottom:12px">🎉</div>
+          <h2 style="font-size:22px;margin-bottom:8px">ASRP Desktop is Ready!</h2>
+          <p style="color:var(--text-secondary);font-size:14px">Your research environment is configured. Let's do some science.</p>
+          <!-- Checklist -->
+          <div style="display:inline-flex;flex-direction:column;gap:6px;text-align:left;margin-top:16px;background:var(--card-alt);padding:14px 20px;border-radius:10px;border:1px solid var(--border)">
+            <div style="font-size:13px;color:var(--text)">✅ Research profile saved</div>
+            <div style="font-size:13px;color:var(--text)">✅ API keys configured</div>
+            <div style="font-size:13px;color:var(--text)">✅ 6 agents initialized</div>
+            <div style="font-size:13px;color:var(--text)">✅ Workspace ready</div>
+          </div>
+        </div>
+
+        <!-- Local Model Prompt -->
+        <div style="border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:24px;background:var(--card-alt)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span style="font-size:22px">🦙</span>
+            <div>
+              <div style="font-weight:600;font-size:14px">Gemma 3 27B — Run AI Locally</div>
+              <div style="font-size:12px;color:var(--text-secondary)">No API costs. Fully private. ~17 GB download.</div>
+            </div>
+          </div>
+          <!-- Hardware detection -->
+          <div style="display:flex;gap:20px;margin-bottom:12px;font-size:12px;color:var(--text-secondary)">
+            <span>🧠 RAM: <span id="s4-ram" style="font-weight:500;color:var(--text)">Detecting…</span></span>
+            <span>🎮 GPU: <span id="s4-gpu" style="font-weight:500;color:var(--text)">Detecting…</span></span>
+            <span>💾 Disk: <span id="s4-disk" style="font-weight:500;color:var(--text)">Detecting…</span></span>
+          </div>
+          <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px">
+            Requires 32 GB+ RAM or 16 GB VRAM GPU. Ollama must be installed separately.
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="swOllamaDownload()">⬇️ Download Now</button>
+            <button class="btn btn-ghost btn-sm" onclick="swOllamaLater()">Maybe Later</button>
+          </div>
+        </div>
+
+        <!-- CTA Buttons -->
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary btn-lg" style="flex:1;justify-content:center" onclick="swFinish()">
+            Open Dashboard →
+          </button>
+          <button class="btn btn-outline" onclick="swNewExperiment()">
+            New Experiment
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+.sw-step {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: white;
+  color: var(--text-tertiary);
+  font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+.sw-step.sw-active {
+  background: var(--accent); border-color: var(--accent); color: white;
+}
+.sw-step.sw-done {
+  background: var(--success); border-color: var(--success); color: white;
+}
+.sw-line {
+  flex: 1; height: 2px;
+  background: var(--border);
+  transition: background 0.4s ease;
+}
+.sw-line.sw-done { background: var(--success); }
+
+.sw-agent-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  transition: all 0.2s;
+}
+.sw-agent-card.configuring { border-color: var(--accent); background: var(--accent-light); }
+.sw-agent-card.ready { border-color: var(--success); }
+.sw-agent-status { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+.sw-agent-name { font-weight: 600; font-size: 13px; }
+.sw-agent-role { font-size: 11px; color: var(--text-secondary); }
+.sw-agent-model { font-size: 11px; color: var(--text-tertiary); background: var(--surface); padding: 2px 8px; border-radius: 4px; margin-left: auto; }
+</style>
+
+<script>
+(function() {
+  var STORAGE_TOKEN = 'asrp_token';
+  var STORAGE_USER  = 'asrp_user';
+  var currentStep   = 1;
+
+  // ── State ────────────────────────────────────────────────
+  var state = {
+    userId: null,
+    token: null,
+    userName: '',
+    trialKey: null,
+    profile: {},
+    keysData: {},
+  };
+
+  // Load session
+  (function loadSession() {
+    var token = localStorage.getItem(STORAGE_TOKEN);
+    var userJson = localStorage.getItem(STORAGE_USER);
+    if (token) state.token = token;
+    if (userJson) {
+      try {
+        var u = JSON.parse(userJson);
+        state.userId = u.id;
+        state.userName = u.name || '';
+      } catch(e) {}
+    }
+    // Pre-fill paper name from user name
+    var paperNameEl = document.getElementById('s1-papername');
+    if (paperNameEl && state.userName) paperNameEl.value = state.userName;
+  })();
+
+  // ── Step navigation ───────────────────────────────────────
+  window.swGoTo = function(step) {
+    if (step === 2 && currentStep === 1) {
+      // Validate step 1
+      var area = document.getElementById('s1-area').value;
+      if (!area) {
+        swShowAlert('s1-alert', 'Please select a research area', 'error'); return;
+      }
+      var profile = {
+        researchArea: area,
+        specificTopic: document.getElementById('s1-topic').value.trim(),
+        paperName: document.getElementById('s1-papername').value.trim(),
+        institution: document.getElementById('s1-institution').value.trim(),
+      };
+      state.profile = profile;
+      // Save profile
+      if (window.asrp && state.userId) {
+        window.asrp.setup.saveProfile(state.userId, profile).catch(function() {});
+      }
+      swHideAlert('s1-alert');
+    }
+
+    // Update progress UI
+    swMarkDone(currentStep);
+    currentStep = step;
+    swMarkActive(step);
+
+    // Hide all steps
+    for (var i = 1; i <= 4; i++) {
+      var el = document.getElementById('sw-step-' + i);
+      if (el) el.style.display = 'none';
+    }
+    var target = document.getElementById('sw-step-' + step);
+    if (target) target.style.display = 'block';
+
+    // Update label
+    var label = document.getElementById('setup-step-label');
+    if (label) label.textContent = 'Step ' + step + ' of 4';
+
+    // Step-specific init
+    if (step === 2) swInitStep2();
+    if (step === 3) swInitStep3();
+    if (step === 4) swInitStep4();
+  };
+
+  function swMarkDone(step) {
+    var dot = document.getElementById('sw-dot-' + step);
+    if (dot) { dot.classList.remove('sw-active'); dot.classList.add('sw-done'); dot.textContent = '✓'; }
+    var line = document.getElementById('sw-line-' + step);
+    if (line) line.classList.add('sw-done');
+  }
+  function swMarkActive(step) {
+    var dot = document.getElementById('sw-dot-' + step);
+    if (dot) { dot.classList.remove('sw-done'); dot.classList.add('sw-active'); dot.textContent = step; }
+  }
+
+  // ── Alert helpers ─────────────────────────────────────────
+  function swShowAlert(id, msg, type) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'alert ' + type + ' show';
+  }
+  function swHideAlert(id) {
+    var el = document.getElementById(id);
+    if (el) el.className = 'alert';
+  }
+
+  // ── Step 2: Keys ──────────────────────────────────────────
+  function swInitStep2() {
+    if (!window.asrp || !state.userId) return;
+    window.asrp.keys.assignTrial(state.userId).then(function(res) {
+      if (res.success && res.key) {
+        state.trialKey = res.key;
+        var display = document.getElementById('s2-trial-key-display');
+        if (display) {
+          // Show masked key
+          var masked = res.key.slice(0, 10) + '•••' + res.key.slice(-6);
+          display.textContent = masked;
+        }
+      }
+    }).catch(function() {});
+  }
+
+  window.swTestKey = function(provider) {
+    swShowAlert('s2-alert', provider + ' key validation (stub) — OK', 'success');
+    setTimeout(function() { swHideAlert('s2-alert'); }, 2000);
+  };
+
+  window.swSkipKeys = function() {
+    state.keysData = { openrouterKey: state.trialKey || '' };
+    swGoTo(3);
+  };
+
+  window.swSaveKeys = function() {
+    var orKey = document.getElementById('s2-or-key').value.trim();
+    var anthKey = document.getElementById('s2-anthro-key').value.trim();
+    var gKey = document.getElementById('s2-google-key').value.trim();
+
+    state.keysData = {
+      openrouterKey: orKey || (state.trialKey || ''),
+      anthropicKey: anthKey,
+      googleKey: gKey,
+    };
+
+    if (window.asrp && state.userId) {
+      window.asrp.setup.saveKeys(state.userId, state.keysData).catch(function() {});
+    }
+    swGoTo(3);
+  };
+
+  // ── Step 3: Agent Init ────────────────────────────────────
+  var AGENTS = [
+    { emoji: '🧑‍💼', name: 'Aria',    role: 'Assistant', model: 'claude-haiku-4-5' },
+    { emoji: '🧠',   name: 'Albert',  role: 'Theorist',  model: 'claude-opus-4-6' },
+    { emoji: '⚙️',   name: 'Wall-E',  role: 'Engineer',  model: 'claude-sonnet-4-6' },
+    { emoji: '📋',   name: 'Critic',  role: 'Reviewer',  model: 'claude-opus-4-6' },
+    { emoji: '📚',   name: 'Scholar', role: 'Librarian', model: 'claude-haiku-4-5' },
+    { emoji: '🏥',   name: 'DocMario',role: 'ITDoctor',  model: 'claude-haiku-4-5' },
+  ];
+
+  var INIT_MESSAGES = [
+    'Creating workspace…',
+    'Writing SOUL.md…',
+    'Loading agent templates…',
+    'Configuring memory systems…',
+    'Verifying agent…',
+    'Running health check…',
+  ];
+
+  function swInitStep3() {
+    var list = document.getElementById('sw-agent-list');
+    if (!list) return;
+
+    // Render cards
+    list.innerHTML = AGENTS.map(function(a, i) {
+      return '<div class="sw-agent-card" id="sw-card-' + i + '">' +
+        '<span class="sw-agent-status" id="sw-status-' + i + '">⏳</span>' +
+        '<div style="flex:1"><div class="sw-agent-name">' + a.emoji + ' ' + a.name + '</div>' +
+        '<div class="sw-agent-role">' + a.role + '</div></div>' +
+        '<span class="sw-agent-model">' + a.model.replace('claude-', '').replace('-4-6','').replace('-4-5','') + '</span>' +
+      '</div>';
+    }).join('');
+
+    // Start the init IPC call (stub)
+    if (window.asrp && state.userId) {
+      window.asrp.setup.initAgents(state.userId).catch(function() {});
+    }
+
+    // Animate through agents
+    swRunAgentAnimation(0);
+  }
+
+  function swRunAgentAnimation(idx) {
+    if (idx >= AGENTS.length) {
+      // All done
+      var bar = document.getElementById('sw-init-bar');
+      var pct = document.getElementById('sw-init-pct');
+      var status = document.getElementById('sw-init-status');
+      var btn = document.getElementById('sw-step3-continue');
+      if (bar) bar.style.width = '100%';
+      if (pct) pct.textContent = '100%';
+      if (status) status.textContent = 'All agents ready ✓';
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    var totalAgents = AGENTS.length;
+    var progress = Math.round((idx / totalAgents) * 100);
+    var bar = document.getElementById('sw-init-bar');
+    var pct = document.getElementById('sw-init-pct');
+    var statusEl = document.getElementById('sw-init-status');
+
+    if (bar) bar.style.width = progress + '%';
+    if (pct) pct.textContent = progress + '%';
+    if (statusEl) statusEl.textContent = INIT_MESSAGES[idx % INIT_MESSAGES.length];
+
+    // Mark current card as configuring
+    var card = document.getElementById('sw-card-' + idx);
+    var statusIcon = document.getElementById('sw-status-' + idx);
+    if (card) card.classList.add('configuring');
+    if (statusIcon) statusIcon.textContent = '🔵';
+
+    // After delay, mark as ready and move to next
+    setTimeout(function() {
+      if (card) { card.classList.remove('configuring'); card.classList.add('ready'); }
+      if (statusIcon) statusIcon.textContent = '✅';
+
+      var newPct = Math.round(((idx + 1) / totalAgents) * 100);
+      if (bar) bar.style.width = newPct + '%';
+      if (pct) pct.textContent = newPct + '%';
+
+      swRunAgentAnimation(idx + 1);
+    }, 700 + Math.random() * 400);
+  }
+
+  // ── Step 4: Complete ──────────────────────────────────────
+  function swInitStep4() {
+    // Hardware detection placeholder
+    var ramEl  = document.getElementById('s4-ram');
+    var gpuEl  = document.getElementById('s4-gpu');
+    var diskEl = document.getElementById('s4-disk');
+
+    // Simulate detection delay
+    setTimeout(function() {
+      if (ramEl)  ramEl.textContent  = '≥ 16 GB (detected via OS)';
+      if (gpuEl)  gpuEl.textContent  = 'Integrated / Unknown';
+      if (diskEl) diskEl.textContent = 'Checking…';
+    }, 800);
+    setTimeout(function() {
+      if (diskEl) diskEl.textContent = 'Available';
+    }, 1400);
+
+    // Mark setup complete
+    if (window.asrp && state.userId) {
+      window.asrp.setup.complete(state.userId).then(function() {
+        // Update localStorage user record
+        var userJson = localStorage.getItem(STORAGE_USER);
+        if (userJson) {
+          try {
+            var u = JSON.parse(userJson);
+            u.setupComplete = true;
+            localStorage.setItem(STORAGE_USER, JSON.stringify(u));
+          } catch(e) {}
+        }
+      }).catch(function() {});
+    }
+  }
+
+  window.swOllamaDownload = function() {
+    console.log('[Setup] Ollama download requested — Phase 7.5 integration pending');
+    swShowAlert('s4-placeholder', 'Ollama download will be available in a future update.', 'warning');
+  };
+  window.swOllamaLater = function() {
+    console.log('[Setup] Ollama download deferred');
+  };
+
+  window.swFinish = function() {
+    // Show toast
+    if (window.showToast) {
+      window.showToast('Welcome to ASRP Desktop! Your research environment is ready.', 'success');
+    }
+    Router.navigate('/dashboard');
+  };
+
+  window.swNewExperiment = function() {
+    Router.navigate('/experiments');
+  };
+
+  // Start on step 1
+  swMarkActive(1);
+})();
+</script>

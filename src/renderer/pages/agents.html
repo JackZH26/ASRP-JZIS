@@ -1,0 +1,553 @@
+<div class="page-header">
+  <div>
+    <h1>Agents</h1>
+    <p>Manage your AI research agents — status, models, SOUL, and logs</p>
+  </div>
+  <div class="actions">
+    <button class="btn btn-outline btn-sm" onclick="loadAgents()">↻ Refresh</button>
+  </div>
+</div>
+
+<!-- Agent Cards Grid (T-039) -->
+<div class="grid-3 mb-3" id="agent-cards">
+  <div class="loading"><div class="spinner"></div> Loading agents...</div>
+</div>
+
+<!-- T-043: SOUL Editor Modal -->
+<div id="soul-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:none;align-items:center;justify-content:center">
+  <div id="soul-modal-inner" style="background:#fff;border-radius:14px;width:700px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,0.18)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:16px;font-weight:700" id="soul-modal-title">SOUL Editor</div>
+        <div style="font-size:12px;color:var(--text-tertiary);margin-top:2px">Changes take effect after agent restart</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeSoulModal()" style="font-size:18px;padding:4px 8px">×</button>
+    </div>
+    <!-- Tab bar -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border)">
+      <button id="soul-tab-edit" class="soul-tab soul-tab-active" onclick="switchSoulTab('edit')">✏️ Edit</button>
+      <button id="soul-tab-preview" class="soul-tab" onclick="switchSoulTab('preview')">👁 Preview</button>
+    </div>
+    <!-- Edit pane -->
+    <div id="soul-edit-pane" style="flex:1;padding:16px;overflow:auto;min-height:0">
+      <textarea id="soul-textarea" style="width:100%;min-height:340px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:13px;line-height:1.6;border:1px solid var(--border);border-radius:8px;padding:12px;resize:vertical;outline:none;color:var(--text-primary);background:#fafcfa" placeholder="# Agent SOUL\n\nDefine the agent's identity, values, and responsibilities here."></textarea>
+    </div>
+    <!-- Preview pane -->
+    <div id="soul-preview-pane" style="display:none;flex:1;padding:16px;overflow:auto;min-height:0">
+      <div id="soul-preview-content" style="font-size:14px;line-height:1.7;color:var(--text-primary)"></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--border);gap:10px">
+      <span style="font-size:12px;color:var(--text-tertiary)" id="soul-save-status"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="closeSoulModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveSoul()">💾 Save SOUL</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Agent card styles */
+.agent-card-new {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.agent-card-new:hover { box-shadow: 0 4px 16px rgba(74,140,106,0.12); border-color: #b8d4c4; }
+.agent-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  cursor: pointer;
+  user-select: none;
+}
+.agent-card-emoji { font-size: 30px; flex-shrink: 0; }
+.agent-card-info { flex: 1; min-width: 0; }
+.agent-card-name {
+  font-size: 15px; font-weight: 700; color: var(--text-primary);
+  display: flex; align-items: center; gap: 6px;
+}
+.agent-card-role { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.agent-status-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid white; box-shadow: 0 0 0 1px currentColor;
+}
+.agent-status-dot.running { background: var(--success); color: var(--success); }
+.agent-status-dot.idle { background: #d0d8d0; color: #d0d8d0; }
+.agent-status-dot.stopped { background: #ccc; color: #ccc; }
+.agent-status-dot.error { background: var(--error); color: var(--error); }
+
+.agent-card-meta {
+  padding: 0 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.agent-card-model-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.agent-token-bar-bg {
+  height: 5px; background: var(--surface); border-radius: 3px; overflow: hidden; border: 1px solid var(--border);
+}
+.agent-token-bar-fill { height: 100%; border-radius: 3px; background: var(--accent); }
+.agent-sessions-badge {
+  font-size: 11px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 2px 7px; color: var(--text-secondary);
+}
+.agent-actions {
+  display: flex; gap: 6px; padding: 10px 16px; border-top: 1px solid var(--border);
+  background: var(--surface, #fafcfa); flex-wrap: wrap;
+}
+/* Expand detail */
+.agent-detail-section {
+  border-top: 1px solid var(--border);
+  padding: 14px 16px;
+  display: none;
+}
+.agent-detail-section.open { display: block; }
+.agent-log-viewer {
+  background: #1a2330;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  max-height: 160px;
+  overflow-y: auto;
+  color: #a8c4a8;
+  margin-top: 8px;
+}
+.log-line { display: block; }
+.log-line.error { color: #ff6b6b; }
+.log-line.warn  { color: #ffd93d; }
+.log-line.info  { color: #a8c4a8; }
+.log-timestamp { color: #5a8a7a; margin-right: 4px; }
+
+/* Model dropdown */
+.model-select {
+  font-size: 11px; padding: 3px 6px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--surface); color: var(--text-secondary);
+  cursor: pointer; outline: none;
+}
+.model-select:focus { border-color: var(--accent); }
+
+/* Inline rename */
+.agent-name-input {
+  font-size: 15px; font-weight: 700; color: var(--text-primary);
+  border: none; background: transparent; outline: none;
+  border-bottom: 1px dashed var(--accent); padding: 0; margin: 0;
+  width: 120px; max-width: 120px;
+}
+.agent-name-input:focus { background: #f4f7f4; border-radius: 4px; padding: 2px 4px; }
+
+/* SOUL modal tabs */
+.soul-tab {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  padding: 10px 20px; font-size: 13px; cursor: pointer; color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.soul-tab:hover { color: var(--accent); }
+.soul-tab-active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+/* Markdown preview styles */
+#soul-preview-content h1 { font-size: 20px; color: var(--text-primary); margin: 0 0 12px; }
+#soul-preview-content h2 { font-size: 16px; color: var(--text-primary); margin: 16px 0 8px; }
+#soul-preview-content h3 { font-size: 14px; color: var(--accent); margin: 14px 0 6px; }
+#soul-preview-content p { margin: 0 0 10px; color: var(--text-secondary); }
+#soul-preview-content ul,
+#soul-preview-content ol { padding-left: 20px; margin: 0 0 10px; color: var(--text-secondary); }
+#soul-preview-content li { margin-bottom: 4px; }
+#soul-preview-content code {
+  background: #e8f2ec; padding: 1px 5px; border-radius: 4px;
+  font-family: monospace; font-size: 12px; color: #3d7558;
+}
+#soul-preview-content strong { color: var(--text-primary); }
+</style>
+
+<script>
+(function() {
+  const AVAILABLE_MODELS = [
+    { value: 'claude-opus-4-6',   label: 'Opus 4.6' },
+    { value: 'claude-sonnet-4-6', label: 'Sonnet 4.6' },
+    { value: 'claude-haiku-4-5',  label: 'Haiku 4.5' },
+    { value: 'gemma-27b-local',   label: 'Gemma 27B (local)' },
+  ];
+
+  const AGENT_META = {
+    Theorist:  { emoji: '🧠', color: '#7c69f0', desc: 'Generates hypotheses, designs experiments, identifies theoretical gaps.' },
+    Engineer:  { emoji: '⚙️', color: 'var(--success)', desc: 'Writes and runs code, implements simulations, processes data.' },
+    Reviewer:  { emoji: '📋', color: 'var(--warning)', desc: 'Cross-validates results, checks methodology, flags anomalies.' },
+    Librarian: { emoji: '📚', color: '#4a82c8', desc: 'Searches literature, fetches papers, manages citations.' },
+    ITDoctor:  { emoji: '🏥', color: '#c85c96', desc: 'Monitors system health, fixes environment issues, manages dependencies.' },
+    Analyst:   { emoji: '📈', color: '#4a8c8c', desc: 'Analyses data trends, produces charts, identifies patterns.' },
+  };
+
+  let currentAgents = [];
+  let soulAgentName = '';
+  let expandedCards = new Set();
+
+  function shortModel(m) {
+    if (!m) return '—';
+    if (m.includes('opus'))   return 'Opus 4.6';
+    if (m.includes('sonnet')) return 'Sonnet 4.6';
+    if (m.includes('haiku'))  return 'Haiku 4.5';
+    if (m.includes('gemma'))  return 'Gemma 27B';
+    return m;
+  }
+
+  function tokenPct(cost) {
+    const max = 3.5; // rough max per agent per day
+    return Math.min(100, Math.round((cost / max) * 100));
+  }
+
+  function uptimeStr(sec) {
+    if (!sec) return 'Offline';
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  // T-039: Render agent cards
+  function renderCards(agents) {
+    const container = document.getElementById('agent-cards');
+    if (!agents || agents.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>No agents found.</p></div>';
+      return;
+    }
+    container.innerHTML = agents.map((a, i) => {
+      const meta = AGENT_META[a.role] || { emoji: '🤖', color: 'var(--accent)', desc: '' };
+      const statusClass = a.status === 'running' ? 'running' : a.status === 'stopped' ? 'stopped' : 'idle';
+      const statusLabel = a.status.charAt(0).toUpperCase() + a.status.slice(1);
+      const cost = a.tokenUsage ? a.tokenUsage.cost : 0;
+      const pct = tokenPct(cost);
+      const isExpanded = expandedCards.has(a.name);
+      const modelOptions = AVAILABLE_MODELS.map(m =>
+        `<option value="${m.value}" ${a.model === m.value ? 'selected' : ''}>${m.label}</option>`
+      ).join('');
+
+      return `
+        <div class="agent-card-new" id="card-${a.name}">
+          <!-- Card header (T-039) -->
+          <div class="agent-card-header" onclick="toggleCard('${a.name}')">
+            <div class="agent-card-emoji">${meta.emoji}</div>
+            <div class="agent-card-info">
+              <div class="agent-card-name">
+                <input class="agent-name-input" id="name-input-${a.name}"
+                  value="${a.name}" title="Click to rename"
+                  onclick="event.stopPropagation()"
+                  onblur="renameAgent('${a.name}', this)"
+                  onkeydown="if(event.key==='Enter'){this.blur()}"
+                />
+                <span class="agent-status-dot ${statusClass}" title="${statusLabel}"></span>
+              </div>
+              <div class="agent-card-role">${a.role} · ${statusLabel}</div>
+            </div>
+            <div style="font-size:18px;color:var(--text-tertiary);padding-left:4px">${isExpanded ? '▾' : '▸'}</div>
+          </div>
+
+          <!-- Card meta (T-039) -->
+          <div class="agent-card-meta">
+            <div class="agent-card-model-row">
+              <!-- T-042: Model switch dropdown -->
+              <select class="model-select" id="model-select-${a.name}"
+                onchange="switchModel('${a.name}', this.value)"
+                title="Switch model">
+                ${modelOptions}
+              </select>
+              <span class="agent-sessions-badge">📡 ${a.sessions || 0} sessions</span>
+              <span style="font-size:11px;color:var(--text-tertiary)">${uptimeStr(a.uptime)}</span>
+            </div>
+            <!-- Token usage bar -->
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:11px;color:var(--text-tertiary);min-width:60px">Tokens</span>
+              <div class="agent-token-bar-bg" style="flex:1">
+                <div class="agent-token-bar-fill" style="width:${pct}%"></div>
+              </div>
+              <span style="font-size:11px;color:var(--text-tertiary)">$${cost.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <!-- T-044: Action buttons -->
+          <div class="agent-actions">
+            ${a.status === 'running'
+              ? `<button class="btn btn-outline btn-sm" onclick="agentAction('${a.name}','stop')">⏹ Stop</button>
+                 <button class="btn btn-ghost btn-sm" onclick="agentAction('${a.name}','restart')">🔄 Restart</button>`
+              : `<button class="btn btn-primary btn-sm" onclick="agentAction('${a.name}','start')">▶ Start</button>`
+            }
+            <button class="btn btn-ghost btn-sm" onclick="openSoulModal('${a.name}')">📜 SOUL</button>
+            <button class="btn btn-ghost btn-sm" onclick="toggleCard('${a.name}')">
+              ${isExpanded ? '▲ Collapse' : '▼ Details'}
+            </button>
+          </div>
+
+          <!-- T-040: Expandable details -->
+          <div class="agent-detail-section ${isExpanded ? 'open' : ''}" id="detail-${a.name}">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <!-- Left: token breakdown + uptime -->
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">TOKEN USAGE</div>
+                ${a.tokenUsage ? `
+                  <div class="health-item"><span class="icon">📥</span> Input: ${(a.tokenUsage.input/1000).toFixed(1)}K tokens</div>
+                  <div class="health-item"><span class="icon">📤</span> Output: ${(a.tokenUsage.output/1000).toFixed(1)}K tokens</div>
+                  <div class="health-item"><span class="icon">💰</span> Cost today: $${a.tokenUsage.cost.toFixed(2)}</div>
+                ` : '<div class="health-item">No data</div>'}
+                <div style="margin-top:12px">
+                  <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">UPTIME</div>
+                  <div class="health-item"><span class="icon">⏱️</span> ${uptimeStr(a.uptime)}</div>
+                </div>
+              </div>
+              <!-- Right: log viewer (T-045) -->
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">RECENT LOGS</div>
+                <div class="agent-log-viewer" id="log-${a.name}">
+                  ${(a.recentLogs || []).map(line => formatLogLine(line)).join('')}
+                  ${(!a.recentLogs || a.recentLogs.length === 0) ? '<span class="log-line info">No logs available.</span>' : ''}
+                </div>
+                <button class="btn btn-ghost btn-sm mt-1" onclick="refreshLogs('${a.name}')">↻ Refresh logs</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // T-045: Color-coded log lines
+  function formatLogLine(line) {
+    let cls = 'info';
+    if (/error|ERROR|fail|FAIL/i.test(line)) cls = 'error';
+    else if (/warn|WARN|warning/i.test(line)) cls = 'warn';
+    // Extract timestamp prefix
+    const tsMatch = line.match(/^\[[\d:]+\]/);
+    if (tsMatch) {
+      const ts = tsMatch[0];
+      const rest = line.slice(ts.length);
+      return `<span class="log-line ${cls}"><span class="log-timestamp">${ts}</span>${escHtml(rest)}</span>`;
+    }
+    return `<span class="log-line ${cls}">${escHtml(line)}</span>`;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // T-040: Toggle card expand
+  window.toggleCard = function(name) {
+    if (expandedCards.has(name)) {
+      expandedCards.delete(name);
+    } else {
+      expandedCards.add(name);
+    }
+    renderCards(currentAgents);
+  };
+
+  // T-041: Rename agent (inline)
+  window.renameAgent = async function(oldName, inputEl) {
+    const newName = inputEl.value.trim();
+    if (!newName || newName === oldName) return;
+    try {
+      if (window.asrp && window.asrp.agents) {
+        await window.asrp.agents.rename(oldName, newName);
+      }
+      // Update local data
+      currentAgents = currentAgents.map(a => a.name === oldName ? { ...a, name: newName } : a);
+      if (expandedCards.has(oldName)) {
+        expandedCards.delete(oldName);
+        expandedCards.add(newName);
+      }
+      showToast('Agent renamed to ' + newName, 'success');
+      renderCards(currentAgents);
+    } catch (e) {
+      showToast('Rename failed', 'error');
+      inputEl.value = oldName;
+    }
+  };
+
+  // T-042: Switch model
+  window.switchModel = async function(agentName, model) {
+    try {
+      if (window.asrp && window.asrp.agents) {
+        await window.asrp.agents.setModel(agentName, model);
+      }
+      currentAgents = currentAgents.map(a => a.name === agentName ? { ...a, model } : a);
+      showToast(agentName + ' → ' + shortModel(model) + ' (restart to apply)', 'success');
+    } catch (e) {
+      showToast('Model switch failed', 'error');
+    }
+  };
+
+  // T-044: Agent actions (start/stop/restart)
+  window.agentAction = async function(agentName, action) {
+    try {
+      if (window.asrp && window.asrp.agents) {
+        if (action === 'start') await window.asrp.agents.start(agentName);
+        else if (action === 'stop') await window.asrp.agents.stop(agentName);
+        else if (action === 'restart') await window.asrp.agents.restart(agentName);
+      }
+      // Optimistically update status
+      const newStatus = action === 'start' ? 'running' : action === 'stop' ? 'stopped' : 'idle';
+      currentAgents = currentAgents.map(a => a.name === agentName ? { ...a, status: newStatus } : a);
+      showToast(agentName + ' ' + action + ' requested', 'success');
+      renderCards(currentAgents);
+    } catch (e) {
+      showToast('Action failed: ' + e.message, 'error');
+    }
+  };
+
+  // T-045: Refresh logs for an agent
+  window.refreshLogs = async function(agentName) {
+    const logEl = document.getElementById('log-' + agentName);
+    if (!logEl) return;
+    logEl.innerHTML = '<span class="log-line info">Loading...</span>';
+    try {
+      if (window.asrp && window.asrp.agents) {
+        const { logs } = await window.asrp.agents.logs(agentName);
+        logEl.innerHTML = logs.map(formatLogLine).join('') || '<span class="log-line info">No logs.</span>';
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+    } catch (e) {
+      logEl.innerHTML = '<span class="log-line error">Failed to load logs.</span>';
+    }
+  };
+
+  // T-043: SOUL Editor
+  window.openSoulModal = async function(agentName) {
+    soulAgentName = agentName;
+    const modal = document.getElementById('soul-modal');
+    const title = document.getElementById('soul-modal-title');
+    const textarea = document.getElementById('soul-textarea');
+    const saveStatus = document.getElementById('soul-save-status');
+
+    title.textContent = agentName + ' — SOUL Editor';
+    textarea.value = 'Loading...';
+    saveStatus.textContent = '';
+    modal.style.display = 'flex';
+    switchSoulTab('edit');
+
+    try {
+      if (window.asrp && window.asrp.agents) {
+        const { content } = await window.asrp.agents.getSoul(agentName);
+        textarea.value = content || '';
+      }
+    } catch (e) {
+      textarea.value = '# ' + agentName + ' SOUL\n\n(Error loading SOUL file)';
+    }
+  };
+
+  window.closeSoulModal = function() {
+    document.getElementById('soul-modal').style.display = 'none';
+    soulAgentName = '';
+  };
+
+  window.switchSoulTab = function(tab) {
+    const editPane = document.getElementById('soul-edit-pane');
+    const previewPane = document.getElementById('soul-preview-pane');
+    const tabEdit = document.getElementById('soul-tab-edit');
+    const tabPreview = document.getElementById('soul-tab-preview');
+
+    if (tab === 'edit') {
+      editPane.style.display = 'block';
+      previewPane.style.display = 'none';
+      tabEdit.classList.add('soul-tab-active');
+      tabPreview.classList.remove('soul-tab-active');
+    } else {
+      editPane.style.display = 'none';
+      previewPane.style.display = 'block';
+      tabEdit.classList.remove('soul-tab-active');
+      tabPreview.classList.add('soul-tab-active');
+      // Render markdown preview
+      const raw = document.getElementById('soul-textarea').value;
+      document.getElementById('soul-preview-content').innerHTML = renderMarkdown(raw);
+    }
+  };
+
+  // Simple regex-based markdown rendering (T-043)
+  function renderMarkdown(md) {
+    return md
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/^#{3}\s+(.+)$/gm, '<h3>$1</h3>')
+      .replace(/^#{2}\s+(.+)$/gm, '<h2>$1</h2>')
+      .replace(/^#{1}\s+(.+)$/gm, '<h1>$1</h1>')
+      .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+      .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+      .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
+      .replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>\n?)+/g, m => '<ul>' + m + '</ul>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br>')
+      .replace(/^(?!<[hup])(.+)/, '<p>$1')
+      ;
+  }
+
+  window.saveSoul = async function() {
+    if (!soulAgentName) return;
+    const content = document.getElementById('soul-textarea').value;
+    const saveStatus = document.getElementById('soul-save-status');
+    saveStatus.textContent = 'Saving...';
+    try {
+      if (window.asrp && window.asrp.agents) {
+        await window.asrp.agents.saveSoul(soulAgentName, content);
+      }
+      saveStatus.textContent = '✅ Saved — restart agent to apply';
+      saveStatus.style.color = 'var(--success)';
+      showToast('SOUL saved for ' + soulAgentName + ' (restart to apply)', 'success');
+    } catch (e) {
+      saveStatus.textContent = '❌ Save failed';
+      saveStatus.style.color = 'var(--error)';
+    }
+  };
+
+  // Close soul modal on backdrop click
+  document.getElementById('soul-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeSoulModal();
+  });
+
+  // Main load function
+  window.loadAgents = async function() {
+    if (!window.asrp) return;
+    const container = document.getElementById('agent-cards');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div> Loading agents...</div>';
+
+    try {
+      let agents;
+      if (window.asrp.openclaw) {
+        const res = await window.asrp.openclaw.agentStatuses();
+        agents = res.agents || [];
+      } else {
+        const res = await window.asrp.agents.status();
+        agents = (res.agents || []).map(a => ({
+          ...a, sessions: 0, tokenUsage: { input: 0, output: 0, cost: 0 }, uptime: 0, recentLogs: []
+        }));
+      }
+      currentAgents = agents;
+      renderCards(agents);
+    } catch (e) {
+      container.innerHTML = '<div class="empty-state"><p>Error loading agents: ' + e.message + '</p></div>';
+    }
+  };
+
+  function showToast(msg, type) {
+    if (typeof window.showToast === 'function') window.showToast(msg, type);
+  }
+
+  // T-027: Subscribe to real-time status updates
+  if (window.asrp && window.asrp.agents && window.asrp.agents.onStatusUpdate) {
+    window.asrp.agents.onStatusUpdate(function(updatedAgents) {
+      if (currentAgents.length === 0) return;
+      // Merge updated statuses
+      currentAgents = currentAgents.map(a => {
+        const upd = updatedAgents.find(u => u.name === a.name);
+        return upd ? { ...a, ...upd } : a;
+      });
+      renderCards(currentAgents);
+    });
+  }
+
+  loadAgents();
+})();
+</script>

@@ -1,0 +1,416 @@
+import { contextBridge, ipcRenderer } from 'electron';
+
+// ============================================================
+// ASRP Desktop Preload — contextBridge IPC API
+// ============================================================
+// All communication between renderer and main process goes
+// through this typed bridge. nodeIntegration is OFF.
+// ============================================================
+
+type IpcResult<T = unknown> = Promise<T>;
+
+function invoke<T = unknown>(channel: string, ...args: unknown[]): IpcResult<T> {
+  return ipcRenderer.invoke(channel, ...args) as IpcResult<T>;
+}
+
+// ---- System API ----
+const system = {
+  info: () => invoke<{
+    version: string; platform: string; arch: string;
+    electron: string; node: string; resourcesPath: string;
+  }>('system:info'),
+
+  workspace: () => invoke<{ path: string }>('system:workspace'),
+
+  openPath: (targetPath: string) =>
+    invoke<{ success: boolean; error?: string }>('system:open-path', targetPath),
+
+  selectDirectory: () =>
+    invoke<{ canceled: boolean; path: string | null }>('system:select-directory'),
+
+  health: () =>
+    invoke<{ status: string; timestamp: string; uptime: number }>('system:health'),
+
+  selfTest: () =>
+    invoke<{
+      success: boolean;
+      error?: string;
+      result: {
+        passed: number;
+        failed: number;
+        errors: string[];
+        details: Array<{ name: string; status: 'pass' | 'fail'; error?: string }>;
+        durationMs: number;
+      } | null;
+    }>('system:self-test'),
+
+  logError: (errorInfo: Record<string, unknown>) =>
+    invoke<{ success: boolean }>('system:log-error', errorInfo),
+
+  isHeadless: () =>
+    invoke<{ headless: boolean; display: string | null; platform: string }>('system:is-headless'),
+};
+
+// ---- Agents API ----
+const agents = {
+  list: () =>
+    invoke<{ agents: string[]; error?: string }>('agents:list'),
+
+  get: (agentName: string) =>
+    invoke<{ success: boolean; content?: string; error?: string }>('agents:get', agentName),
+
+  status: () =>
+    invoke<{ agents: Array<{ name: string; role: string; status: string; model: string }> }>('agents:status'),
+
+  start: (agentName: string) =>
+    invoke<{ success: boolean; message: string }>('agents:start', agentName),
+
+  stop: (agentName: string) =>
+    invoke<{ success: boolean; message: string }>('agents:stop', agentName),
+
+  restart: (agentName: string) =>
+    invoke<{ success: boolean; message: string }>('agents:restart', agentName),
+
+  getSoul: (agentName: string) =>
+    invoke<{ success: boolean; content?: string }>('agents:get-soul', agentName),
+
+  saveSoul: (agentName: string, content: string) =>
+    invoke<{ success: boolean; error?: string }>('agents:save-soul', agentName, content),
+
+  rename: (oldName: string, newName: string) =>
+    invoke<{ success: boolean; error?: string }>('agents:rename', oldName, newName),
+
+  setModel: (agentName: string, model: string) =>
+    invoke<{ success: boolean; error?: string }>('agents:set-model', agentName, model),
+
+  logs: (agentName: string) =>
+    invoke<{ logs: string[] }>('agents:logs', agentName),
+
+  onStatusUpdate: (callback: (agents: unknown[]) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown[]) => callback(data);
+    ipcRenderer.on('agents:status-update', handler);
+    return () => ipcRenderer.removeListener('agents:status-update', handler);
+  },
+};
+
+// ---- Files API ----
+const files = {
+  list: (dirPath: string) =>
+    invoke<{
+      files: Array<{ name: string; path: string; isDirectory: boolean; size: number }>;
+      error?: string;
+    }>('files:list', dirPath),
+
+  read: (filePath: string) =>
+    invoke<{ success: boolean; content?: string; error?: string }>('files:read', filePath),
+
+  write: (filePath: string, content: string) =>
+    invoke<{ success: boolean; error?: string }>('files:write', filePath, content),
+
+  delete: (filePath: string) =>
+    invoke<{ success: boolean; error?: string }>('files:delete', filePath),
+
+  openDialog: (options?: Electron.OpenDialogOptions) =>
+    invoke<Electron.OpenDialogReturnValue>('files:open-dialog', options),
+
+  saveDialog: (options?: Electron.SaveDialogOptions) =>
+    invoke<Electron.SaveDialogReturnValue>('files:save-dialog', options),
+};
+
+// ---- Papers API ----
+const papers = {
+  list: () =>
+    invoke<{ papers: Array<{ id: string; title: string; status: string; created: string }> }>('papers:list'),
+
+  get: (paperId: string) =>
+    invoke<{ success: boolean; paper?: Record<string, unknown>; error?: string }>('papers:get', paperId),
+
+  create: (metadata: Record<string, unknown>) =>
+    invoke<{ success: boolean; paperId?: string; error?: string }>('papers:create', metadata),
+
+  update: (paperId: string, data: Record<string, unknown>) =>
+    invoke<{ success: boolean; error?: string }>('papers:update', paperId, data),
+
+  export: (paperId: string, format: string) =>
+    invoke<{ success: boolean; message?: string; error?: string }>('papers:export', paperId, format),
+};
+
+// ---- Experiments API ----
+const experiments = {
+  list: () =>
+    invoke<{
+      experiments: Array<{
+        id: string; hypothesis: string; status: string; created: string;
+      }>;
+    }>('experiments:list'),
+
+  get: (expId: string) =>
+    invoke<{ success: boolean; experiment?: Record<string, unknown>; error?: string }>('experiments:get', expId),
+
+  register: (hypothesis: string, metadata: Record<string, unknown>) =>
+    invoke<{ success: boolean; id?: string; error?: string }>('experiments:register', hypothesis, metadata),
+
+  updateStatus: (expId: string, status: string) =>
+    invoke<{ success: boolean; error?: string }>('experiments:update-status', expId, status),
+};
+
+// ---- Audit API ----
+const audit = {
+  list: (options?: { limit?: number; offset?: number }) =>
+    invoke<{
+      entries: Array<{ time: string; agent: string; message: string; severity: string }>;
+      total: number;
+    }>('audit:list', options),
+
+  log: (entry: Record<string, unknown>) =>
+    invoke<{ success: boolean; error?: string }>('audit:log', entry),
+
+  export: () =>
+    invoke<{ success: boolean; message?: string; error?: string }>('audit:export'),
+};
+
+// ---- Settings API ----
+const settings = {
+  get: () =>
+    invoke<Record<string, unknown>>('settings:get'),
+
+  set: (updates: Record<string, unknown>) =>
+    invoke<{ success: boolean; settings?: Record<string, unknown>; error?: string }>('settings:set', updates),
+
+  reset: () =>
+    invoke<{ success: boolean; settings?: Record<string, unknown>; error?: string }>('settings:reset'),
+};
+
+// ---- Auth API ----
+const auth = {
+  register: (name: string, email: string, password: string) =>
+    invoke<{ success: boolean; token?: string; user?: { id: number; name: string; email: string }; error?: string }>(
+      'auth:register', name, email, password
+    ),
+
+  login: (email: string, password: string) =>
+    invoke<{ success: boolean; token?: string; user?: { id: number; name: string; email: string }; error?: string }>(
+      'auth:login', email, password
+    ),
+
+  logout: () =>
+    invoke<{ success: boolean }>('auth:logout'),
+
+  user: (token: string) =>
+    invoke<{ id: number; name: string; email: string; setupComplete: boolean } | null>(
+      'auth:user', token
+    ),
+
+  setupComplete: (userId: number) =>
+    invoke<{ success: boolean; error?: string }>('auth:setup-complete', userId),
+};
+
+// ---- Keys API ----
+const keys = {
+  assignTrial: (userId: number) =>
+    invoke<{ success: boolean; key?: string; error?: string }>('keys:assign-trial', userId),
+
+  get: (userId: number) =>
+    invoke<{ key: string | null }>('keys:get', userId),
+
+  validate: (key: string) =>
+    invoke<{ valid: boolean; error?: string }>('keys:validate', key),
+};
+
+// ---- Setup API ----
+const setup = {
+  saveProfile: (userId: number, profile: Record<string, string>) =>
+    invoke<{ success: boolean; error?: string }>('setup:save-profile', userId, profile),
+
+  saveKeys: (userId: number, apiKeys: Record<string, string>) =>
+    invoke<{ success: boolean; error?: string }>('setup:save-keys', userId, apiKeys),
+
+  initAgents: (userId: number) =>
+    invoke<{ success: boolean; error?: string }>('setup:init-agents', userId),
+
+  complete: (userId: number) =>
+    invoke<{ success: boolean; error?: string }>('setup:complete', userId),
+};
+
+// ---- OpenClaw Bridge API ----
+const openclaw = {
+  agentStatuses: () =>
+    invoke<{ agents: unknown[] }>('openclaw:agent-statuses'),
+
+  workspaceStats: () =>
+    invoke<{ experiments: number; confirmed: number; refuted: number; papers: number }>('openclaw:workspace-stats'),
+
+  tokenUsage: () =>
+    invoke<{
+      models: Array<{ name: string; input: number; output: number; cost: number; budget: number; pct: number }>;
+      dailyTotal: number;
+      dailyBudget: number;
+      pct: number;
+    }>('openclaw:token-usage'),
+
+  researchProgress: () =>
+    invoke<{ rh: number; sc: number; bc: number }>('openclaw:research-progress'),
+
+  gatewayStatus: () =>
+    invoke<{ running: boolean; pid: number | null; uptime: number }>('openclaw:gateway-status'),
+};
+
+// ---- Assistant Chat API ----
+const assistant = {
+  chat: (message: string, context?: string) =>
+    invoke<{ success: boolean; reply: string; model: string; error?: string }>(
+      'assistant:chat', message, context
+    ),
+
+  getModel: () =>
+    invoke<{ model: string; type: 'local' | 'cloud' }>('assistant:get-model'),
+
+  history: () =>
+    invoke<{ messages: Array<{ role: string; content: string; ts: string }> }>('assistant:history'),
+
+  saveMessage: (role: string, content: string) =>
+    invoke<{ success: boolean; error?: string }>('assistant:save-message', role, content),
+
+  clearHistory: () =>
+    invoke<{ success: boolean; error?: string }>('assistant:clear-history'),
+
+  onToggle: (callback: () => void): (() => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('assistant:toggle', handler);
+    return () => ipcRenderer.removeListener('assistant:toggle', handler);
+  },
+};
+
+// ---- Ollama Local AI API ----
+const ollama = {
+  status: () =>
+    invoke<{
+      installed: boolean;
+      running: boolean;
+      models: string[];
+      downloading: boolean;
+      downloadProgress: number;
+      downloadSpeed: string;
+      downloadEta: string;
+      downloadModel: string;
+    }>('ollama:status'),
+
+  detectHardware: () =>
+    invoke<{
+      success: boolean;
+      hardware?: { ram: number; gpu: string; gpuVram: number; os: string; arch: string };
+      recommendation?: 'recommended' | 'possible_slow' | 'not_recommended';
+      error?: string;
+    }>('ollama:detect-hardware'),
+
+  pullModel: (modelName?: string) =>
+    invoke<{ success: boolean; message?: string; error?: string }>('ollama:pull-model', modelName),
+
+  cancelPull: () =>
+    invoke<{ success: boolean; error?: string }>('ollama:cancel-pull'),
+
+  listModels: () =>
+    invoke<{ success: boolean; models: string[]; error?: string }>('ollama:list-models'),
+
+  chat: (messages: Array<{ role: string; content: string }>, model?: string) =>
+    invoke<{ success: boolean; reply: string; error?: string }>('ollama:chat', messages, model),
+
+  deleteModel: (modelName: string) =>
+    invoke<{ success: boolean; error?: string }>('ollama:delete-model', modelName),
+
+  start: () =>
+    invoke<{ success: boolean; error?: string }>('ollama:start'),
+
+  stop: () =>
+    invoke<{ success: boolean; error?: string }>('ollama:stop'),
+
+  installInstructions: () =>
+    invoke<{ url: string; instructions: string }>('ollama:install-instructions'),
+
+  onDownloadProgress: (callback: (data: {
+    progress: number; speed: string; eta: string; model: string; status: string;
+  }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: {
+      progress: number; speed: string; eta: string; model: string; status: string;
+    }) => callback(data);
+    ipcRenderer.on('ollama:download-progress', handler);
+    return () => ipcRenderer.removeListener('ollama:download-progress', handler);
+  },
+
+  onDownloadComplete: (callback: (data: { model: string }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: { model: string }) => callback(data);
+    ipcRenderer.on('ollama:download-complete', handler);
+    return () => ipcRenderer.removeListener('ollama:download-complete', handler);
+  },
+
+  onDownloadError: (callback: (data: { model: string; error: string }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: { model: string; error: string }) => callback(data);
+    ipcRenderer.on('ollama:download-error', handler);
+    return () => ipcRenderer.removeListener('ollama:download-error', handler);
+  },
+};
+
+// ---- Auto-Updater API ----
+const updater = {
+  status: () =>
+    invoke<{
+      checking: boolean; available: boolean; downloading: boolean;
+      ready: boolean; version: string | null; progress: number; error: string | null;
+    }>('updater:status'),
+
+  check: () =>
+    invoke<{ success: boolean; error?: string }>('updater:check'),
+
+  download: () =>
+    invoke<{ success: boolean; error?: string }>('updater:download'),
+
+  install: () =>
+    invoke<{ success: boolean; error?: string }>('updater:install'),
+
+  onStatus: (callback: (status: {
+    checking: boolean; available: boolean; downloading: boolean;
+    ready: boolean; version: string | null; progress: number; error: string | null;
+  }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: {
+      checking: boolean; available: boolean; downloading: boolean;
+      ready: boolean; version: string | null; progress: number; error: string | null;
+    }) => callback(data);
+    ipcRenderer.on('updater:status', handler);
+    return () => ipcRenderer.removeListener('updater:status', handler);
+  },
+};
+
+// ---- Navigation events from main process ----
+const on = (channel: 'navigate', callback: (route: string) => void): (() => void) => {
+  const allowedChannels = ['navigate'] as const;
+  if (!allowedChannels.includes(channel as typeof allowedChannels[number])) {
+    throw new Error(`Channel ${channel} not allowed`);
+  }
+  const handler = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => {
+    callback(args[0] as string);
+  };
+  ipcRenderer.on(channel, handler);
+  // Return unsubscribe function
+  return () => ipcRenderer.removeListener(channel, handler);
+};
+
+// ============================================================
+// Expose to renderer via contextBridge
+// ============================================================
+contextBridge.exposeInMainWorld('asrp', {
+  system,
+  agents,
+  files,
+  papers,
+  experiments,
+  audit,
+  settings,
+  auth,
+  keys,
+  setup,
+  openclaw,
+  assistant,
+  ollama,
+  updater,
+  on,
+});
