@@ -92,9 +92,9 @@ jobs:
         with:
           name: release-windows
           path: |
-            release/*.exe
-            release/*.blockmap
-            release/latest.yml
+            dist/*.exe
+            dist/*.blockmap
+            dist/latest.yml
           retention-days: 14
 
       - name: Upload artifacts (macOS)
@@ -103,10 +103,10 @@ jobs:
         with:
           name: release-macos
           path: |
-            release/*.dmg
-            release/*.zip
-            release/*.blockmap
-            release/latest-mac.yml
+            dist/*.dmg
+            dist/*.zip
+            dist/*.blockmap
+            dist/latest-mac.yml
           retention-days: 14
 
       - name: Upload artifacts (Linux)
@@ -115,10 +115,10 @@ jobs:
         with:
           name: release-linux
           path: |
-            release/*.AppImage
-            release/*.deb
-            release/*.rpm
-            release/latest-linux.yml
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
+            dist/latest-linux.yml
           retention-days: 14
 
   # ---- GitHub Release (tags only) ----
