@@ -15,7 +15,7 @@
 
   // T-038: Quick action buttons
   var QUICK_ACTIONS = [
-    { label: '🧪 Register experiment', msg: 'How do I register an experiment?' },
+    { label: '🧪 Register research', msg: 'How do I register an research?' },
     { label: '🔄 Switch agent model', msg: 'How do I switch an agent model?' },
     { label: '📄 Paper pipeline', msg: 'What is the current paper pipeline status?' },
   ];
@@ -342,7 +342,7 @@
       var emptyIcon = document.createElement('div');
       emptyIcon.className = 'ap-empty-icon';
       emptyIcon.textContent = '✨';
-      var emptyText = document.createTextNode('Ask me anything about your research, experiments, or agents.');
+      var emptyText = document.createTextNode('Ask me anything about your research, researchs, or agents.');
       empty.appendChild(emptyIcon);
       empty.appendChild(emptyText);
       container.appendChild(empty);

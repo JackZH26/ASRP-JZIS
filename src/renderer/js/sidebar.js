@@ -12,7 +12,7 @@ const Sidebar = (() => {
     ]},
     // Section: Research
     { section: 'Research', items: [
-      { route: '/experiments', icon: '🧪', label: 'Experiments',  id: 'nav-experiments' },
+      { route: '/researches',  icon: '🔬', label: 'Researches',  id: 'nav-researches' },
       { route: '/papers',      icon: '📄', label: 'Papers',       id: 'nav-papers' },
       { route: '/files',       icon: '🗂️', label: 'Files',        id: 'nav-files' },
       { route: '/audit',       icon: '📝', label: 'Audit Log',    id: 'nav-audit' },

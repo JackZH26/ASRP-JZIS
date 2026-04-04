@@ -134,7 +134,7 @@ function createTray(): void {
       label: 'New Experiment',
       click: () => {
         mainWindow?.show();
-        mainWindow?.webContents.send('navigate', '/experiments');
+        mainWindow?.webContents.send('navigate', '/researches');
       },
     },
     {

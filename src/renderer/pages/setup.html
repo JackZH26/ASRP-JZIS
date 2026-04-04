@@ -13,7 +13,7 @@
       <div style="text-align:center;margin-bottom:24px">
         <div style="font-size:44px;margin-bottom:10px">🔬</div>
         <h1 style="font-size:24px;font-weight:700;margin-bottom:6px">Configure Your Research Environment</h1>
-        <p style="color:var(--text-secondary);font-size:14px">Set up ASRP Desktop to start running AI-powered experiments</p>
+        <p style="color:var(--text-secondary);font-size:14px">Set up ASRP Desktop to start running AI-powered researchs</p>
       </div>
 
       <!-- Step Progress Bar -->
@@ -286,8 +286,8 @@
           <button class="btn btn-primary btn-lg" style="flex:1;justify-content:center" onclick="swFinish()">
             Open Dashboard →
           </button>
-          <button class="btn btn-outline" onclick="swNewExperiment()">
-            New Experiment
+          <button class="btn btn-outline" onclick="swNewResearch()">
+            New Research
           </button>
         </div>
       </div>
@@ -675,10 +675,10 @@
     },
     {
       emoji: '⚙️', name: 'Wall-E',   role: 'Engineer',  defaultName: 'Wall-E',
-      desc: 'Implements experiments, writes code, and runs computational tasks.',
+      desc: 'Implements researchs, writes code, and runs computational tasks.',
       defaultModel: 'claude-sonnet-4-6',
       suggestedBotName: 'ASRP-WallE',
-      assistantMsg: "You're configuring Wall-E (Engineer). He writes and runs experimental code. Create a Discord bot called 'ASRP-WallE', paste its token, and invite it. Enable Message Content Intent — Wall-E needs to read task messages to execute code.",
+      assistantMsg: "You're configuring Wall-E (Engineer). He writes and runs researchal code. Create a Discord bot called 'ASRP-WallE', paste its token, and invite it. Enable Message Content Intent — Wall-E needs to read task messages to execute code.",
     },
     {
       emoji: '📋', name: 'Critic',   role: 'Reviewer',  defaultName: 'Critic',
@@ -1345,8 +1345,8 @@
     Router.navigate('/dashboard');
   };
 
-  window.swNewExperiment = function() {
-    Router.navigate('/experiments');
+  window.swNewResearch = function() {
+    Router.navigate('/researchs');
   };
 
   // Start on step 1

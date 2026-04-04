@@ -13,7 +13,7 @@
     <p>Overview of your research activity and agent status</p>
   </div>
   <div class="actions">
-    <button class="btn btn-outline btn-sm" onclick="Router.navigate('/experiments')">🧪 New Experiment</button>
+    <button class="btn btn-outline btn-sm" onclick="Router.navigate('/researches')">🧪 New Research</button>
     <button class="btn btn-primary btn-sm" onclick="refreshDashboard()">↻ Refresh</button>
   </div>
 </div>
@@ -21,7 +21,7 @@
 <!-- Stats Row -->
 <div class="grid-5 mb-3" id="stats-row">
   <div class="stat-card accent">
-    <div class="label">Experiments</div>
+    <div class="label">Researches</div>
     <div class="value" id="stat-experiments">—</div>
     <div class="sub" id="stat-experiments-sub">Loading...</div>
   </div>
@@ -47,7 +47,7 @@
   </div>
 </div>
 
-<!-- Agent Status + Recent Experiments -->
+<!-- Agent Status + Recent Researches -->
 <div class="grid-2 mb-3">
   <div class="panel">
     <h3>🤖 Agent Status <span class="badge badge-accent" id="agent-count-badge">— agents</span></h3>
@@ -57,9 +57,9 @@
   </div>
 
   <div class="panel">
-    <h3>🧪 Recent Experiments <span class="badge badge-accent">last 5</span></h3>
+    <h3>🧪 Recent Researches <span class="badge badge-accent">last 5</span></h3>
     <div id="recent-experiments-list">
-      <div class="loading"><div class="spinner"></div> Loading experiments...</div>
+      <div class="loading"><div class="spinner"></div> Loading researches...</div>
     </div>
   </div>
 </div>
@@ -289,7 +289,7 @@
         const progress = await window.asrp.openclaw.researchProgress();
         const progressEl = document.getElementById('research-progress');
         const bars = [
-          { key: 'rh', label: 'Reproducibility & Honesty', color: '#4a8c6a', desc: 'Experiment coverage' },
+          { key: 'rh', label: 'Reproducibility & Honesty', color: '#4a8c6a', desc: 'Research coverage' },
           { key: 'sc', label: 'Scientific Contribution', color: '#7c69f0', desc: 'Novel findings' },
           { key: 'bc', label: 'Broader Context', color: '#4a82c8', desc: 'Citation coverage' },
         ];

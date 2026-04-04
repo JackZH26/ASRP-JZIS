@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron';
 
 // ============================================================
-// EXPERIMENT HANDLERS (channel: 'experiments:*') — [DEMO STUB]
+// RESEARCH HANDLERS (channel: 'experiments:*') — [STUB]
 // ============================================================
 
 export function registerExperimentHandlers(): void {

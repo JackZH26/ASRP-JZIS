@@ -247,7 +247,7 @@ export async function runSelfTest(): Promise<SelfTestResult> {
     const experiments = [
       { id: 'EXP-DEMO-003', hypothesis: 'Multi-well DD', status: 'running', created: new Date().toISOString().slice(0, 10) },
     ];
-    assert(experiments.length > 0, 'experiments stub empty');
+    assert(experiments.length > 0, 'researches stub empty');
     assert(experiments[0].id.startsWith('EXP-'), 'id format bad');
   });
 

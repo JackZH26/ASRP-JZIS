@@ -13,7 +13,7 @@ const Router = (() => {
     '/agents':      { file: 'pages/agents.html',       title: 'Agents',      sidebar: true,  section: 'agents' },
     '/files':       { file: 'pages/files.html',        title: 'Files',       sidebar: true,  section: 'files' },
     '/papers':      { file: 'pages/papers.html',       title: 'Papers',      sidebar: true,  section: 'papers' },
-    '/experiments': { file: 'pages/experiments.html',  title: 'Experiments', sidebar: true,  section: 'experiments' },
+    '/researches':  { file: 'pages/researches.html',   title: 'Researches', sidebar: true,  section: 'researches' },
     '/audit':       { file: 'pages/audit.html',        title: 'Audit Log',   sidebar: true,  section: 'audit' },
     '/settings':    { file: 'pages/settings.html',     title: 'Settings',    sidebar: true,  section: 'settings' },
   };
@@ -44,11 +44,11 @@ const Router = (() => {
   // Preload adjacency map: when on a page, prefetch these pages in background
   const PRELOAD_MAP = {
     '/dashboard':   ['/agents', '/papers'],
-    '/agents':      ['/dashboard', '/experiments'],
-    '/experiments': ['/agents', '/audit'],
-    '/papers':      ['/experiments', '/files'],
+    '/agents':      ['/dashboard', '/researches'],
+    '/researches': ['/agents', '/audit'],
+    '/papers':      ['/researches', '/files'],
     '/files':       ['/papers', '/audit'],
-    '/audit':       ['/dashboard', '/experiments'],
+    '/audit':       ['/dashboard', '/researches'],
     '/settings':    ['/dashboard'],
   };
 
