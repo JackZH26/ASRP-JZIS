@@ -8,11 +8,11 @@ import {
   ipcMain,
   globalShortcut,
   protocol,
-  net,
   dialog,
 } from 'electron';
 import * as path from 'path';
 import * as os from 'os';
+import * as fs from 'fs';
 import { registerIpcHandlers } from './ipc-handlers';
 import * as openclawBridge from './openclaw-bridge';
 import { autoUpdater } from './auto-updater';
@@ -306,16 +306,48 @@ protocol.registerSchemesAsPrivileged([
 // App lifecycle
 app.whenReady().then(() => {
   // Register app:// protocol handler to serve local files
+  // Uses fs.readFileSync which transparently reads from asar archives
   const rendererRoot = path.join(APP_ROOT, 'src', 'renderer');
+
+  const mimeTypes: Record<string, string> = {
+    '.html': 'text/html',
+    '.css': 'text/css',
+    '.js': 'text/javascript',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+  };
+
   protocol.handle('app', (request) => {
     const url = new URL(request.url);
-    // Resolve file path relative to renderer root
-    const filePath = path.join(rendererRoot, decodeURIComponent(url.pathname));
+    const pathname = decodeURIComponent(url.pathname);
+    const filePath = path.join(rendererRoot, pathname);
+
     // Security: prevent path traversal
     if (!filePath.startsWith(rendererRoot)) {
-      return new Response('Forbidden', { status: 403 });
+      return new Response('Forbidden', { status: 403, headers: { 'Content-Type': 'text/plain' } });
     }
-    return net.fetch(`file://${filePath}`);
+
+    try {
+      // fs.readFileSync transparently handles asar archives
+      const data = fs.readFileSync(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+      return new Response(data, {
+        status: 200,
+        headers: { 'Content-Type': contentType },
+      });
+    } catch (err) {
+      console.error(`[app://] Failed to load: ${filePath}`, err);
+      return new Response('Not Found', { status: 404, headers: { 'Content-Type': 'text/plain' } });
+    }
   });
   createWindow();
   createTray();
