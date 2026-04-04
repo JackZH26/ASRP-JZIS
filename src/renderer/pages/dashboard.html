@@ -1,7 +1,7 @@
-<!-- H4: Demo mode banner — visible whenever real OpenClaw is not connected -->
-<div id="demo-banner" style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:8px 16px;margin-bottom:14px;font-size:13px;color:#856404;display:flex;align-items:center;gap:8px">
-  <span>⚠️</span>
-  <span><strong>Demo Mode</strong> — Displaying sample data. Connect to OpenClaw for live data.</span>
+<!-- Status banner — shown when OpenClaw gateway is not connected -->
+<div id="demo-banner" style="background:#e8f4fd;border:1px solid #b8daff;border-radius:8px;padding:8px 16px;margin-bottom:14px;font-size:13px;color:#004085;display:flex;align-items:center;gap:8px">
+  <span>ℹ️</span>
+  <span><strong>Standalone Mode</strong> — Connect to OpenClaw for live agent data, or start a new experiment below.</span>
 </div>
 
 <div class="page-header">
@@ -201,14 +201,18 @@
 
       const agentList = document.getElementById('agent-status-list');
       const roleEmoji = { Theorist: '🧠', Engineer: '⚙️', Reviewer: '📋', Librarian: '📚', ITDoctor: '🏥', Analyst: '📈' };
-      agentList.innerHTML = agents.map(a => `
-        <div class="agent-row">
-          <span class="dot ${a.status === 'running' ? 'online' : a.status === 'stopped' ? 'offline' : 'idle'}"></span>
-          <span class="name">${escHtml(roleEmoji[a.role] || '🤖')} ${escHtml(a.name)}</span>
-          <span class="role">${escHtml(a.role)}</span>
-          <span class="model">${escHtml(shortModel(a.model))}</span>
-        </div>
-      `).join('');
+      if (agents.length === 0) {
+        agentList.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-tertiary);font-size:13px">No agents connected yet.<br>Connect to OpenClaw to see live agent status.</div>';
+      } else {
+        agentList.innerHTML = agents.map(a => `
+          <div class="agent-row">
+            <span class="dot ${a.status === 'running' ? 'online' : a.status === 'stopped' ? 'offline' : 'idle'}"></span>
+            <span class="name">${escHtml(roleEmoji[a.role] || '🤖')} ${escHtml(a.name)}</span>
+            <span class="role">${escHtml(a.role)}</span>
+            <span class="model">${escHtml(shortModel(a.model))}</span>
+          </div>
+        `).join('');
+      }
 
     } catch (e) { console.error('agents load error', e); }
 
@@ -226,13 +230,17 @@
       // T-030: Load audit entries (last 8)
       const { entries } = await window.asrp.audit.list({ limit: 8 });
       const auditList = document.getElementById('audit-trail-list');
-      auditList.innerHTML = entries.map(e => `
-        <div class="audit-entry">
-          <span class="time">${escHtml(e.time)}</span>
-          <span class="agent-tag ${escHtml(e.agent.toLowerCase())}">${escHtml(e.agent)}</span>
-          <span class="msg">${escHtml(e.message)}</span>
-        </div>
-      `).join('');
+      if (entries.length === 0) {
+        auditList.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-tertiary);font-size:13px">No activity yet. Start an experiment to see the audit trail.</div>';
+      } else {
+        auditList.innerHTML = entries.map(e => `
+          <div class="audit-entry">
+            <span class="time">${escHtml(e.time)}</span>
+            <span class="agent-tag ${escHtml(e.agent.toLowerCase())}">${escHtml(e.agent)}</span>
+            <span class="msg">${escHtml(e.message)}</span>
+          </div>
+        `).join('');
+      }
 
     } catch (e) { console.error('audit load error', e); }
 

@@ -13,12 +13,8 @@ export function registerPaperHandlers(): void {
   };
 
   ipcMain.handle('papers:list', async () => {
-    return {
-      papers: [
-        { id: 'paper-001', title: 'Multi-well double-delta DFT analysis', status: 'draft', created: relDate(2) },
-        { id: 'paper-002', title: 'LDA binding energy corrections', status: 'submitted', created: relDate(6) },
-      ],
-    };
+    // Empty initial state — real data from workspace in Phase 7.5
+    return { papers: [] };
   });
 
   ipcMain.handle('papers:get', async (_event, paperId: string) => {

@@ -13,15 +13,8 @@ export function registerExperimentHandlers(): void {
   };
 
   ipcMain.handle('experiments:list', async () => {
-    return {
-      experiments: [
-        { id: 'EXP-DEMO-003', hypothesis: 'Multi-well DD with exact KS gap at d=5,6,7', status: 'running', created: relDate(1) },
-        { id: 'EXP-DEMO-002', hypothesis: 'Prime-spaced wells produce negative DD', status: 'refuted', created: relDate(2) },
-        { id: 'EXP-DEMO-001', hypothesis: 'LDA overestimates 2e atom binding by >1%', status: 'confirmed', created: relDate(2) },
-        { id: 'EXP-DEMO-005', hypothesis: 'Electron membrane model consistent with Stodolna 2013', status: 'confirmed', created: relDate(3) },
-        { id: 'EXP-DEMO-004', hypothesis: 'Fibonacci lattice reduces DFT ill-conditioning', status: 'registered', created: relDate(1) },
-      ],
-    };
+    // Empty initial state — real data from workspace in Phase 7.5
+    return { experiments: [] };
   });
 
   ipcMain.handle('experiments:get', async (_event, expId: string) => {
