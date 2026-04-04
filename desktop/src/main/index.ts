@@ -7,6 +7,8 @@ import {
   shell,
   ipcMain,
   globalShortcut,
+  protocol,
+  net,
 } from 'electron';
 import * as path from 'path';
 import { registerIpcHandlers } from './ipc-handlers';
@@ -43,9 +45,8 @@ function createWindow(): void {
     },
   });
 
-  // Load the renderer
-  const rendererPath = path.join(APP_ROOT, 'src', 'renderer', 'index.html');
-  mainWindow.loadFile(rendererPath);
+  // Load the renderer via custom protocol (sandbox-compatible)
+  mainWindow.loadURL('app://asrp/index.html');
 
   // Show window gracefully
   mainWindow.once('ready-to-show', () => {
@@ -236,8 +237,34 @@ function createAppMenu(): void {
   Menu.setApplicationMenu(menu);
 }
 
+// Register custom protocol for sandbox-safe file loading
+// Must be called before app.whenReady()
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+]);
+
 // App lifecycle
 app.whenReady().then(() => {
+  // Register app:// protocol handler to serve local files
+  const rendererRoot = path.join(APP_ROOT, 'src', 'renderer');
+  protocol.handle('app', (request) => {
+    const url = new URL(request.url);
+    // Resolve file path relative to renderer root
+    const filePath = path.join(rendererRoot, decodeURIComponent(url.pathname));
+    // Security: prevent path traversal
+    if (!filePath.startsWith(rendererRoot)) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    return net.fetch(`file://${filePath}`);
+  });
   createWindow();
   createTray();
   createAppMenu();
@@ -291,8 +318,8 @@ app.on('will-quit', () => {
 app.on('web-contents-created', (_event, contents) => {
   contents.on('will-navigate', (event, url) => {
     const parsedUrl = new URL(url);
-    // Allow file:// for local app pages
-    if (parsedUrl.protocol !== 'file:') {
+    // Allow file:// and app:// for local app pages
+    if (parsedUrl.protocol !== 'file:' && parsedUrl.protocol !== 'app:') {
       event.preventDefault();
       shell.openExternal(url);
     }
