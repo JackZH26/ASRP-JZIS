@@ -179,40 +179,121 @@ export function registerAssistantHandlers(): void {
     } catch { /* ignore */ }
   };
 
+  // Default model for assistant — use Gemini Flash via OpenRouter (fast + cheap)
+  const DEFAULT_ASSISTANT_MODEL = 'google/gemini-2.5-flash';
+  const DEFAULT_ASSISTANT_MODEL_LABEL = 'Gemini 2.5 Flash';
+
   ipcMain.handle('assistant:get-model', async () => {
-    return { model: 'Claude Sonnet 4.6', type: 'cloud' as const };
+    return { model: DEFAULT_ASSISTANT_MODEL_LABEL, type: 'cloud' as const };
   });
 
   ipcMain.handle('assistant:chat', async (_event, message: string, context?: string) => {
     try {
-      const mockResponses: Record<string, string> = {
-        'register': 'To register an experiment, navigate to **Experiments** → click **+ Register Experiment** → fill in your hypothesis and metadata. The system will assign an EXP-ID automatically.',
-        'model': 'To switch an agent\'s model, go to **Agents** → click on the agent card → use the **Model** dropdown. Changes take effect after the agent restarts.',
-        'pipeline': 'The paper pipeline status shows: 2 papers in workspace (1 submitted, 1 draft). Wall-E is running EXP-003 which feeds into the DD paper.',
-        'default': 'I\'m your ASRP research assistant. I can help you navigate the platform, understand experiment results, and manage your agents. What would you like to know?',
-      };
+      // Build messages array with system prompt + context + history + user message
+      const systemPrompt = `You are the ASRP Desktop research assistant. You help users navigate the platform, manage experiments, configure agents, and understand results. Be concise and helpful. If asked about ASRP features, explain how to use them.`;
 
-      const lowerMsg = message.toLowerCase();
-      let reply = mockResponses['default'];
-      if (lowerMsg.includes('register') || lowerMsg.includes('experiment')) {
-        reply = mockResponses['register'];
-      } else if (lowerMsg.includes('model') || lowerMsg.includes('switch')) {
-        reply = mockResponses['model'];
-      } else if (lowerMsg.includes('pipeline') || lowerMsg.includes('paper') || lowerMsg.includes('status')) {
-        reply = mockResponses['pipeline'];
+      const messages: Array<{ role: string; content: string }> = [
+        { role: 'system', content: systemPrompt },
+      ];
+
+      // Add recent history for context (last 10 messages)
+      try {
+        ensureHistoryFile();
+        const raw = fs.readFileSync(chatHistoryPath, 'utf-8');
+        const lines = raw.trim().split('\n').filter(l => l.trim());
+        const history = lines
+          .map(l => { try { return JSON.parse(l); } catch { return null; } })
+          .filter(Boolean)
+          .slice(-10);
+        for (const h of history) {
+          messages.push({ role: h.role, content: h.content });
+        }
+      } catch {
+        // No history, that's fine
       }
 
+      // Add context if available
+      let userContent = message;
       if (context) {
-        reply = `*[Context: ${context}]*\n\n${reply}`;
+        userContent = `[Context: User is on the ${context} page]\n\n${message}`;
+      }
+      messages.push({ role: 'user', content: userContent });
+
+      // Try OpenRouter API
+      let reply = '';
+      let modelLabel = DEFAULT_ASSISTANT_MODEL_LABEL;
+
+      // Read API key from settings file
+      let apiKey = process.env.OPENROUTER_KEY || '';
+      try {
+        const { app: electronApp } = require('electron');
+        const settingsFile = path.join(electronApp.getPath('userData'), 'settings.json');
+        if (fs.existsSync(settingsFile)) {
+          const s = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'));
+          if (s.openrouterKey) apiKey = s.openrouterKey;
+        }
+      } catch { /* use env fallback */ }
+
+      if (!apiKey) {
+        reply = 'No API key configured. Go to **Settings** → add your OpenRouter API key to enable the assistant.';
+      } else {
+        try {
+          const https = require('https');
+          const requestBody = JSON.stringify({
+            model: DEFAULT_ASSISTANT_MODEL,
+            messages,
+            max_tokens: 1024,
+            temperature: 0.7,
+          });
+
+          reply = await new Promise<string>((resolve, reject) => {
+            const req = https.request({
+              hostname: 'openrouter.ai',
+              path: '/api/v1/chat/completions',
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://asrp.jzis.org',
+                'X-Title': 'ASRP Desktop',
+              },
+            }, (res: import('http').IncomingMessage) => {
+              let data = '';
+              res.on('data', (chunk: Buffer) => { data += chunk.toString(); });
+              res.on('end', () => {
+                try {
+                  const parsed = JSON.parse(data);
+                  if (parsed.choices?.[0]?.message?.content) {
+                    // Update model label from response
+                    if (parsed.model) modelLabel = parsed.model;
+                    resolve(parsed.choices[0].message.content);
+                  } else if (parsed.error) {
+                    resolve(`API error: ${parsed.error.message || JSON.stringify(parsed.error)}`);
+                  } else {
+                    resolve('Unexpected API response. Check your API key and model settings.');
+                  }
+                } catch {
+                  resolve('Failed to parse API response.');
+                }
+              });
+            });
+            req.on('error', (err: Error) => reject(err));
+            req.write(requestBody);
+            req.end();
+          });
+        } catch (apiErr: unknown) {
+          reply = `API call failed: ${apiErr instanceof Error ? apiErr.message : String(apiErr)}`;
+        }
       }
 
+      // Save to history
       ensureHistoryFile();
       const userEntry = JSON.stringify({ role: 'user', content: message, ts: new Date().toISOString() });
       const assistantEntry = JSON.stringify({ role: 'assistant', content: reply, ts: new Date().toISOString() });
       fs.appendFileSync(chatHistoryPath, userEntry + '\n' + assistantEntry + '\n', 'utf-8');
       trimHistoryIfNeeded();
 
-      return { success: true, reply, model: 'Claude Sonnet 4.6' };
+      return { success: true, reply, model: modelLabel };
     } catch (err: unknown) {
       return { success: false, reply: 'Error processing message', error: String(err), model: 'unknown' };
     }

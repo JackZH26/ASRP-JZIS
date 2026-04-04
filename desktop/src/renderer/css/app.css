@@ -40,15 +40,16 @@
   display: none;
 }
 
-/* Sidebar Header */
+/* Sidebar Header — extra top padding for macOS traffic lights (hiddenInset) */
 .sidebar-header {
-  padding: 16px 16px 12px;
+  padding: 38px 16px 12px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   gap: 10px;
   background: var(--card);
   flex-shrink: 0;
+  -webkit-app-region: drag;
 }
 
 .sidebar-logo {
