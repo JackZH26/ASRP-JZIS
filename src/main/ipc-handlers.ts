@@ -6,7 +6,7 @@ import * as keyManager from './key-manager';
 
 import { registerAuthHandlers, registerKeyHandlers, registerSetupHandlers } from './auth-handlers';
 import { registerFileHandlers } from './file-handlers';
-import { registerAgentHandlers, registerOpenClawHandlers, registerAssistantHandlers } from './agent-handlers';
+import { registerAgentHandlers, registerOpenClawHandlers, registerAssistantHandlers, registerDiscordHandlers } from './agent-handlers';
 import { registerPaperHandlers } from './paper-handlers';
 import { registerExperimentHandlers } from './experiment-handlers';
 import { registerAuditHandlers } from './audit-handlers';
@@ -120,4 +120,5 @@ export function registerIpcHandlers(): void {
   registerOllamaHandlers();
   registerUpdaterHandlers();
   registerSelfTestHandlers();
+  registerDiscordHandlers();
 }

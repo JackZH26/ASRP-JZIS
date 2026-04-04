@@ -386,6 +386,30 @@ const updater = {
   },
 };
 
+// ---- Discord Bot Configuration API ----
+const discord = {
+  validateToken: (token: string) =>
+    invoke<{ valid: boolean; botName?: string; botId?: string; botTag?: string; error?: string }>(
+      'discord:validate-token', token
+    ),
+
+  inviteUrl: (botAppId: string, guildId?: string) =>
+    invoke<{ url: string }>('discord:invite-url', botAppId, guildId),
+
+  listChannels: (token: string, guildId: string) =>
+    invoke<{ channels: Array<{ id: string; name: string }>; error?: string }>(
+      'discord:list-channels', token, guildId
+    ),
+
+  checkGuild: (token: string, guildId: string) =>
+    invoke<{ inGuild: boolean; guildName?: string; error?: string }>(
+      'discord:check-guild', token, guildId
+    ),
+
+  openUrl: (url: string) =>
+    invoke<{ success: boolean; error?: string }>('discord:open-url', url),
+};
+
 // ---- Navigation events from main process ----
 const on = (channel: 'navigate', callback: (route: string) => void): (() => void) => {
   const allowedChannels = ['navigate'] as const;
@@ -418,5 +442,6 @@ contextBridge.exposeInMainWorld('asrp', {
   assistant,
   ollama,
   updater,
+  discord,
   on,
 });

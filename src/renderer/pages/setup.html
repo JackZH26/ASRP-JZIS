@@ -172,41 +172,82 @@
       </div>
 
       <!-- ═══════════════════════════════════════
-           STEP 4: Agent Configuration (NEW)
+           STEP 4: Agent Configuration
       ════════════════════════════════════════ -->
       <div id="sw-step-4" class="panel" style="display:none">
         <h3 style="margin-bottom:4px">🛠️ Agent Configuration</h3>
         <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">
-          Personalise each agent's name, model, and research focus.
+          Personalise each agent and connect them to Discord.
         </p>
 
-        <!-- Mini agent progress dots -->
-        <div style="display:flex;gap:6px;align-items:center;margin-bottom:18px">
-          <div class="sw-agent-dot" id="s4-adot-0">1</div>
-          <div class="sw-agent-dot" id="s4-adot-1">2</div>
-          <div class="sw-agent-dot" id="s4-adot-2">3</div>
-          <div class="sw-agent-dot" id="s4-adot-3">4</div>
-          <div class="sw-agent-dot" id="s4-adot-4">5</div>
-          <span id="s4-agent-counter" style="font-size:11px;color:var(--text-tertiary);margin-left:6px">Agent 1 of 5</span>
+        <!-- ── Phase A: Discord Server ── -->
+        <div id="s4-phase-a">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px">🔗 Step 1 of 3 — Discord Server</div>
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
+              All 5 agents will join one Discord server. Enter your server's Guild ID below.
+            </p>
+            <div class="form-group" style="margin-bottom:8px">
+              <label for="s4-guild-id" style="font-size:12px;font-weight:600">Discord Server (Guild) ID</label>
+              <input type="text" id="s4-guild-id" placeholder="e.g. 1234567890123456789" style="font-family:monospace">
+              <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">
+                In Discord: right-click your server icon → <strong>Copy Server ID</strong>
+                (Settings → Advanced → Enable Developer Mode if the option is missing)
+              </div>
+            </div>
+          </div>
+
+          <div class="alert" id="s4a-alert"></div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+            <button class="btn btn-ghost btn-sm" onclick="swGoTo(3)">← Back to Init</button>
+            <button class="btn btn-primary" onclick="s4PhaseAContinue()">Next: Configure Agents →</button>
+          </div>
         </div>
 
-        <!-- Agent wizard card (populated by JS) -->
-        <div id="s4-agent-card-area"></div>
+        <!-- ── Phase B: Per-agent config ── -->
+        <div id="s4-phase-b" style="display:none">
+          <!-- Mini agent progress dots -->
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:18px">
+            <div class="sw-agent-dot" id="s4-adot-0">1</div>
+            <div class="sw-agent-dot" id="s4-adot-1">2</div>
+            <div class="sw-agent-dot" id="s4-adot-2">3</div>
+            <div class="sw-agent-dot" id="s4-adot-3">4</div>
+            <div class="sw-agent-dot" id="s4-adot-4">5</div>
+            <span id="s4-agent-counter" style="font-size:11px;color:var(--text-tertiary);margin-left:6px">Agent 1 of 5</span>
+          </div>
 
-        <!-- Assistant guidance panel -->
-        <div id="s4-assistant-panel" style="display:none;margin-top:14px;background:var(--accent-light);border:1px solid var(--border-hover);border-radius:10px;padding:14px">
-          <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:6px">💬 Assistant</div>
-          <div id="s4-assistant-msg" style="font-size:13px;color:var(--text-secondary);line-height:1.5"></div>
+          <!-- Agent wizard card (populated by JS) -->
+          <div id="s4-agent-card-area"></div>
+
+          <!-- Assistant guidance panel -->
+          <div id="s4-assistant-panel" style="display:none;margin-top:14px;background:var(--accent-light);border:1px solid var(--border-hover);border-radius:10px;padding:14px">
+            <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:6px">💬 Assistant</div>
+            <div id="s4-assistant-msg" style="font-size:13px;color:var(--text-secondary);line-height:1.5"></div>
+          </div>
+
+          <div class="alert" id="s4-alert"></div>
+
+          <!-- Navigation -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px">
+            <button class="btn btn-ghost btn-sm" id="s4-back-btn" onclick="swAgentConfigBack()">← Back</button>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span id="s4-all-done-msg" style="font-size:12px;color:var(--success);display:none">✅ All agents configured</span>
+              <button class="btn btn-outline btn-sm" id="s4-next-btn" onclick="swAgentConfigNext()">Save &amp; Next →</button>
+              <button class="btn btn-outline btn-sm" id="s4-verify-btn" style="display:none" onclick="s4StartVerification()">Verify All →</button>
+            </div>
+          </div>
         </div>
 
-        <div class="alert" id="s4-alert"></div>
-
-        <!-- Navigation -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px">
-          <button class="btn btn-ghost btn-sm" id="s4-back-btn" onclick="swAgentConfigBack()">← Back</button>
-          <div style="display:flex;gap:8px;align-items:center">
-            <span id="s4-all-done-msg" style="font-size:12px;color:var(--success);display:none">✅ All agents configured</span>
-            <button class="btn btn-outline btn-sm" id="s4-next-btn" onclick="swAgentConfigNext()">Save &amp; Next →</button>
+        <!-- ── Phase C: Final verification ── -->
+        <div id="s4-phase-c" style="display:none">
+          <div style="font-weight:600;font-size:14px;margin-bottom:12px">🔍 Step 3 of 3 — Final Verification</div>
+          <div id="s4-verify-table" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+            <!-- Populated by JS -->
+          </div>
+          <div class="alert" id="s4c-alert"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+            <button class="btn btn-ghost btn-sm" onclick="s4BackToPhaseB()">← Fix Issues</button>
             <button class="btn btn-primary" id="s4-continue-btn" disabled onclick="swGoTo(5)">Continue to Complete →</button>
           </div>
         </div>
@@ -343,6 +384,49 @@
   padding: 2px 8px; border-radius: 8px; font-weight: 600;
   display: none;
 }
+
+/* Discord bot section within a config card */
+.s4-discord-section {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-hover);
+}
+.s4-discord-section .discord-steps {
+  list-style: none; padding: 0; margin: 0 0 12px;
+  counter-reset: dstep;
+}
+.s4-discord-section .discord-steps li {
+  counter-increment: dstep;
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 12px; color: var(--text-secondary);
+  margin-bottom: 6px; line-height: 1.4;
+}
+.s4-discord-section .discord-steps li::before {
+  content: counter(dstep);
+  background: var(--accent); color: white;
+  border-radius: 50%; width: 16px; height: 16px;
+  font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+.s4-token-row {
+  display: flex; gap: 6px; align-items: center;
+}
+.s4-token-status {
+  font-size: 12px; padding: 3px 8px; border-radius: 6px;
+  background: var(--surface); color: var(--text-tertiary);
+  border: 1px solid var(--border); white-space: nowrap;
+}
+.s4-token-status.valid   { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+.s4-token-status.invalid { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.s4-token-status.testing { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+.s4-verify-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border: 1px solid var(--border);
+  border-radius: 8px; background: white; font-size: 13px;
+}
+.s4-verify-row.ok  { border-color: var(--success); }
+.s4-verify-row.err { border-color: #fca5a5; }
 </style>
 
 <script>
@@ -359,7 +443,8 @@
     trialKey: null,
     profile: {},
     keysData: {},
-    agentConfigs: [null, null, null, null, null],
+    guildId: '',
+    agentConfigs: [{}, {}, {}, {}, {}],
   };
 
   // Load session
@@ -576,58 +661,93 @@
     }, 700 + Math.random() * 400);
   }
 
-  // ── Step 4: Agent Configuration ───────────────────────────
+  // ── Step 4: Agent Configuration (Phase A/B/C) ─────────────
+
   var CONFIG_AGENTS = [
     {
       emoji: '🧠', name: 'Albert',   role: 'Theorist',  defaultName: 'Albert',
       desc: 'Generates hypotheses and theoretical frameworks for your research.',
       defaultModel: 'claude-opus-4-6',
-      assistantMsg: "You're configuring Albert, your Theorist agent. Albert generates hypotheses and theoretical frameworks. Claude Opus 4.6 is recommended for its deep reasoning. Set the research focus to your primary scientific domain — e.g. 'quantum chemistry' or 'machine learning theory'.",
+      suggestedBotName: 'ASRP-Albert',
+      assistantMsg: "You're configuring Albert (Theorist). He generates hypotheses and reasoning frameworks. Create a Discord bot called 'ASRP-Albert', paste its token below, and invite it to your server. Enable the Message Content Intent in the Discord Developer Portal under Bot → Privileged Gateway Intents.",
     },
     {
       emoji: '⚙️', name: 'Wall-E',   role: 'Engineer',  defaultName: 'Wall-E',
       desc: 'Implements experiments, writes code, and runs computational tasks.',
       defaultModel: 'claude-sonnet-4-6',
-      assistantMsg: "You're configuring Wall-E, your Engineer agent. Wall-E writes and executes experimental code. Claude Sonnet 4.6 balances speed and capability well. Set the focus to your preferred languages or methods — e.g. 'Python, NumPy, simulation code'.",
+      suggestedBotName: 'ASRP-WallE',
+      assistantMsg: "You're configuring Wall-E (Engineer). He writes and runs experimental code. Create a Discord bot called 'ASRP-WallE', paste its token, and invite it. Enable Message Content Intent — Wall-E needs to read task messages to execute code.",
     },
     {
       emoji: '📋', name: 'Critic',   role: 'Reviewer',  defaultName: 'Critic',
       desc: 'Reviews and validates research outputs with rigorous peer-review standards.',
       defaultModel: 'claude-opus-4-6',
-      assistantMsg: "You're configuring Critic, your Reviewer agent. Critic validates outputs and checks for logical errors. Claude Opus 4.6 is best for rigorous review tasks. Set the focus to methodological standards — e.g. 'statistical validity, reproducibility, APA citations'.",
+      suggestedBotName: 'ASRP-Critic',
+      assistantMsg: "You're configuring Critic (Reviewer). She validates research outputs. Create 'ASRP-Critic' in the Developer Portal. Enable Message Content Intent so she can read and evaluate full messages from other agents.",
     },
     {
       emoji: '📚', name: 'Scholar',  role: 'Librarian', defaultName: 'Scholar',
       desc: 'Searches literature, manages citations, and curates research references.',
       defaultModel: 'claude-haiku-4-5',
-      assistantMsg: "You're configuring Scholar, your Librarian agent. Scholar handles literature search and citation management. Claude Haiku 4.5 is efficient for high-volume retrieval tasks. Set the focus to key databases or citation styles — e.g. 'PubMed, arXiv, IEEE, APA format'.",
+      suggestedBotName: 'ASRP-Scholar',
+      assistantMsg: "You're configuring Scholar (Librarian). He handles literature search and citations. Create 'ASRP-Scholar' in Discord. Haiku is efficient for high-volume retrieval. Enable Message Content Intent to receive search queries.",
     },
     {
       emoji: '🏥', name: 'DocMario', role: 'ITDoctor',  defaultName: 'DocMario',
       desc: 'Monitors system health, diagnoses issues, and keeps infrastructure running.',
       defaultModel: 'claude-haiku-4-5',
-      assistantMsg: "You're configuring DocMario, your ITDoctor agent. DocMario monitors system health and fixes infrastructure issues. Claude Haiku 4.5 is ideal for fast diagnostics. Set the focus to your research stack — e.g. 'Python environment, Docker, HPC cluster'.",
+      suggestedBotName: 'ASRP-DocMario',
+      assistantMsg: "You're configuring DocMario (ITDoctor). He monitors system health and fixes issues. Create 'ASRP-DocMario' in Discord. Enable Message Content Intent for diagnostic messages.",
     },
   ];
 
   var currentAgentIdx = 0;
 
-  function swInitStep4Config() {
+  // ── Phase A ────────────────────────────────────────────────
+  window.s4PhaseAContinue = function() {
+    var guildIdEl = document.getElementById('s4-guild-id');
+    var guildId = guildIdEl ? guildIdEl.value.trim() : '';
+    if (!guildId || !/^\d{17,20}$/.test(guildId)) {
+      swShowAlert('s4a-alert', 'Please enter a valid Discord Server ID (17–20 digits).', 'error');
+      return;
+    }
+    swHideAlert('s4a-alert');
+    state.guildId = guildId;
+    document.getElementById('s4-phase-a').style.display = 'none';
+    document.getElementById('s4-phase-b').style.display = 'block';
     currentAgentIdx = 0;
     swRenderAgentCard(0);
     swUpdateAgentDots();
     swUpdateAgentNavButtons();
     swSendAgentAssistantMsg(0);
-    swCheckAllConfigured();
-  }
+  };
 
+  // ── Phase B ────────────────────────────────────────────────
   function swRenderAgentCard(idx) {
     var a = CONFIG_AGENTS[idx];
-    var saved = state.agentConfigs[idx];
-    var nameVal   = saved ? saved.customName   : a.defaultName;
-    var modelVal  = saved ? saved.model        : a.defaultModel;
-    var focusVal  = saved ? saved.researchFocus : '';
-    var isDone    = saved !== null;
+    var saved = state.agentConfigs[idx] || {};
+    var nameVal   = saved.customName   || a.defaultName;
+    var modelVal  = saved.model        || a.defaultModel;
+    var focusVal  = saved.researchFocus || '';
+    var tokenVal  = saved.discordToken  || '';
+    var chanVal   = saved.discordChannelId || '';
+    var tokenValid = saved.discordTokenValid || false;
+    var inGuild   = saved.discordInGuild || false;
+    var isDone    = s4AgentComplete(idx);
+
+    // Build channel dropdown HTML
+    var channels = saved.channels || [];
+    var chanOptions = '<option value="">— Select channel —</option>';
+    channels.forEach(function(ch) {
+      chanOptions += '<option value="' + swEscape(ch.id) + '"' + (chanVal === ch.id ? ' selected' : '') + '>#' + swEscape(ch.name) + '</option>';
+    });
+    chanOptions += '<option value="__create__">+ Create #asrp-' + swEscape(a.defaultName.toLowerCase()) + '</option>';
+
+    // Status badge text
+    var tokenStatusClass = tokenValid ? 'valid' : (tokenVal ? 'invalid' : '');
+    var tokenStatusText  = tokenValid
+      ? ('✅ ' + swEscape(saved.discordBotName || 'Valid'))
+      : (tokenVal ? '❌ Invalid' : '⬜ Not tested');
 
     var area = document.getElementById('s4-agent-card-area');
     if (!area) return;
@@ -637,16 +757,20 @@
         '<div class="agent-header">' +
           '<span class="agent-emoji">' + a.emoji + '</span>' +
           '<div style="flex:1">' +
-            '<div class="agent-title">' + a.name + ' <span style="font-size:12px;font-weight:400;color:var(--text-tertiary)">(' + a.role + ')</span></div>' +
-            '<div class="agent-desc">' + a.desc + '</div>' +
+            '<div class="agent-title">' + swEscape(a.name) +
+              ' <span style="font-size:12px;font-weight:400;color:var(--text-tertiary)">(' + swEscape(a.role) + ')</span>' +
+            '</div>' +
+            '<div class="agent-desc">' + swEscape(a.desc) + '</div>' +
           '</div>' +
-          '<span class="configured-badge" id="s4-badge-done" style="' + (isDone ? 'display:inline' : 'display:none') + '">✓ Configured</span>' +
+          (isDone ? '<span class="configured-badge" style="display:inline">✓ Configured</span>' : '') +
         '</div>' +
-        '<div class="form-group" style="margin-bottom:12px">' +
+
+        // Basic config
+        '<div class="form-group" style="margin-bottom:10px">' +
           '<label style="font-size:12px;font-weight:600">Custom Name</label>' +
-          '<input type="text" id="s4-agent-name" value="' + swEscape(nameVal) + '" placeholder="' + a.defaultName + '">' +
+          '<input type="text" id="s4-agent-name" value="' + swEscape(nameVal) + '" placeholder="' + swEscape(a.defaultName) + '">' +
         '</div>' +
-        '<div class="form-group" style="margin-bottom:12px">' +
+        '<div class="form-group" style="margin-bottom:10px">' +
           '<label style="font-size:12px;font-weight:600">Model</label>' +
           '<select id="s4-agent-model">' +
             '<option value="claude-opus-4-6"'   + (modelVal === 'claude-opus-4-6'   ? ' selected' : '') + '>Claude Opus 4.6</option>' +
@@ -659,6 +783,52 @@
           '<label style="font-size:12px;font-weight:600">Research Focus / Specialty <span style="font-weight:400;color:var(--text-tertiary)">(optional)</span></label>' +
           '<input type="text" id="s4-agent-focus" value="' + swEscape(focusVal) + '" placeholder="e.g. quantum chemistry, Python simulations…">' +
         '</div>' +
+
+        // Discord bot section
+        '<div class="s4-discord-section">' +
+          '<div style="font-weight:600;font-size:12px;margin-bottom:8px">🤖 Discord Bot — ' + swEscape(a.suggestedBotName) + '</div>' +
+          '<ol class="discord-steps">' +
+            '<li>Open the Discord Developer Portal and create a new Application named <strong>' + swEscape(a.suggestedBotName) + '</strong>.</li>' +
+            '<li>Go to <strong>Bot</strong> → Reset Token → copy the token below.</li>' +
+            '<li>Enable <strong>Message Content Intent</strong> under Privileged Gateway Intents.</li>' +
+            '<li>Click <strong>Add to Server</strong> to invite the bot to your server.</li>' +
+            '<li>Select the channel for this agent to use.</li>' +
+          '</ol>' +
+          '<div style="display:flex;gap:6px;margin-bottom:10px">' +
+            '<button class="btn btn-outline btn-sm" onclick="s4OpenPortal()">' +
+              '↗ Open Discord Developer Portal' +
+            '</button>' +
+            '<button class="btn btn-ghost btn-sm" onclick="s4CopyBotName(' + idx + ')" title="Copy suggested name">' +
+              '📋 Copy name: ' + swEscape(a.suggestedBotName) +
+            '</button>' +
+          '</div>' +
+          '<div class="form-group" style="margin-bottom:8px">' +
+            '<label style="font-size:12px;font-weight:600">Bot Token</label>' +
+            '<div class="s4-token-row">' +
+              '<input type="password" id="s4-bot-token-' + idx + '" value="' + swEscape(tokenVal) + '" placeholder="Paste bot token here…" style="flex:1;font-family:monospace;font-size:12px">' +
+              '<button class="btn btn-outline btn-sm" onclick="s4TestToken(' + idx + ')">Test</button>' +
+            '</div>' +
+            '<div class="s4-token-status ' + tokenStatusClass + '" id="s4-token-status-' + idx + '" style="margin-top:6px;display:inline-block">' + tokenStatusText + '</div>' +
+          '</div>' +
+          (tokenValid ? (
+            '<div style="display:flex;gap:6px;margin-bottom:8px">' +
+              '<button class="btn btn-outline btn-sm" onclick="s4AddToServer(' + idx + ')">🔗 Add to Server</button>' +
+              (inGuild
+                ? '<span style="font-size:12px;color:var(--success);align-self:center">✅ Bot is in server</span>'
+                : '<button class="btn btn-ghost btn-sm" onclick="s4CheckGuild(' + idx + ')">Check if joined</button>') +
+            '</div>' +
+            (inGuild ? (
+              '<div class="form-group" style="margin-bottom:0">' +
+                '<label style="font-size:12px;font-weight:600">Channel</label>' +
+                '<div style="display:flex;gap:6px">' +
+                  '<select id="s4-channel-' + idx + '" style="flex:1" onchange="s4ChannelSelected(' + idx + ')">' + chanOptions + '</select>' +
+                  '<button class="btn btn-ghost btn-sm" onclick="s4RefreshChannels(' + idx + ')">↻</button>' +
+                '</div>' +
+              '</div>'
+            ) : '') +
+            '<div class="alert" id="s4-guild-alert-' + idx + '"></div>'
+          ) : '') +
+        '</div>' +
       '</div>';
 
     var counter = document.getElementById('s4-agent-counter');
@@ -669,21 +839,190 @@
     return (str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
+  // Extract Application ID from a Discord bot token (base64 first segment)
+  function s4ExtractAppId(token) {
+    try {
+      var firstSeg = token.split('.')[0];
+      // Pad base64
+      var pad = firstSeg.length % 4;
+      if (pad) firstSeg += '===='.slice(pad);
+      return atob(firstSeg);
+    } catch(e) {
+      return null;
+    }
+  }
+
+  window.s4OpenPortal = function() {
+    var url = 'https://discord.com/developers/applications';
+    if (window.asrp && window.asrp.discord) {
+      window.asrp.discord.openUrl(url).catch(function() {});
+    }
+  };
+
+  window.s4CopyBotName = function(idx) {
+    var name = CONFIG_AGENTS[idx].suggestedBotName;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(name).catch(function() {});
+    }
+  };
+
+  window.s4TestToken = function(idx) {
+    var tokenEl = document.getElementById('s4-bot-token-' + idx);
+    var statusEl = document.getElementById('s4-token-status-' + idx);
+    if (!tokenEl) return;
+    var token = tokenEl.value.trim();
+    if (!token) { swShowAlert('s4-alert', 'Enter a token first.', 'error'); return; }
+
+    if (statusEl) {
+      statusEl.className = 's4-token-status testing';
+      statusEl.textContent = '🔄 Testing…';
+    }
+    swHideAlert('s4-alert');
+
+    if (window.asrp && window.asrp.discord) {
+      window.asrp.discord.validateToken(token).then(function(res) {
+        var cfg = state.agentConfigs[idx] || {};
+        cfg.discordToken = token;
+        if (res.valid) {
+          cfg.discordTokenValid = true;
+          cfg.discordBotId = res.botId || '';
+          cfg.discordBotName = res.botName || '';
+          if (statusEl) {
+            statusEl.className = 's4-token-status valid';
+            statusEl.textContent = '✅ ' + (res.botName || 'Valid');
+          }
+          // Auto-extract app ID
+          var appId = s4ExtractAppId(token);
+          if (appId) cfg.discordAppId = appId;
+        } else {
+          cfg.discordTokenValid = false;
+          if (statusEl) {
+            statusEl.className = 's4-token-status invalid';
+            statusEl.textContent = '❌ ' + (res.error || 'Invalid token');
+          }
+        }
+        state.agentConfigs[idx] = cfg;
+        // Re-render to show/hide Add to Server button
+        s4SoftSaveBasicFields(idx);
+        swRenderAgentCard(idx);
+        swUpdateAgentDots();
+        swCheckAllConfigured();
+      }).catch(function(err) {
+        if (statusEl) {
+          statusEl.className = 's4-token-status invalid';
+          statusEl.textContent = '❌ Error: ' + String(err);
+        }
+      });
+    } else {
+      if (statusEl) { statusEl.className = ''; statusEl.textContent = 'IPC not available'; }
+    }
+  };
+
+  window.s4AddToServer = function(idx) {
+    var cfg = state.agentConfigs[idx] || {};
+    var appId = cfg.discordAppId || s4ExtractAppId(cfg.discordToken || '');
+    if (!appId) { swShowAlert('s4-alert', 'Could not determine Bot Application ID. Paste the token and test it first.', 'error'); return; }
+    if (window.asrp && window.asrp.discord) {
+      window.asrp.discord.inviteUrl(appId, state.guildId).catch(function() {});
+    }
+  };
+
+  window.s4CheckGuild = function(idx) {
+    var cfg = state.agentConfigs[idx] || {};
+    var token = cfg.discordToken;
+    if (!token || !cfg.discordTokenValid) { swShowAlert('s4-alert', 'Validate the token first.', 'error'); return; }
+    var alertId = 's4-guild-alert-' + idx;
+    swShowAlert(alertId, '🔄 Checking…', '');
+    if (window.asrp && window.asrp.discord) {
+      window.asrp.discord.checkGuild(token, state.guildId).then(function(res) {
+        if (res.inGuild) {
+          cfg.discordInGuild = true;
+          cfg.discordGuildName = res.guildName || '';
+          state.agentConfigs[idx] = cfg;
+          // Load channels
+          s4LoadChannels(idx);
+        } else {
+          swShowAlert(alertId, 'Bot is not in the server yet. Use "Add to Server" and complete the invite.', 'error');
+        }
+      }).catch(function(err) {
+        swShowAlert(alertId, 'Error: ' + String(err), 'error');
+      });
+    }
+  };
+
+  function s4LoadChannels(idx) {
+    var cfg = state.agentConfigs[idx] || {};
+    var token = cfg.discordToken;
+    if (!token) return;
+    if (window.asrp && window.asrp.discord) {
+      window.asrp.discord.listChannels(token, state.guildId).then(function(res) {
+        cfg.channels = res.channels || [];
+        state.agentConfigs[idx] = cfg;
+        s4SoftSaveBasicFields(idx);
+        swRenderAgentCard(idx);
+        swCheckAllConfigured();
+      }).catch(function() {});
+    }
+  }
+
+  window.s4RefreshChannels = function(idx) { s4LoadChannels(idx); };
+
+  window.s4ChannelSelected = function(idx) {
+    var sel = document.getElementById('s4-channel-' + idx);
+    if (!sel) return;
+    var val = sel.value;
+    var cfg = state.agentConfigs[idx] || {};
+    if (val === '__create__') {
+      // Create the channel via Discord API (delegated to main) — stub, use check-guild flow
+      var chanName = 'asrp-' + CONFIG_AGENTS[idx].defaultName.toLowerCase();
+      swShowAlert('s4-alert', 'Channel creation: use Discord to create #' + chanName + ' and refresh.', 'warning');
+      sel.value = cfg.discordChannelId || '';
+      return;
+    }
+    cfg.discordChannelId = val;
+    state.agentConfigs[idx] = cfg;
+    swCheckAllConfigured();
+    swUpdateAgentDots();
+  };
+
+  // Save name/model/focus fields into state without full validation
+  function s4SoftSaveBasicFields(idx) {
+    var nameEl  = document.getElementById('s4-agent-name');
+    var modelEl = document.getElementById('s4-agent-model');
+    var focusEl = document.getElementById('s4-agent-focus');
+    var cfg = state.agentConfigs[idx] || {};
+    if (nameEl)  cfg.customName    = nameEl.value.trim();
+    if (modelEl) cfg.model         = modelEl.value;
+    if (focusEl) cfg.researchFocus = focusEl.value.trim();
+    cfg.agentId = CONFIG_AGENTS[idx].name;
+    state.agentConfigs[idx] = cfg;
+  }
+
   function swSaveCurrentAgentConfig() {
     var nameEl  = document.getElementById('s4-agent-name');
     var modelEl = document.getElementById('s4-agent-model');
     var focusEl = document.getElementById('s4-agent-focus');
+    var tokenEl = document.getElementById('s4-bot-token-' + currentAgentIdx);
     if (!nameEl || !modelEl) return false;
     var name = nameEl.value.trim();
     var model = modelEl.value;
     if (!name || !model) return false;
-    state.agentConfigs[currentAgentIdx] = {
-      agentId: CONFIG_AGENTS[currentAgentIdx].name,
-      customName: name,
-      model: model,
-      researchFocus: focusEl ? focusEl.value.trim() : '',
-    };
+
+    var existing = state.agentConfigs[currentAgentIdx] || {};
+    existing.agentId       = CONFIG_AGENTS[currentAgentIdx].name;
+    existing.customName    = name;
+    existing.model         = model;
+    existing.researchFocus = focusEl ? focusEl.value.trim() : '';
+    if (tokenEl) existing.discordToken = tokenEl.value.trim();
+    state.agentConfigs[currentAgentIdx] = existing;
     return true;
+  }
+
+  // An agent is "complete" when it has name + model + valid token + in guild + channel
+  function s4AgentComplete(idx) {
+    var cfg = state.agentConfigs[idx];
+    if (!cfg) return false;
+    return !!(cfg.customName && cfg.model && cfg.discordTokenValid && cfg.discordInGuild && cfg.discordChannelId);
   }
 
   window.swAgentConfigNext = function() {
@@ -703,7 +1042,6 @@
       swUpdateAgentNavButtons();
       swSendAgentAssistantMsg(currentAgentIdx);
     } else {
-      // On last agent, re-render to show badge, update buttons
       swRenderAgentCard(currentAgentIdx);
       swUpdateAgentNavButtons();
     }
@@ -712,16 +1050,16 @@
   window.swAgentConfigBack = function() {
     swHideAlert('s4-alert');
     if (currentAgentIdx > 0) {
-      // Soft-save current (no validation required for back)
-      swSaveCurrentAgentConfig();
+      s4SoftSaveBasicFields(currentAgentIdx);
       currentAgentIdx--;
       swRenderAgentCard(currentAgentIdx);
       swUpdateAgentDots();
       swUpdateAgentNavButtons();
       swSendAgentAssistantMsg(currentAgentIdx);
     } else {
-      // Back to step 3
-      swGoTo(3);
+      // Back to Phase A
+      document.getElementById('s4-phase-b').style.display = 'none';
+      document.getElementById('s4-phase-a').style.display = 'block';
     }
   };
 
@@ -733,7 +1071,7 @@
       if (i === currentAgentIdx) {
         dot.classList.add('active');
         dot.textContent = i + 1;
-      } else if (state.agentConfigs[i] !== null) {
+      } else if (s4AgentComplete(i)) {
         dot.classList.add('done');
         dot.textContent = '✓';
       } else {
@@ -742,42 +1080,57 @@
     }
   }
 
-  function swUpdateAgentNavButtons() {
-    var backBtn = document.getElementById('s4-back-btn');
-    var nextBtn = document.getElementById('s4-next-btn');
-    var continueBtn = document.getElementById('s4-continue-btn');
-    var allDoneMsg = document.getElementById('s4-all-done-msg');
-
-    if (backBtn) backBtn.textContent = currentAgentIdx === 0 ? '← Back to Init' : '← Back';
-
-    var isLast = currentAgentIdx === CONFIG_AGENTS.length - 1;
-    if (nextBtn) {
-      nextBtn.textContent = isLast ? 'Save ✓' : 'Save & Next →';
-      nextBtn.style.display = isLast && swAllConfigured() ? 'none' : '';
-    }
-
-    var allDone = swAllConfigured();
-    if (allDoneMsg) allDoneMsg.style.display = allDone ? 'inline' : 'none';
-    if (continueBtn) continueBtn.disabled = !allDone;
-  }
-
   function swAllConfigured() {
     for (var i = 0; i < CONFIG_AGENTS.length; i++) {
-      if (state.agentConfigs[i] === null) return false;
+      if (!s4AgentComplete(i)) return false;
     }
     return true;
   }
 
   function swCheckAllConfigured() {
-    var continueBtn = document.getElementById('s4-continue-btn');
-    var allDoneMsg  = document.getElementById('s4-all-done-msg');
-    var nextBtn     = document.getElementById('s4-next-btn');
-    var allDone     = swAllConfigured();
-    if (continueBtn) continueBtn.disabled = !allDone;
-    if (allDoneMsg)  allDoneMsg.style.display = allDone ? 'inline' : 'none';
-    if (nextBtn && allDone && currentAgentIdx === CONFIG_AGENTS.length - 1) {
-      nextBtn.style.display = 'none';
+    var allDoneMsg = document.getElementById('s4-all-done-msg');
+    var nextBtn    = document.getElementById('s4-next-btn');
+    var verifyBtn  = document.getElementById('s4-verify-btn');
+    var allDone    = swAllConfigured();
+    if (allDoneMsg) allDoneMsg.style.display = allDone ? 'inline' : 'none';
+    if (nextBtn)   nextBtn.style.display    = allDone ? 'none' : '';
+    if (verifyBtn) verifyBtn.style.display  = allDone ? '' : 'none';
+  }
+
+  function swUpdateAgentNavButtons() {
+    var backBtn    = document.getElementById('s4-back-btn');
+    var nextBtn    = document.getElementById('s4-next-btn');
+    var allDoneMsg = document.getElementById('s4-all-done-msg');
+    var verifyBtn  = document.getElementById('s4-verify-btn');
+
+    if (backBtn) backBtn.textContent = currentAgentIdx === 0 ? '← Back' : '← Back';
+
+    var isLast = currentAgentIdx === CONFIG_AGENTS.length - 1;
+    if (nextBtn) nextBtn.textContent = isLast ? 'Save ✓' : 'Save & Next →';
+
+    var allDone = swAllConfigured();
+    if (allDoneMsg) allDoneMsg.style.display = allDone ? 'inline' : 'none';
+    if (nextBtn)   nextBtn.style.display    = allDone ? 'none' : '';
+    if (verifyBtn) verifyBtn.style.display  = allDone ? '' : 'none';
+  }
+
+  function swInitStep4Config() {
+    // Reset to Phase A if guild ID not set
+    if (!state.guildId) {
+      document.getElementById('s4-phase-a').style.display = 'block';
+      document.getElementById('s4-phase-b').style.display = 'none';
+      document.getElementById('s4-phase-c').style.display = 'none';
+      return;
     }
+    document.getElementById('s4-phase-a').style.display = 'none';
+    document.getElementById('s4-phase-b').style.display = 'block';
+    document.getElementById('s4-phase-c').style.display = 'none';
+    currentAgentIdx = 0;
+    swRenderAgentCard(0);
+    swUpdateAgentDots();
+    swUpdateAgentNavButtons();
+    swSendAgentAssistantMsg(0);
+    swCheckAllConfigured();
   }
 
   function swSendAgentAssistantMsg(idx) {
@@ -785,31 +1138,120 @@
     var panel = document.getElementById('s4-assistant-panel');
     var msgEl = document.getElementById('s4-assistant-msg');
 
-    // Show panel with a loading state
     if (panel) panel.style.display = 'block';
     if (msgEl) msgEl.textContent = 'Thinking…';
 
-    // Try global sendMessage (from assistant-chat.js) first
     if (typeof sendMessage === 'function') {
       try { sendMessage(msg); } catch(e) {}
     }
 
-    // Also call IPC for inline display
     if (window.asrp && window.asrp.assistant) {
       window.asrp.assistant.chat(msg).then(function(res) {
         if (msgEl && res && res.reply) {
           msgEl.textContent = res.reply;
         } else if (msgEl) {
-          msgEl.textContent = msg; // Fall back to the guidance text
+          msgEl.textContent = msg;
         }
       }).catch(function() {
         if (msgEl) msgEl.textContent = msg;
       });
     } else {
-      // No IPC available, show the built-in guidance directly
       if (msgEl) msgEl.textContent = msg;
     }
   }
+
+  // ── Phase C: Verification ──────────────────────────────────
+  window.s4StartVerification = function() {
+    s4SoftSaveBasicFields(currentAgentIdx);
+    document.getElementById('s4-phase-b').style.display = 'none';
+    document.getElementById('s4-phase-c').style.display = 'block';
+
+    var table = document.getElementById('s4-verify-table');
+    var continueBtn = document.getElementById('s4-continue-btn');
+    if (table) table.innerHTML = '';
+    if (continueBtn) continueBtn.disabled = true;
+
+    var pending = CONFIG_AGENTS.length;
+    var allOk = true;
+
+    CONFIG_AGENTS.forEach(function(agent, idx) {
+      var cfg = state.agentConfigs[idx] || {};
+      var rowId = 's4-vrow-' + idx;
+      var row = document.createElement('div');
+      row.className = 's4-verify-row';
+      row.id = rowId;
+      row.innerHTML =
+        '<span style="font-size:20px">' + agent.emoji + '</span>' +
+        '<div style="flex:1">' +
+          '<div style="font-weight:600;font-size:13px">' + swEscape(cfg.customName || agent.name) + '</div>' +
+          '<div style="font-size:11px;color:var(--text-secondary)">' + swEscape(agent.role) + '</div>' +
+        '</div>' +
+        '<span id="' + rowId + '-status" style="font-size:12px;color:var(--text-tertiary)">🔄 Checking…</span>';
+      if (table) table.appendChild(row);
+
+      // Re-verify token + guild membership
+      if (window.asrp && window.asrp.discord && cfg.discordToken) {
+        window.asrp.discord.validateToken(cfg.discordToken).then(function(vRes) {
+          if (!vRes.valid) {
+            s4SetVerifyRow(rowId, false, 'Token invalid: ' + (vRes.error || ''));
+            allOk = false;
+            pending--;
+            if (pending === 0) s4VerifyDone(allOk);
+            return;
+          }
+          return window.asrp.discord.checkGuild(cfg.discordToken, state.guildId).then(function(gRes) {
+            if (!gRes.inGuild) {
+              s4SetVerifyRow(rowId, false, 'Bot not in server');
+              allOk = false;
+            } else if (!cfg.discordChannelId) {
+              s4SetVerifyRow(rowId, false, 'No channel selected');
+              allOk = false;
+            } else {
+              s4SetVerifyRow(rowId, true, '✅ Ready');
+            }
+            pending--;
+            if (pending === 0) s4VerifyDone(allOk);
+          });
+        }).catch(function(err) {
+          s4SetVerifyRow(rowId, false, 'Error: ' + String(err));
+          allOk = false;
+          pending--;
+          if (pending === 0) s4VerifyDone(allOk);
+        });
+      } else {
+        // No IPC — trust local state
+        var ok = s4AgentComplete(idx);
+        s4SetVerifyRow(rowId, ok, ok ? '✅ Ready' : '⚠️ Incomplete (no IPC)');
+        if (!ok) allOk = false;
+        pending--;
+        if (pending === 0) s4VerifyDone(allOk);
+      }
+    });
+  };
+
+  function s4SetVerifyRow(rowId, ok, msg) {
+    var row = document.getElementById(rowId);
+    var statusEl = document.getElementById(rowId + '-status');
+    if (row) { row.classList.remove('ok', 'err'); row.classList.add(ok ? 'ok' : 'err'); }
+    if (statusEl) statusEl.textContent = msg;
+  }
+
+  function s4VerifyDone(allOk) {
+    var continueBtn = document.getElementById('s4-continue-btn');
+    var alertEl = document.getElementById('s4c-alert');
+    if (allOk) {
+      if (continueBtn) continueBtn.disabled = false;
+      if (alertEl) { alertEl.className = 'alert success show'; alertEl.textContent = '✅ All agents verified! Click Continue to finish setup.'; }
+    } else {
+      if (alertEl) { alertEl.className = 'alert error show'; alertEl.textContent = 'Some agents have issues. Click "Fix Issues" to go back and resolve them.'; }
+    }
+  }
+
+  window.s4BackToPhaseB = function() {
+    document.getElementById('s4-phase-c').style.display = 'none';
+    document.getElementById('s4-phase-b').style.display = 'block';
+    swHideAlert('s4c-alert');
+  };
 
   // ── Step 5: Complete ──────────────────────────────────────
   function swInitStep5() {

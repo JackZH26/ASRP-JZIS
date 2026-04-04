@@ -387,3 +387,111 @@ export function registerAssistantHandlers(): void {
     }
   });
 }
+
+// ============================================================
+// DISCORD HANDLERS (channel: 'discord:*')
+// ============================================================
+
+export function registerDiscordHandlers(): void {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const https = require('https') as typeof import('https');
+
+  // Helper: make a GET request to the Discord API with a Bot token
+  const discordGet = (apiPath: string, token: string): Promise<unknown> => {
+    return new Promise((resolve, reject) => {
+      const req = https.request(
+        {
+          hostname: 'discord.com',
+          path: `/api/v10${apiPath}`,
+          method: 'GET',
+          headers: {
+            Authorization: `Bot ${token}`,
+            'Content-Type': 'application/json',
+            'User-Agent': 'ASRP-Desktop (https://asrp.jzis.org, 1.0)',
+          },
+        },
+        (res: import('http').IncomingMessage) => {
+          let data = '';
+          res.on('data', (chunk: Buffer) => { data += chunk.toString(); });
+          res.on('end', () => {
+            try { resolve(JSON.parse(data)); }
+            catch { resolve({ error: 'Invalid JSON response from Discord API' }); }
+          });
+        },
+      );
+      req.on('error', reject);
+      req.end();
+    });
+  };
+
+  // Validate a Discord bot token by calling GET /users/@me
+  ipcMain.handle('discord:validate-token', async (_event, token: string) => {
+    try {
+      const data = await discordGet('/users/@me', token) as Record<string, unknown>;
+      if (data.id) {
+        return {
+          valid: true,
+          botName: data.username as string,
+          botId: data.id as string,
+          botTag: `${data.username as string}#${data.discriminator as string}`,
+        };
+      }
+      return { valid: false, error: (data.message as string) || 'Invalid token' };
+    } catch (err: unknown) {
+      return { valid: false, error: String(err) };
+    }
+  });
+
+  // Generate and open an OAuth invite URL for the bot; optionally scoped to a guild
+  ipcMain.handle('discord:invite-url', async (_event, botAppId: string, guildId?: string) => {
+    const permissions = '537069072'; // Send + Read + History + Manage Channels + Manage Webhooks
+    const scope = 'bot';
+    let url = `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(botAppId)}&permissions=${permissions}&scope=${scope}`;
+    if (guildId) url += `&guild_id=${encodeURIComponent(guildId)}`;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { shell } = require('electron') as typeof import('electron');
+    await shell.openExternal(url);
+    return { url };
+  });
+
+  // List text channels (type===0) in a guild
+  ipcMain.handle('discord:list-channels', async (_event, token: string, guildId: string) => {
+    try {
+      const data = await discordGet(`/guilds/${encodeURIComponent(guildId)}/channels`, token);
+      if (Array.isArray(data)) {
+        const channels = (data as Array<Record<string, unknown>>)
+          .filter(c => c['type'] === 0)
+          .map(c => ({ id: c['id'] as string, name: c['name'] as string }));
+        return { channels };
+      }
+      const err = data as Record<string, unknown>;
+      return { channels: [], error: (err['message'] as string) || 'Failed to list channels' };
+    } catch (err: unknown) {
+      return { channels: [], error: String(err) };
+    }
+  });
+
+  // Check whether the bot is a member of a specific guild
+  ipcMain.handle('discord:check-guild', async (_event, token: string, guildId: string) => {
+    try {
+      const data = await discordGet(`/guilds/${encodeURIComponent(guildId)}`, token) as Record<string, unknown>;
+      if (data['id']) {
+        return { inGuild: true, guildName: data['name'] as string };
+      }
+      return { inGuild: false, error: (data['message'] as string) || 'Bot not in guild' };
+    } catch (err: unknown) {
+      return { inGuild: false, error: String(err) };
+    }
+  });
+
+  // Open a Discord URL in the system default browser (restricted to discord.com only)
+  ipcMain.handle('discord:open-url', async (_event, url: string) => {
+    if (typeof url !== 'string' || !url.startsWith('https://discord.com/')) {
+      return { success: false, error: 'Only https://discord.com/ URLs are permitted' };
+    }
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { shell } = require('electron') as typeof import('electron');
+    await shell.openExternal(url);
+    return { success: true };
+  });
+}
