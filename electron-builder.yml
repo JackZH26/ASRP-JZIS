@@ -41,9 +41,11 @@ mac:
   target:
     - target: dmg
       arch: [universal]
+    - target: zip
+      arch: [universal]
   icon: build/icon.png
   category: public.app-category.productivity
-  artifactName: ASRP_Setup_${version}.dmg
+  artifactName: ASRP_Setup_${version}.${ext}
 
 dmg:
   title: ASRP Desktop ${version}
