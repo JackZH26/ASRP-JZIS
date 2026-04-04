@@ -7,12 +7,12 @@
        <script> tags from loaded page fragments via executeScripts(). Removing it
        would require a nonce-based approach or a module-based router rewrite. -->
   <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self';
+    default-src 'self' app:;
     script-src 'self' 'unsafe-inline';
     style-src 'self' 'unsafe-inline';
-    img-src 'self' data:;
-    font-src 'self' data:;
-    connect-src 'none';
+    img-src 'self' data: app:;
+    font-src 'self' data: app:;
+    connect-src 'self' app: https://openrouter.ai https://asrp.jzis.org;
   ">
   <title>ASRP Desktop</title>
   <link rel="stylesheet" href="css/mint-apple.css">
