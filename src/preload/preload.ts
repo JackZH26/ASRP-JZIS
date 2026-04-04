@@ -263,9 +263,9 @@ const openclaw = {
 
 // ---- Assistant Chat API ----
 const assistant = {
-  chat: (message: string, context?: string) =>
+  chat: (message: string, context?: string, preferredModel?: string) =>
     invoke<{ success: boolean; reply: string; model: string; error?: string }>(
-      'assistant:chat', message, context
+      'assistant:chat', message, context, preferredModel
     ),
 
   getModel: () =>

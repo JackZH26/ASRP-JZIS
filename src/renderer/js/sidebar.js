@@ -43,7 +43,7 @@ const Sidebar = (() => {
           <span class="sidebar-logo-full">ASRP</span>
           <span class="sidebar-logo-icon" style="display:none">A</span>
         </div>
-        <div class="sidebar-version sidebar-full-only" id="sidebar-version-label">v1.0.0</div>
+        <div class="sidebar-version sidebar-full-only" id="sidebar-version-label">v...</div>
         <button
           class="sidebar-collapse-btn btn btn-ghost"
           id="sidebar-collapse-btn"
@@ -94,6 +94,9 @@ const Sidebar = (() => {
 
     // Load workspace path from settings
     loadWorkspaceInfo();
+
+    // Load version dynamically
+    loadVersion();
   }
 
   /**
@@ -175,6 +178,22 @@ const Sidebar = (() => {
       }
     } catch {
       // Ignore — just keep the default text
+    }
+  }
+
+  /**
+   * Load version from system info
+   */
+  async function loadVersion() {
+    if (!window.asrp) return;
+    try {
+      const info = await window.asrp.system.info();
+      const el = document.getElementById('sidebar-version-label');
+      if (el && info.version) {
+        el.textContent = 'v' + info.version;
+      }
+    } catch {
+      // Ignore
     }
   }
 

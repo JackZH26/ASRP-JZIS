@@ -77,4 +77,4 @@ publish:
   provider: github
   owner: JackZH26
   repo: ASRP-JZIS
-  releaseType: draft
+  releaseType: release

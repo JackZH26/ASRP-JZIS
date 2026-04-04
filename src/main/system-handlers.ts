@@ -74,7 +74,7 @@ export function registerSettingsHandlers(): void {
     language: 'en',
     workspace: path.join(app.getPath('home'), 'asrp-workspace'),
     openrouterKey: '',
-    defaultModel: 'claude-sonnet-4-6',
+    defaultModel: 'google/gemini-2.5-flash',
     budgetDaily: 15,
     notifications: true,
     minimizeToTray: true,

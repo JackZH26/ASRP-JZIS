@@ -40,15 +40,16 @@
   display: none;
 }
 
-/* Sidebar Header */
+/* Sidebar Header — extra top padding for macOS traffic lights (hiddenInset) */
 .sidebar-header {
-  padding: 16px 16px 12px;
+  padding: 38px 16px 12px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   gap: 10px;
   background: var(--card);
   flex-shrink: 0;
+  -webkit-app-region: drag;
 }
 
 .sidebar-logo {
@@ -463,4 +464,117 @@ kbd {
   .content-header {
     padding: 0 12px;
   }
+}
+
+/* ========== UPDATE STATUS BAR ========== */
+#update-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+  animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+#update-bar-inner {
+  max-width: 100%;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+#update-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+#update-text {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+#update-progress-wrap {
+  flex: 1;
+  min-width: 120px;
+  max-width: 300px;
+  height: 6px;
+  background: var(--surface);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+#update-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--gradient);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+#update-bar.ready #update-progress-bar {
+  background: var(--success);
+  width: 100%;
+}
+
+#update-percent {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+#update-speed {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+#update-action-btn {
+  padding: 4px 14px;
+  border: none;
+  border-radius: 6px;
+  background: var(--gradient);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+#update-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(74, 140, 106, 0.3);
+}
+
+#update-dismiss-btn {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+#update-dismiss-btn:hover {
+  color: var(--text);
+  background: var(--surface);
 }

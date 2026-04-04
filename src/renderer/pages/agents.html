@@ -548,6 +548,8 @@
   // T-027: Subscribe to real-time status updates
   if (window.asrp && window.asrp.agents && window.asrp.agents.onStatusUpdate) {
     window.asrp.agents.onStatusUpdate(function(updatedAgents) {
+      // Guard: skip if agents page is no longer rendered
+      if (!document.getElementById('agent-cards')) return;
       if (currentAgents.length === 0) return;
       // Merge updated statuses
       currentAgents = currentAgents.map(a => {

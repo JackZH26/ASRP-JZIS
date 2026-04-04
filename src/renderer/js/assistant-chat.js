@@ -387,7 +387,7 @@
       var useLocal = currentModel.type === 'local' && window.asrp.ollama;
 
       var doCloudChat = function () {
-        window.asrp.assistant.chat(text, context).then(function (res) {
+        window.asrp.assistant.chat(text, context, currentModel.model).then(function (res) {
           setLoading(false);
           var reply = (res && res.reply) ? res.reply : 'Sorry, I could not process that request.';
           messages.push({ role: 'assistant', content: reply });
@@ -587,30 +587,43 @@
       });
     }
 
-    // Model toggle button
+    // Model toggle button — cycle through available cloud models + local if available
+    var CLOUD_MODELS = [
+      { model: 'Gemini 2.5 Flash', type: 'cloud' },
+      { model: 'Claude Sonnet 4.6', type: 'cloud' },
+      { model: 'Claude Haiku 4.5', type: 'cloud' },
+    ];
+
     var modelToggle = document.getElementById('ap-model-toggle');
     if (modelToggle) {
       modelToggle.addEventListener('click', function () {
-        if (currentModel.type === 'cloud') {
-          // T-073: Check if local model is actually available before switching
-          if (window.asrp && window.asrp.ollama) {
-            window.asrp.ollama.status().then(function (status) {
-              var hasGemma = status.models && status.models.some(function (m) { return m.includes('gemma'); });
-              if (status.running && hasGemma) {
-                currentModel = { model: 'Gemma 27B (local)', type: 'local' };
-                renderModelInfo();
-                showToast('Switched to Gemma 27B (local)', 'success', 2000);
-              } else {
-                showToast('Local model not available. Download it in Settings.', 'info', 3000);
+        // Build available model list: cloud models + local if available
+        var available = CLOUD_MODELS.slice();
+
+        // Find current index
+        var curIdx = -1;
+        for (var i = 0; i < available.length; i++) {
+          if (available[i].model === currentModel.model) { curIdx = i; break; }
+        }
+
+        // Cycle to next
+        var nextIdx = (curIdx + 1) % available.length;
+        currentModel = available[nextIdx];
+        renderModelInfo();
+        showToast('Switched to ' + currentModel.model, 'success', 2000);
+
+        // Also check if local model is available and add to cycle
+        if (window.asrp && window.asrp.ollama && currentModel.type !== 'local') {
+          window.asrp.ollama.status().then(function (status) {
+            var hasGemma = status.models && status.models.some(function (m) { return m.includes('gemma'); });
+            if (status.running && hasGemma) {
+              // Local is available — it will appear on next cycle
+              var hasLocal = available.some(function (m) { return m.type === 'local'; });
+              if (!hasLocal) {
+                CLOUD_MODELS.push({ model: 'Gemma 27B (local)', type: 'local' });
               }
-            }).catch(function () {
-              showToast('Could not check local model status.', 'info', 2000);
-            });
-          }
-        } else {
-          currentModel = { model: 'Claude Sonnet 4.6', type: 'cloud' };
-          renderModelInfo();
-          showToast('Switched to Claude Sonnet 4.6 (cloud)', 'success', 2000);
+            }
+          }).catch(function () { /* ignore */ });
         }
       });
     }
