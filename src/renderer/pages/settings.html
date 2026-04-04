@@ -41,10 +41,24 @@
       </select>
     </div>
     <div class="form-group">
-      <label>OpenRouter API Key</label>
+      <label>OpenRouter API Key <span style="font-size:11px;color:var(--error)">*required</span></label>
       <input type="password" id="setting-openrouter-key" placeholder="sk-or-v1-...">
       <div style="font-size:12px;color:var(--text-tertiary);margin-top:4px">
-        Required for cloud AI models. Get a key at openrouter.ai
+        Required for cloud AI models. Get a key at <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--accent)">openrouter.ai</a>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Anthropic API Key <span style="font-size:11px;color:var(--text-tertiary)">(optional)</span></label>
+      <input type="password" id="setting-anthropic-key" placeholder="sk-ant-...">
+      <div style="font-size:12px;color:var(--text-tertiary);margin-top:4px">
+        Direct Anthropic access for Claude models. Optional if using OpenRouter.
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Google AI Key <span style="font-size:11px;color:var(--text-tertiary)">(optional)</span></label>
+      <input type="password" id="setting-google-key" placeholder="AIza...">
+      <div style="font-size:12px;color:var(--text-tertiary);margin-top:4px">
+        For Gemini models. Optional if using OpenRouter.
       </div>
     </div>
     <div class="form-group">
@@ -200,6 +214,8 @@
     setValue('setting-workspace', settings.workspace || '');
     setValue('setting-default-model', settings.defaultModel || 'claude-sonnet-4-6');
     setValue('setting-openrouter-key', settings.openrouterKey || '');
+    setValue('setting-anthropic-key', settings.anthropicKey || '');
+    setValue('setting-google-key', settings.googleKey || '');
     setValue('setting-budget-daily', settings.budgetDaily || 15);
     setValue('setting-language', settings.language || 'en');
     setChecked('setting-minimize-tray', settings.minimizeToTray !== false);
@@ -225,6 +241,8 @@
       workspace: document.getElementById('setting-workspace').value,
       defaultModel: document.getElementById('setting-default-model').value,
       openrouterKey: document.getElementById('setting-openrouter-key').value,
+      anthropicKey: document.getElementById('setting-anthropic-key').value,
+      googleKey: document.getElementById('setting-google-key').value,
       budgetDaily: parseFloat(document.getElementById('setting-budget-daily').value) || 15,
       language: document.getElementById('setting-language').value,
       minimizeToTray: document.getElementById('setting-minimize-tray').checked,

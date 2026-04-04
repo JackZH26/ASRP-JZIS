@@ -98,10 +98,12 @@ export function registerSettingsHandlers(): void {
 
   ipcMain.handle('settings:get', async () => {
     const settings = loadSettings();
-    // Inject API key status (masked) from safeKeyStore so renderer knows if a key is configured
-    const storedKey = safeKeyStore.getKey('openrouterKey');
-    if (storedKey) {
-      settings.openrouterKey = storedKey.slice(0, 8) + '••••••••';
+    // Inject API key status (masked) from safeKeyStore so renderer knows if keys are configured
+    for (const keyField of ['openrouterKey', 'anthropicKey', 'googleKey']) {
+      const storedKey = safeKeyStore.getKey(keyField);
+      if (storedKey) {
+        settings[keyField] = storedKey.slice(0, 8) + '••••••••';
+      }
     }
     return settings;
   });
@@ -109,13 +111,16 @@ export function registerSettingsHandlers(): void {
   ipcMain.handle('settings:set', async (_event, updates: Record<string, unknown>) => {
     try {
       // Route API key updates through safeKeyStore (encrypted)
-      if (typeof updates.openrouterKey === 'string') {
-        const keyVal = updates.openrouterKey as string;
-        // Only store if it's a real key (not the masked placeholder we send to renderer)
-        if (keyVal && !keyVal.includes('••••')) {
-          safeKeyStore.storeKey('openrouterKey', keyVal);
+      const keyFields = ['openrouterKey', 'anthropicKey', 'googleKey'];
+      for (const keyField of keyFields) {
+        if (typeof updates[keyField] === 'string') {
+          const keyVal = updates[keyField] as string;
+          // Only store if it's a real key (not the masked placeholder we send to renderer)
+          if (keyVal && !keyVal.includes('••••')) {
+            safeKeyStore.storeKey(keyField, keyVal);
+          }
+          delete updates[keyField]; // Don't persist in settings.json
         }
-        delete updates.openrouterKey; // Don't persist in settings.json
       }
 
       // Filter to only known, allowed keys
