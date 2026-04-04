@@ -1139,25 +1139,8 @@
     var msgEl = document.getElementById('s4-assistant-msg');
 
     if (panel) panel.style.display = 'block';
-    if (msgEl) msgEl.textContent = 'Thinking…';
-
-    if (typeof sendMessage === 'function') {
-      try { sendMessage(msg); } catch(e) {}
-    }
-
-    if (window.asrp && window.asrp.assistant) {
-      window.asrp.assistant.chat(msg).then(function(res) {
-        if (msgEl && res && res.reply) {
-          msgEl.textContent = res.reply;
-        } else if (msgEl) {
-          msgEl.textContent = msg;
-        }
-      }).catch(function() {
-        if (msgEl) msgEl.textContent = msg;
-      });
-    } else {
-      if (msgEl) msgEl.textContent = msg;
-    }
+    // Show the guidance text directly — no need to call AI for setup instructions
+    if (msgEl) msgEl.textContent = msg;
   }
 
   // ── Phase C: Verification ──────────────────────────────────
