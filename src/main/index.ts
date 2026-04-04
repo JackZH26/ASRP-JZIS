@@ -16,6 +16,8 @@ import * as fs from 'fs';
 import { registerIpcHandlers } from './ipc-handlers';
 import * as openclawBridge from './openclaw-bridge';
 import { autoUpdater } from './auto-updater';
+import { openclawManager } from './openclaw-manager';
+import { hasConfig } from './openclaw-config-generator';
 
 // Build metadata (generated during prebuild)
 let buildInfo = { commit: 'dev', date: 'dev' };
@@ -379,6 +381,19 @@ app.whenReady().then(() => {
     }
   });
 
+  // Auto-start OpenClaw gateway if config exists (setup was completed)
+  if (hasConfig()) {
+    openclawManager.start().then((res) => {
+      if (res.success) {
+        console.log('[ASRP] OpenClaw gateway started on port 18800');
+      } else {
+        console.warn('[ASRP] OpenClaw gateway failed to start:', res.error);
+      }
+    }).catch((err) => {
+      console.warn('[ASRP] OpenClaw gateway start error:', err);
+    });
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -398,6 +413,8 @@ app.on('before-quit', () => {
   isQuitting = true;
   // Issue #32: Clear polling interval to prevent leaks
   if (statusPollInterval) clearInterval(statusPollInterval);
+  // Stop OpenClaw gateway on app quit
+  openclawManager.stop();
 });
 
 app.on('will-quit', () => {

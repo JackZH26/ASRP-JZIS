@@ -1274,6 +1274,59 @@
         }
       }).catch(function() {});
     }
+
+    // Generate OpenClaw config and start gateway
+    if (window.asrp && window.asrp.gateway) {
+      var gwStatus = document.createElement('div');
+      gwStatus.id = 's5-gw-status';
+      gwStatus.style.cssText = 'margin-top:16px;padding:12px 16px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:13px;color:var(--text-secondary)';
+      gwStatus.textContent = '🔄 Starting OpenClaw gateway...';
+      var step5 = document.getElementById('sw-step-5');
+      if (step5) {
+        // Insert before the CTA buttons
+        var ctaDiv = step5.querySelector('div:last-child');
+        if (ctaDiv) step5.insertBefore(gwStatus, ctaDiv);
+      }
+
+      // Build agent configs for gateway
+      var gwAgents = (state.agentConfigs || []).map(function(cfg) {
+        return {
+          name: cfg.agentId || cfg.customName || 'Agent',
+          role: cfg.role || 'Assistant',
+          model: cfg.model || 'claude-sonnet-4-6',
+          discordToken: cfg.discordToken || '',
+          channelId: cfg.channelId || '',
+          customName: cfg.customName || '',
+        };
+      }).filter(function(a) { return a.discordToken; });
+
+      var gwGuildId = state.guildId || '';
+
+      if (gwAgents.length > 0 && gwGuildId) {
+        window.asrp.gateway.setupAndStart(gwAgents, gwGuildId).then(function(res) {
+          if (gwStatus) {
+            if (res.success) {
+              gwStatus.style.background = 'rgba(74,140,106,0.08)';
+              gwStatus.style.borderColor = 'var(--success)';
+              gwStatus.style.color = 'var(--success)';
+              gwStatus.textContent = '✅ OpenClaw gateway is running — agents are online!';
+            } else {
+              gwStatus.style.background = 'rgba(200,92,92,0.08)';
+              gwStatus.style.borderColor = 'var(--error)';
+              gwStatus.style.color = 'var(--error)';
+              gwStatus.textContent = '⚠️ Gateway start failed: ' + (res.error || 'Unknown error') + '. You can start it later from Settings.';
+            }
+          }
+        }).catch(function(err) {
+          if (gwStatus) {
+            gwStatus.textContent = '⚠️ Could not start gateway: ' + String(err);
+            gwStatus.style.color = 'var(--error)';
+          }
+        });
+      } else {
+        if (gwStatus) gwStatus.textContent = 'ℹ️ No Discord bots configured — gateway not started.';
+      }
+    }
   }
 
   window.swOllamaDownload = function() {

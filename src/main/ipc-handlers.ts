@@ -10,7 +10,7 @@ import { registerAgentHandlers, registerOpenClawHandlers, registerAssistantHandl
 import { registerPaperHandlers } from './paper-handlers';
 import { registerExperimentHandlers } from './experiment-handlers';
 import { registerAuditHandlers } from './audit-handlers';
-import { registerSystemHandlers, registerSettingsHandlers, registerUpdaterHandlers, registerSelfTestHandlers } from './system-handlers';
+import { registerSystemHandlers, registerSettingsHandlers, registerUpdaterHandlers, registerSelfTestHandlers, registerGatewayHandlers } from './system-handlers';
 import { registerOllamaHandlers } from './ollama-handlers';
 
 // ---- Issue #1 (CRITICAL): Path resolution — works in dev and packaged ASAR builds ----
@@ -121,4 +121,5 @@ export function registerIpcHandlers(): void {
   registerUpdaterHandlers();
   registerSelfTestHandlers();
   registerDiscordHandlers();
+  registerGatewayHandlers();
 }

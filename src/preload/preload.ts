@@ -410,6 +410,35 @@ const discord = {
     invoke<{ success: boolean; error?: string }>('discord:open-url', url),
 };
 
+// ---- OpenClaw Gateway API ----
+const gateway = {
+  status: () =>
+    invoke<{
+      installed: boolean; running: boolean; port: number;
+      pid: number | null; version: string | null; uptime: number; error: string | null;
+    }>('gateway:status'),
+
+  start: () =>
+    invoke<{ success: boolean; error?: string }>('gateway:start'),
+
+  stop: () =>
+    invoke<{ success: boolean }>('gateway:stop'),
+
+  restart: () =>
+    invoke<{ success: boolean; error?: string }>('gateway:restart'),
+
+  install: () =>
+    invoke<{ success: boolean; error?: string }>('gateway:install'),
+
+  setupAndStart: (agentConfigs: Array<{
+    name: string; role: string; model: string; discordToken: string; channelId?: string; customName?: string;
+  }>, guildId: string) =>
+    invoke<{ success: boolean; error?: string }>('gateway:setup-and-start', agentConfigs, guildId),
+
+  hasConfig: () =>
+    invoke<{ hasConfig: boolean }>('gateway:has-config'),
+};
+
 // ---- Navigation events from main process ----
 const on = (channel: 'navigate', callback: (route: string) => void): (() => void) => {
   const allowedChannels = ['navigate'] as const;
@@ -443,5 +472,6 @@ contextBridge.exposeInMainWorld('asrp', {
   ollama,
   updater,
   discord,
+  gateway,
   on,
 });

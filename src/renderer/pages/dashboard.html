@@ -1,7 +1,10 @@
-<!-- Status banner — shown when OpenClaw gateway is not connected -->
-<div id="demo-banner" style="background:#e8f4fd;border:1px solid #b8daff;border-radius:8px;padding:8px 16px;margin-bottom:14px;font-size:13px;color:#004085;display:flex;align-items:center;gap:8px">
-  <span>ℹ️</span>
-  <span><strong>Standalone Mode</strong> — Connect to OpenClaw for live agent data, or start a new experiment below.</span>
+<!-- Gateway status banner — dynamically updated -->
+<div id="demo-banner" style="background:#e8f4fd;border:1px solid #b8daff;border-radius:8px;padding:8px 16px;margin-bottom:14px;font-size:13px;color:#004085;display:flex;align-items:center;gap:8px;justify-content:space-between">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="gw-banner-icon">ℹ️</span>
+    <span id="gw-banner-text"><strong>Checking gateway status...</strong></span>
+  </div>
+  <button class="btn btn-outline btn-sm" id="gw-start-btn" style="display:none;font-size:11px;padding:2px 10px" onclick="startGateway()">Start Gateway</button>
 </div>
 
 <div class="page-header">
@@ -452,5 +455,73 @@
 
   loadDashboard();
   loadLocalAiStatus();
+
+  // Gateway status check
+  async function checkGatewayStatus() {
+    if (!window.asrp || !window.asrp.gateway) return;
+    try {
+      var status = await window.asrp.gateway.status();
+      var banner = document.getElementById('demo-banner');
+      var icon = document.getElementById('gw-banner-icon');
+      var text = document.getElementById('gw-banner-text');
+      var btn = document.getElementById('gw-start-btn');
+      if (!banner) return;
+
+      if (!status.installed) {
+        banner.style.background = '#fff3cd';
+        banner.style.borderColor = '#ffc107';
+        banner.style.color = '#856404';
+        if (icon) icon.textContent = '⚠️';
+        if (text) text.innerHTML = '<strong>OpenClaw not installed</strong> — Run <code>npm install -g openclaw</code> to enable agents.';
+        if (btn) btn.style.display = 'none';
+      } else if (status.running) {
+        banner.style.background = 'rgba(74,140,106,0.08)';
+        banner.style.borderColor = '#4a8c6a';
+        banner.style.color = '#2d5a3d';
+        if (icon) icon.textContent = '🟢';
+        if (text) text.innerHTML = '<strong>Gateway running</strong> — Port ' + status.port + ' · PID ' + status.pid + ' · Uptime ' + formatUptime(status.uptime);
+        if (btn) btn.style.display = 'none';
+      } else {
+        banner.style.background = '#e8f4fd';
+        banner.style.borderColor = '#b8daff';
+        banner.style.color = '#004085';
+        if (icon) icon.textContent = '⏸️';
+        if (text) text.innerHTML = '<strong>Gateway stopped</strong> — Start the gateway to bring agents online.';
+        if (btn) btn.style.display = '';
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  function formatUptime(seconds) {
+    if (seconds < 60) return seconds + 's';
+    if (seconds < 3600) return Math.floor(seconds / 60) + 'm';
+    return Math.floor(seconds / 3600) + 'h ' + Math.floor((seconds % 3600) / 60) + 'm';
+  }
+
+  window.startGateway = async function() {
+    if (!window.asrp || !window.asrp.gateway) return;
+    var btn = document.getElementById('gw-start-btn');
+    var text = document.getElementById('gw-banner-text');
+    if (btn) btn.disabled = true;
+    if (text) text.innerHTML = '<strong>Starting gateway...</strong>';
+    try {
+      var res = await window.asrp.gateway.start();
+      if (res.success) {
+        Toast.show('Gateway started!', 'success');
+      } else {
+        Toast.show('Failed: ' + (res.error || 'Unknown error'), 'error');
+      }
+    } catch (e) {
+      Toast.show('Error: ' + String(e), 'error');
+    }
+    if (btn) btn.disabled = false;
+    checkGatewayStatus();
+  };
+
+  checkGatewayStatus();
+  // Refresh gateway status every 30 seconds
+  setInterval(checkGatewayStatus, 30000);
 })();
 </script>

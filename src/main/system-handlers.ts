@@ -4,6 +4,8 @@ import * as fs from 'fs';
 import { autoUpdater } from './auto-updater';
 import { runSelfTest } from './self-test';
 import * as safeKeyStore from './safe-key-store';
+import { openclawManager } from './openclaw-manager';
+import * as openclawConfigGen from './openclaw-config-generator';
 import {
   RESOURCES_PATH,
   getWorkspaceBase,
@@ -236,5 +238,57 @@ export function registerSelfTestHandlers(): void {
     const display = process.env.DISPLAY;
     const isHeadless = process.platform === 'linux' && (!display || display.trim() === '');
     return { headless: isHeadless, display: display || null, platform: process.platform };
+  });
+}
+
+// ============================================================
+// OPENCLAW GATEWAY HANDLERS (channel: 'gateway:*')
+// ============================================================
+
+export function registerGatewayHandlers(): void {
+  ipcMain.handle('gateway:status', async () => {
+    return openclawManager.getStatus();
+  });
+
+  ipcMain.handle('gateway:start', async () => {
+    return openclawManager.start();
+  });
+
+  ipcMain.handle('gateway:stop', async () => {
+    openclawManager.stop();
+    return { success: true };
+  });
+
+  ipcMain.handle('gateway:restart', async () => {
+    return openclawManager.restart();
+  });
+
+  ipcMain.handle('gateway:install', async () => {
+    return openclawManager.install();
+  });
+
+  // Generate config from saved agent setup data and start the gateway
+  ipcMain.handle('gateway:setup-and-start', async (_event, agentConfigs: Array<{
+    name: string; role: string; model: string; discordToken: string; channelId?: string; customName?: string;
+  }>, guildId: string) => {
+    try {
+      const workspacePath = getWorkspaceBase();
+
+      // Generate OpenClaw config
+      const configResult = openclawConfigGen.generateConfig(agentConfigs, guildId, workspacePath);
+      if (!configResult.success) {
+        return { success: false, error: configResult.error };
+      }
+
+      // Start the gateway
+      const startResult = await openclawManager.start();
+      return startResult;
+    } catch (err: unknown) {
+      return { success: false, error: String(err) };
+    }
+  });
+
+  ipcMain.handle('gateway:has-config', async () => {
+    return { hasConfig: openclawConfigGen.hasConfig() };
   });
 }
