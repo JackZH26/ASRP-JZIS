@@ -79,28 +79,18 @@ class AppAutoUpdater extends EventEmitter {
       this._send('updater:status', this.getStatus());
 
       if (this.manualCheck) {
-        // User clicked "Check for Updates..." — show dialog
         this.manualCheck = false;
-        const win = this.getWindow?.() ?? undefined;
-        dialog.showMessageBox(win as BrowserWindow, {
-          type: 'info',
-          title: 'Update Available',
-          message: `ASRP Desktop v${info.version} is available.`,
-          detail: `You are currently on v${app.getVersion()}. Would you like to download the update now?`,
-          buttons: ['Download Update', 'Later'],
-          defaultId: 0,
-          cancelId: 1,
-        }).then(({ response }) => {
-          if (response === 0) {
-            this.downloadUpdate().catch(() => { /* handled by error event */ });
-          }
-        });
+        // Auto-start download when user manually checked
+        this.downloadUpdate().catch(() => { /* handled by error event */ });
       } else {
-        // Silent check — show system notification
+        // Silent check — auto-start download in background
+        // The update bar in renderer will show progress
+        this.downloadUpdate().catch(() => { /* handled by error event */ });
+
         if (Notification.isSupported()) {
           const notif = new Notification({
             title: 'ASRP Update Available',
-            body: `Version ${info.version} is ready to download. Go to ASRP → Check for Updates.`,
+            body: `Downloading v${info.version} in the background...`,
           });
           notif.on('click', () => {
             this.getWindow?.()?.show();
@@ -145,21 +135,13 @@ class AppAutoUpdater extends EventEmitter {
       this.status.progress = 100;
       this._send('updater:status', this.getStatus());
 
-      // Show restart dialog
-      const win = this.getWindow?.() ?? undefined;
-      dialog.showMessageBox(win as BrowserWindow, {
-        type: 'info',
-        title: 'Update Ready',
-        message: `ASRP Desktop v${info.version} has been downloaded.`,
-        detail: 'Restart now to install the update, or it will be installed automatically next time you quit.',
-        buttons: ['Restart Now', 'Later'],
-        defaultId: 0,
-        cancelId: 1,
-      }).then(({ response }) => {
-        if (response === 0) {
-          this.installUpdate();
-        }
-      });
+      // Notification — the update bar in renderer handles the restart button
+      if (Notification.isSupported()) {
+        new Notification({
+          title: 'ASRP Ready to Update',
+          body: `v${info.version} downloaded. Click "Restart Now" in the app to install.`,
+        }).show();
+      }
 
       // Update menu
       this._updateMenu();
