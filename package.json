@@ -1,7 +1,7 @@
 {
   "name": "asrp-desktop",
-  "version": "0.1.9",
-  "description": "ASRP Desktop \u2014 Agent Science Research Platform",
+  "version": "0.1.10",
+  "description": "ASRP Desktop — Agent Science Research Platform",
   "main": "dist/main/index.js",
   "author": {
     "name": "Jian Zhou",
