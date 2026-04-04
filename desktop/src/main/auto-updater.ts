@@ -1,10 +1,10 @@
 // ============================================================
-// Auto-Updater — T-083
+// Auto-Updater — ASRP Desktop
 // Uses electron-updater for automatic update checks/installs.
 // Loaded dynamically to avoid hard crash when not installed.
 // ============================================================
 
-import { app, BrowserWindow, Notification } from 'electron';
+import { app, BrowserWindow, Notification, dialog, Menu } from 'electron';
 import { EventEmitter } from 'events';
 
 export interface UpdaterStatus {
@@ -28,6 +28,9 @@ type UpdaterEvent =
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AutoUpdaterLib = any;
 
+// Check interval: 4 hours
+const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
+
 class AppAutoUpdater extends EventEmitter {
   private lib: AutoUpdaterLib = null;
   private status: UpdaterStatus = {
@@ -40,10 +43,14 @@ class AppAutoUpdater extends EventEmitter {
     error: null,
   };
   private initialized = false;
+  private getWindow: (() => BrowserWindow | null) | null = null;
+  private periodicTimer: ReturnType<typeof setInterval> | null = null;
+  private manualCheck = false; // true when user clicked "Check for Updates..."
 
   initialize(getWindow: () => BrowserWindow | null): void {
     if (this.initialized) return;
     this.initialized = true;
+    this.getWindow = getWindow;
 
     // Try to load electron-updater dynamically
     try {
@@ -62,34 +69,73 @@ class AppAutoUpdater extends EventEmitter {
     this.lib.on('checking-for-update' as UpdaterEvent, () => {
       this.status.checking = true;
       this.status.error = null;
-      this._send(getWindow, 'updater:status', this.getStatus());
+      this._send('updater:status', this.getStatus());
     });
 
     this.lib.on('update-available' as UpdaterEvent, (info: { version: string }) => {
       this.status.checking = false;
       this.status.available = true;
       this.status.version = info.version;
-      this._send(getWindow, 'updater:status', this.getStatus());
+      this._send('updater:status', this.getStatus());
 
-      // Show notification
-      if (Notification.isSupported()) {
-        new Notification({
-          title: 'ASRP Update Available',
-          body: `Version ${info.version} is ready to download.`,
-        }).show();
+      if (this.manualCheck) {
+        // User clicked "Check for Updates..." — show dialog
+        this.manualCheck = false;
+        const win = this.getWindow?.() ?? undefined;
+        dialog.showMessageBox(win as BrowserWindow, {
+          type: 'info',
+          title: 'Update Available',
+          message: `ASRP Desktop v${info.version} is available.`,
+          detail: `You are currently on v${app.getVersion()}. Would you like to download the update now?`,
+          buttons: ['Download Update', 'Later'],
+          defaultId: 0,
+          cancelId: 1,
+        }).then(({ response }) => {
+          if (response === 0) {
+            this.downloadUpdate().catch(() => { /* handled by error event */ });
+          }
+        });
+      } else {
+        // Silent check — show system notification
+        if (Notification.isSupported()) {
+          const notif = new Notification({
+            title: 'ASRP Update Available',
+            body: `Version ${info.version} is ready to download. Go to ASRP → Check for Updates.`,
+          });
+          notif.on('click', () => {
+            this.getWindow?.()?.show();
+            this.getWindow?.()?.focus();
+          });
+          notif.show();
+        }
       }
+
+      // Update the app menu to show update available
+      this._updateMenu();
     });
 
     this.lib.on('update-not-available' as UpdaterEvent, () => {
       this.status.checking = false;
       this.status.available = false;
-      this._send(getWindow, 'updater:status', this.getStatus());
+      this._send('updater:status', this.getStatus());
+
+      if (this.manualCheck) {
+        this.manualCheck = false;
+        const win = this.getWindow?.() ?? undefined;
+        dialog.showMessageBox(win as BrowserWindow, {
+          type: 'info',
+          title: 'No Updates',
+          message: 'You\'re up to date!',
+          detail: `ASRP Desktop v${app.getVersion()} is the latest version.`,
+          buttons: ['OK'],
+        });
+      }
     });
 
-    this.lib.on('download-progress' as UpdaterEvent, (progress: { percent: number }) => {
+    this.lib.on('download-progress' as UpdaterEvent, (progress: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => {
       this.status.downloading = true;
       this.status.progress = Math.round(progress.percent);
-      this._send(getWindow, 'updater:status', this.getStatus());
+      this._send('updater:status', this.getStatus());
     });
 
     this.lib.on('update-downloaded' as UpdaterEvent, (info: { version: string }) => {
@@ -97,35 +143,71 @@ class AppAutoUpdater extends EventEmitter {
       this.status.ready = true;
       this.status.version = info.version;
       this.status.progress = 100;
-      this._send(getWindow, 'updater:status', this.getStatus());
+      this._send('updater:status', this.getStatus());
 
-      if (Notification.isSupported()) {
-        new Notification({
-          title: 'ASRP Ready to Update',
-          body: `Version ${info.version} downloaded. Restart to install.`,
-        }).show();
-      }
+      // Show restart dialog
+      const win = this.getWindow?.() ?? undefined;
+      dialog.showMessageBox(win as BrowserWindow, {
+        type: 'info',
+        title: 'Update Ready',
+        message: `ASRP Desktop v${info.version} has been downloaded.`,
+        detail: 'Restart now to install the update, or it will be installed automatically next time you quit.',
+        buttons: ['Restart Now', 'Later'],
+        defaultId: 0,
+        cancelId: 1,
+      }).then(({ response }) => {
+        if (response === 0) {
+          this.installUpdate();
+        }
+      });
+
+      // Update menu
+      this._updateMenu();
     });
 
     this.lib.on('error' as UpdaterEvent, (err: Error) => {
       this.status.checking = false;
       this.status.downloading = false;
       this.status.error = err.message;
-      this._send(getWindow, 'updater:status', this.getStatus());
+      this._send('updater:status', this.getStatus());
       console.error('[AutoUpdater] Error:', err.message);
+
+      if (this.manualCheck) {
+        this.manualCheck = false;
+        const win = this.getWindow?.() ?? undefined;
+        dialog.showMessageBox(win as BrowserWindow, {
+          type: 'error',
+          title: 'Update Error',
+          message: 'Failed to check for updates.',
+          detail: err.message,
+          buttons: ['OK'],
+        });
+      }
     });
 
-    // Check for updates after 10s delay on startup
+    // Silent check after 10s on startup
     setTimeout(() => {
       this.checkForUpdates().catch(() => { /* ignore startup check errors */ });
     }, 10000);
 
-    // Prompt to install on quit if update ready
+    // Periodic check every 4 hours
+    this.periodicTimer = setInterval(() => {
+      this.checkForUpdates().catch(() => { /* ignore periodic check errors */ });
+    }, CHECK_INTERVAL_MS);
+
+    // Install on quit if update ready
     app.on('before-quit', () => {
+      if (this.periodicTimer) clearInterval(this.periodicTimer);
       if (this.status.ready && this.lib) {
         this.lib.quitAndInstall(false, true);
       }
     });
+  }
+
+  /** Triggered by user clicking "Check for Updates..." in menu */
+  async checkForUpdatesManual(): Promise<void> {
+    this.manualCheck = true;
+    return this.checkForUpdates();
   }
 
   async checkForUpdates(): Promise<void> {
@@ -141,6 +223,7 @@ class AppAutoUpdater extends EventEmitter {
     if (!this.lib || !this.status.available) return;
     try {
       this.status.downloading = true;
+      this._send('updater:status', this.getStatus());
       await this.lib.downloadUpdate();
     } catch (err) {
       this.status.downloading = false;
@@ -157,9 +240,31 @@ class AppAutoUpdater extends EventEmitter {
     return { ...this.status };
   }
 
-  private _send(getWindow: () => BrowserWindow | null, channel: string, data: unknown): void {
+  /** Update the application menu to reflect update state */
+  private _updateMenu(): void {
+    // Emit event so index.ts can rebuild the menu
+    this.emit('menu-update-needed');
+  }
+
+  /** Get the label for the update menu item */
+  getMenuLabel(): string {
+    if (this.status.ready) return `Restart to Update (v${this.status.version})`;
+    if (this.status.downloading) return `Downloading Update... (${this.status.progress}%)`;
+    if (this.status.available) return `Download Update (v${this.status.version})`;
+    return 'Check for Updates...';
+  }
+
+  /** Get the menu click handler */
+  getMenuAction(): () => void {
+    if (this.status.ready) return () => this.installUpdate();
+    if (this.status.downloading) return () => { /* downloading, no action */ };
+    if (this.status.available) return () => { this.downloadUpdate().catch(() => {}); };
+    return () => { this.checkForUpdatesManual().catch(() => {}); };
+  }
+
+  private _send(channel: string, data: unknown): void {
     try {
-      const win = getWindow();
+      const win = this.getWindow?.();
       if (win && !win.isDestroyed()) {
         win.webContents.send(channel, data);
       }
