@@ -137,6 +137,26 @@ export function registerSetupHandlers(): void {
     }
   });
 
+  ipcMain.handle('setup:save-agent-config', async (_event, token: string, agentConfigs: unknown[]) => {
+    try {
+      getAuthenticatedUserId(token); // Verify auth
+      const userDataPath = app.getPath('userData');
+      const settingsPath = path.join(userDataPath, 'settings.json');
+      let settings: Record<string, unknown> = {};
+      try {
+        if (fs.existsSync(settingsPath)) {
+          settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+        }
+      } catch { /* use empty */ }
+      settings.agentConfigs = agentConfigs;
+      fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+      fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+      return { success: true };
+    } catch (err: unknown) {
+      return { success: false, error: String(err) };
+    }
+  });
+
   // Issue #3 (IDOR): Accept token instead of userId
   ipcMain.handle('setup:complete', async (_event, token: string) => {
     try {

@@ -231,6 +231,9 @@ const setup = {
   initAgents: (token: string) =>
     invoke<{ success: boolean; error?: string }>('setup:init-agents', token),
 
+  saveAgentConfig: (token: string, agentConfigs: unknown[]) =>
+    invoke<{ success: boolean; error?: string }>('setup:save-agent-config', token, agentConfigs),
+
   complete: (token: string) =>
     invoke<{ success: boolean; error?: string }>('setup:complete', token),
 };
