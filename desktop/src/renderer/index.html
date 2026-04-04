@@ -235,9 +235,16 @@
     _updateDismissed = true;
   }
 
+  var _updateState = 'idle'; // idle | available | downloading | ready
+
   function handleUpdateAction() {
-    if (window.asrp && window.asrp.updater) {
+    if (!window.asrp || !window.asrp.updater) return;
+    if (_updateState === 'ready') {
       window.asrp.updater.install();
+    } else if (_updateState === 'available') {
+      window.asrp.updater.download();
+    } else if (_updateState === 'idle') {
+      window.asrp.updater.check();
     }
   }
 
@@ -262,7 +269,7 @@
       if (!bar) return;
 
       if (status.downloading) {
-        // Show download progress
+        _updateState = 'downloading';
         showUpdateBar();
         bar.className = '';
         if (icon) icon.textContent = '⬇';
@@ -273,8 +280,8 @@
         if (actionBtn) actionBtn.style.display = 'none';
         if (progressWrap) progressWrap.style.display = '';
       } else if (status.ready) {
-        // Download complete, ready to install
-        _updateDismissed = false; // re-show even if dismissed
+        _updateState = 'ready';
+        _updateDismissed = false;
         showUpdateBar();
         bar.className = 'ready';
         if (icon) icon.textContent = '✅';
@@ -285,20 +292,16 @@
         if (actionBtn) { actionBtn.style.display = ''; actionBtn.textContent = 'Restart Now'; }
         if (progressWrap) progressWrap.style.display = 'none';
       } else if (status.available && !status.downloading) {
+        _updateState = 'available';
         showUpdateBar();
         if (icon) icon.textContent = '🔔';
         if (text) text.textContent = 'v' + status.version + ' available';
         if (progressWrap) progressWrap.style.display = 'none';
         if (percent) percent.textContent = '';
         if (speed) speed.textContent = '';
-        if (actionBtn) {
-          actionBtn.style.display = '';
-          actionBtn.textContent = 'Download';
-          actionBtn.onclick = function() {
-            if (window.asrp && window.asrp.updater) window.asrp.updater.download();
-          };
-        }
+        if (actionBtn) { actionBtn.style.display = ''; actionBtn.textContent = 'Download'; }
       } else if (status.error) {
+        _updateState = 'idle';
         showUpdateBar();
         if (icon) icon.textContent = '⚠️';
         if (text) text.textContent = 'Update error: ' + status.error.substring(0, 60);

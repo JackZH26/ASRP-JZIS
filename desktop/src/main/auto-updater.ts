@@ -210,6 +210,8 @@ class AppAutoUpdater extends EventEmitter {
     } catch (err) {
       this.status.downloading = false;
       this.status.error = err instanceof Error ? err.message : String(err);
+      this._send('updater:status', this.getStatus());
+      console.error('[AutoUpdater] Download failed:', this.status.error);
     }
   }
 
