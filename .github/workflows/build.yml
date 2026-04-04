@@ -10,11 +10,12 @@ on:
     branches: [main]
 
 # Cancel in-progress runs for the same trigger.
-# Use SHA for push events so tag-push and branch-push don't cancel each other.
-# Use head_ref for PRs so new commits cancel stale PR runs.
+# Use full ref (refs/heads/main or refs/tags/v*) so branch and tag pushes
+# get separate groups even when they share the same SHA.
+# PRs use head_ref so new commits cancel stale runs.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
