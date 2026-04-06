@@ -233,14 +233,22 @@ class AppAutoUpdater extends EventEmitter {
       return;
     }
     console.log('[AutoUpdater] Calling quitAndInstall...');
-    // On macOS, setImmediate ensures the IPC response is sent before the app quits
+
+    // CRITICAL: Set isQuitting flag BEFORE calling quitAndInstall.
+    // Without this, the mainWindow 'close' handler calls e.preventDefault()
+    // (minimize to tray) which blocks app.quit() inside quitAndInstall.
+    // We emit 'before-quit-for-update' so index.ts can set isQuitting = true.
+    this.emit('before-quit-for-update');
+
+    // Use setImmediate to let the IPC response reach the renderer first
     setImmediate(() => {
       try {
+        // isSilent=false (show installer), isForceRunAfter=true (relaunch after install)
         this.lib.quitAndInstall(false, true);
       } catch (err) {
         console.error('[AutoUpdater] quitAndInstall failed:', err);
-        // Fallback: force quit and let autoInstallOnAppQuit handle it
-        app.quit();
+        // Fallback: force quit — autoInstallOnAppQuit will handle install on next launch
+        app.exit(0);
       }
     });
   }

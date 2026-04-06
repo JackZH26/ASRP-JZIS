@@ -365,6 +365,12 @@ app.whenReady().then(() => {
     createAppMenu();
   });
 
+  // When auto-updater is about to quit for install, set isQuitting
+  // so the window close handler doesn't block with e.preventDefault()
+  autoUpdater.on('before-quit-for-update', () => {
+    isQuitting = true;
+  });
+
   // T-027: Agent status polling every 30s
   // Issue #32: Store interval ID so it can be cleared on quit
   statusPollInterval = setInterval(() => {
