@@ -232,9 +232,7 @@
             <div class="sw-agent-dot" id="s4-adot-0">1</div>
             <div class="sw-agent-dot" id="s4-adot-1">2</div>
             <div class="sw-agent-dot" id="s4-adot-2">3</div>
-            <div class="sw-agent-dot" id="s4-adot-3">4</div>
-            <div class="sw-agent-dot" id="s4-adot-4">5</div>
-            <span id="s4-agent-counter" style="font-size:11px;color:var(--text-tertiary);margin-left:6px">Agent 1 of 5</span>
+            <span id="s4-agent-counter" style="font-size:11px;color:var(--text-tertiary);margin-left:6px">Agent 1 of 3</span>
           </div>
 
           <!-- Agent wizard card (populated by JS) -->
@@ -283,7 +281,7 @@
           <div style="display:inline-flex;flex-direction:column;gap:6px;text-align:left;margin-top:16px;background:var(--card-alt);padding:14px 20px;border-radius:10px;border:1px solid var(--border)">
             <div style="font-size:13px;color:var(--text)">✅ Research profile saved</div>
             <div style="font-size:13px;color:var(--text)">✅ API keys configured</div>
-            <div style="font-size:13px;color:var(--text)">✅ 5 agents configured</div>
+            <div style="font-size:13px;color:var(--text)">✅ 3 agents configured</div>
             <div style="font-size:13px;color:var(--text)">✅ Workspace ready</div>
           </div>
         </div>
@@ -613,21 +611,15 @@
 
   // ── Step 3: OpenClaw + Agent Init ─────────────────────────
   var AGENTS = [
-    { emoji: '🧑‍💼', name: 'Aria',    role: 'Assistant', model: 'claude-haiku-4-5' },
-    { emoji: '🧠',   name: 'Albert',  role: 'Theorist',  model: 'claude-opus-4-6' },
-    { emoji: '⚙️',   name: 'Wall-E',  role: 'Engineer',  model: 'claude-sonnet-4-6' },
-    { emoji: '📋',   name: 'Critic',  role: 'Reviewer',  model: 'claude-opus-4-6' },
-    { emoji: '📚',   name: 'Scholar', role: 'Librarian', model: 'claude-haiku-4-5' },
-    { emoji: '🏥',   name: 'DocMario',role: 'ITDoctor',  model: 'claude-haiku-4-5' },
+    { emoji: '🧠', name: 'Albert',  role: 'Theorist',  model: 'claude-opus-4-6' },
+    { emoji: '⚙️', name: 'Wall-E',  role: 'Engineer',  model: 'claude-sonnet-4-6' },
+    { emoji: '🤖', name: 'Aria',    role: 'Assistant',  model: 'claude-haiku-4-5' },
   ];
 
   var INIT_MESSAGES = [
     'Creating workspace…',
     'Writing SOUL.md…',
     'Loading agent templates…',
-    'Configuring memory systems…',
-    'Verifying agent…',
-    'Running health check…',
   ];
 
   function swInitStep3() {
@@ -774,34 +766,22 @@
 
   var CONFIG_AGENTS = [
     {
-      emoji: '🧠', name: 'Albert',   role: 'Theorist',  defaultName: 'Albert',
-      desc: 'Generates hypotheses and theoretical frameworks for your research.',
+      emoji: '🧠', name: 'Albert',  role: 'Theorist',  defaultName: 'Albert',
+      desc: 'Theoretical research: hypotheses, experiment design, literature search, and citations.',
       defaultModel: 'claude-opus-4-6',
       suggestedBotName: 'ASRP-Albert',
     },
     {
-      emoji: '⚙️', name: 'Wall-E',   role: 'Engineer',  defaultName: 'Wall-E',
-      desc: 'Implements researchs, writes code, and runs computational tasks.',
+      emoji: '⚙️', name: 'Wall-E',  role: 'Engineer',  defaultName: 'Wall-E',
+      desc: 'Engineering & review: code implementation, numerical experiments, and result validation.',
       defaultModel: 'claude-sonnet-4-6',
       suggestedBotName: 'ASRP-WallE',
     },
     {
-      emoji: '📋', name: 'Critic',   role: 'Reviewer',  defaultName: 'Critic',
-      desc: 'Reviews and validates research outputs with rigorous peer-review standards.',
-      defaultModel: 'claude-opus-4-6',
-      suggestedBotName: 'ASRP-Critic',
-    },
-    {
-      emoji: '📚', name: 'Scholar',  role: 'Librarian', defaultName: 'Scholar',
-      desc: 'Searches literature, manages citations, and curates research references.',
+      emoji: '🤖', name: 'Aria',    role: 'Assistant', defaultName: 'Aria',
+      desc: 'General assistant: task coordination, workflow management, and system monitoring.',
       defaultModel: 'claude-haiku-4-5',
-      suggestedBotName: 'ASRP-Scholar',
-    },
-    {
-      emoji: '🏥', name: 'DocMario', role: 'ITDoctor',  defaultName: 'DocMario',
-      desc: 'Monitors system health, diagnoses issues, and keeps infrastructure running.',
-      defaultModel: 'claude-haiku-4-5',
-      suggestedBotName: 'ASRP-DocMario',
+      suggestedBotName: 'ASRP-Aria',
     },
   ];
 

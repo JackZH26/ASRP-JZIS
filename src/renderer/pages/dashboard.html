@@ -203,7 +203,7 @@
       if (badge) badge.textContent = agents.length + ' agents';
 
       const agentList = document.getElementById('agent-status-list');
-      const roleEmoji = { Theorist: '🧠', Engineer: '⚙️', Reviewer: '📋', Librarian: '📚', ITDoctor: '🏥', Analyst: '📈' };
+      const roleEmoji = { Theorist: '🧠', Engineer: '⚙️', Assistant: '🤖' };
       if (agents.length === 0) {
         agentList.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-tertiary);font-size:13px">No agents connected yet.<br>Connect to OpenClaw to see live agent status.</div>';
       } else {
@@ -421,7 +421,7 @@
       if (badge) badge.textContent = agents.length + ' agents';
       const agentList = document.getElementById('agent-status-list');
       if (!agentList || !document.body.contains(agentList)) return;
-      const roleEmoji = { Theorist: '🧠', Engineer: '⚙️', Reviewer: '📋', Librarian: '📚', ITDoctor: '🏥', Analyst: '📈' };
+      const roleEmoji = { Theorist: '🧠', Engineer: '⚙️', Assistant: '🤖' };
       agentList.innerHTML = agents.map(function(a) {
         return '<div class="agent-row">' +
           '<span class="dot ' + (a.status === 'running' ? 'online' : a.status === 'stopped' ? 'offline' : 'idle') + '"></span>' +
