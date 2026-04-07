@@ -497,6 +497,103 @@ export function registerDiscordHandlers(): void {
     }
   });
 
+  // Helper: make a POST request to the Discord API with a Bot token
+  const discordPost = (apiPath: string, token: string, body: Record<string, unknown>): Promise<unknown> => {
+    return new Promise((resolve, reject) => {
+      const bodyStr = JSON.stringify(body);
+      const req = https.request(
+        {
+          hostname: 'discord.com',
+          path: `/api/v10${apiPath}`,
+          method: 'POST',
+          headers: {
+            Authorization: `Bot ${token}`,
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(bodyStr),
+            'User-Agent': 'ASRP-Desktop (https://asrp.jzis.org, 1.0)',
+          },
+        },
+        (res: import('http').IncomingMessage) => {
+          let data = '';
+          res.on('data', (chunk: Buffer) => { data += chunk.toString(); });
+          res.on('end', () => {
+            try { resolve(JSON.parse(data)); }
+            catch { resolve({ error: 'Invalid JSON response from Discord API' }); }
+          });
+        },
+      );
+      req.on('error', reject);
+      req.write(bodyStr);
+      req.end();
+    });
+  };
+
+  // Create a text channel in a guild for a new research
+  ipcMain.handle('discord:create-channel', async (_event, channelName: string) => {
+    try {
+      // Read guildId and a bot token from settings
+      const settingsFile = path.join(app.getPath('userData'), 'settings.json');
+      if (!fs.existsSync(settingsFile)) {
+        return { success: false, error: 'Settings not found' };
+      }
+      const settings = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'));
+      const guildId = settings.guildId as string;
+      if (!guildId) {
+        return { success: false, error: 'Guild ID not configured' };
+      }
+
+      // Get a bot token from the first agent config that has one
+      const configs = settings.agentConfigs as Array<{ discordToken?: string }> | undefined;
+      let botToken: string | null = null;
+      if (Array.isArray(configs)) {
+        for (const cfg of configs) {
+          if (cfg.discordToken) {
+            // Token is stored encrypted in safeKeyStore — read from there
+            botToken = cfg.discordToken;
+            break;
+          }
+        }
+      }
+      // Also try safeKeyStore for the first agent's token
+      if (!botToken) {
+        const stored = safeKeyStore.getKey('discordBotToken');
+        if (stored) botToken = stored;
+      }
+      if (!botToken) {
+        return { success: false, error: 'No Discord bot token available' };
+      }
+
+      // Sanitize channel name for Discord (lowercase, alphanumeric + hyphens, max 100 chars)
+      const safeName = channelName
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .slice(0, 100);
+
+      const data = await discordPost(
+        `/guilds/${encodeURIComponent(guildId)}/channels`,
+        botToken,
+        {
+          name: safeName,
+          type: 0, // text channel
+          topic: `Research: ${channelName}`,
+        }
+      ) as Record<string, unknown>;
+
+      if (data['id']) {
+        return {
+          success: true,
+          channelId: data['id'] as string,
+          channelName: data['name'] as string,
+        };
+      }
+      return { success: false, error: (data['message'] as string) || 'Failed to create channel' };
+    } catch (err: unknown) {
+      return { success: false, error: String(err) };
+    }
+  });
+
   // Open a Discord URL in the system default browser (restricted to discord.com only)
   ipcMain.handle('discord:open-url', async (_event, url: string) => {
     if (typeof url !== 'string' || !url.startsWith('https://discord.com/')) {

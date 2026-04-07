@@ -18,6 +18,7 @@ const HEALTH_POLL_INTERVAL_MS = 15000;
 
 export interface AgentInstance {
   name: string;
+  displayName: string;  // Discord bot name (user-facing)
   role: string;
   port: number;
   profileName: string;
@@ -35,6 +36,7 @@ export interface OpenClawStatus {
   version: string | null;
   agents: Array<{
     name: string;
+    displayName: string;
     role: string;
     port: number;
     running: boolean;
@@ -212,11 +214,11 @@ class OpenClawManager extends EventEmitter {
       const settingsPath = path.join(app.getPath('userData'), 'settings.json');
       if (!fs.existsSync(settingsPath)) return;
       const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-      const configs = settings.agentConfigs as Array<{ agentId?: string; role?: string }> | undefined;
+      const configs = settings.agentConfigs as Array<{ agentId?: string; discordBotName?: string; role?: string }> | undefined;
       if (!Array.isArray(configs)) return;
       configs.forEach((cfg, idx) => {
         if (cfg && cfg.agentId) {
-          this.registerAgent(cfg.agentId, cfg.role || 'Assistant', idx);
+          this.registerAgent(cfg.agentId, cfg.role || 'Assistant', idx, cfg.discordBotName);
         }
       });
     } catch { /* ignore */ }
@@ -225,12 +227,13 @@ class OpenClawManager extends EventEmitter {
   /**
    * Register an agent (call before start). Does not start the gateway.
    */
-  registerAgent(name: string, role: string, index: number): void {
+  registerAgent(name: string, role: string, index: number, discordBotName?: string): void {
     if (this.instances.has(name)) return;
     const port = this.getPortForAgent(index);
     const profileName = `asrp-${name.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
     this.instances.set(name, {
       name,
+      displayName: discordBotName || name,
       role,
       port,
       profileName,
@@ -480,7 +483,8 @@ class OpenClawManager extends EventEmitter {
 
   getStatus(): OpenClawStatus {
     const agents = Array.from(this.instances.values()).map(inst => ({
-      name: inst.name,
+      name: inst.displayName,
+      displayName: inst.displayName,
       role: inst.role,
       port: inst.port,
       running: inst.running,
@@ -528,7 +532,8 @@ class OpenClawManager extends EventEmitter {
     while (Date.now() - start < timeoutMs) {
       try {
         const res = await this.apiGet(port, '/health', 2000) as Record<string, unknown>;
-        if (res && (res.status === 'ok' || res.ok === true)) return true;
+        // OpenClaw returns {"ok":true,"status":"live"} — accept both 'ok' and 'live'
+        if (res && (res.status === 'ok' || res.status === 'live' || res.ok === true)) return true;
       } catch { /* not ready */ }
       await new Promise(resolve => setTimeout(resolve, 500));
     }

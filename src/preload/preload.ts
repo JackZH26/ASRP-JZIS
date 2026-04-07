@@ -413,6 +413,11 @@ const discord = {
 
   openUrl: (url: string) =>
     invoke<{ success: boolean; error?: string }>('discord:open-url', url),
+
+  createChannel: (channelName: string) =>
+    invoke<{ success: boolean; channelId?: string; channelName?: string; error?: string }>(
+      'discord:create-channel', channelName
+    ),
 };
 
 // ---- OpenClaw Gateway API ----

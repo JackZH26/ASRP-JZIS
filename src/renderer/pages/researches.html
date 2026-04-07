@@ -407,8 +407,21 @@
     };
 
     if (window.asrp) {
-      const result = await window.asrp.researchs.register(hyp, metadata);
+      const result = await window.asrp.experiments.register(hyp, metadata);
       if (result.success) {
+        // Auto-create a Discord channel named after the research ID
+        try {
+          if (window.asrp.discord && window.asrp.discord.createChannel) {
+            const chResult = await window.asrp.discord.createChannel(result.id);
+            if (chResult.success) {
+              console.log('Discord channel created:', chResult.channelName);
+            } else {
+              console.warn('Discord channel creation failed:', chResult.error);
+            }
+          }
+        } catch (chErr) {
+          console.warn('Discord channel creation error:', chErr);
+        }
         alertEl.textContent = `Registered: ${result.id}`;
         alertEl.className = 'alert success show';
         // Add to local list
@@ -440,9 +453,9 @@
 
   async function init() {
     if (!window.asrp) { allResearches = MOCK_EXPERIMENTS; applyFilters(); return; }
-    const { researchs } = await window.asrp.researchs.list();
+    const { experiments } = await window.asrp.experiments.list();
     // Merge IPC data with extended mock (use mock for extended fields when IPC lacks them)
-    allResearches = researchs.map(e => {
+    allResearches = experiments.map(e => {
       const mock = MOCK_EXPERIMENTS.find(m => m.id === e.id);
       return mock ? { ...mock, ...e } : { ...e, researchLine: 'RH', score: null, result: null, method: '', expected: '', successCriteria: '', failureCriteria: '', computeTime: '', validations: [] };
     });
