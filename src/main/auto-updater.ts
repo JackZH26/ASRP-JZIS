@@ -234,23 +234,25 @@ class AppAutoUpdater extends EventEmitter {
     }
     console.log('[AutoUpdater] Calling quitAndInstall...');
 
-    // CRITICAL: Set isQuitting flag BEFORE calling quitAndInstall.
-    // Without this, the mainWindow 'close' handler calls e.preventDefault()
-    // (minimize to tray) which blocks app.quit() inside quitAndInstall.
-    // We emit 'before-quit-for-update' so index.ts can set isQuitting = true.
+    // Set isQuitting BEFORE quit so window close handler doesn't block
     this.emit('before-quit-for-update');
 
-    // Use setImmediate to let the IPC response reach the renderer first
-    setImmediate(() => {
+    // autoInstallOnAppQuit is already true — the update will install when app exits.
+    // We try quitAndInstall first (works for zip-based updates),
+    // then fall back to app.exit() which triggers autoInstallOnAppQuit.
+    setTimeout(() => {
       try {
-        // isSilent=false (show installer), isForceRunAfter=true (relaunch after install)
         this.lib.quitAndInstall(false, true);
       } catch (err) {
-        console.error('[AutoUpdater] quitAndInstall failed:', err);
-        // Fallback: force quit — autoInstallOnAppQuit will handle install on next launch
-        app.exit(0);
+        console.error('[AutoUpdater] quitAndInstall threw:', err);
       }
-    });
+
+      // If still alive after 2s, force exit (autoInstallOnAppQuit handles the rest)
+      setTimeout(() => {
+        console.log('[AutoUpdater] Force exiting for update install...');
+        app.exit(0);
+      }, 2000);
+    }, 500);
   }
 
   getStatus(): UpdaterStatus {
