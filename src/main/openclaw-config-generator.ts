@@ -119,12 +119,18 @@ export function generateAllConfigs(
         fs.writeFileSync(soulPath, soulTemplate(agent.customName || agent.name), 'utf-8');
       }
 
+      // Ensure model has provider prefix (e.g. anthropic/claude-opus-4-6)
+      let modelId = agent.model || (openrouterKey ? 'anthropic/claude-sonnet-4-6' : 'google/gemini-2.5-flash');
+      if (modelId.startsWith('claude-') && !modelId.includes('/')) {
+        modelId = 'anthropic/' + modelId;
+      }
+
       // Build config — tokens inline (file is mode 0o600)
       const config: Record<string, unknown> = {
         agents: {
           defaults: {
             workspace: agentWorkspace,
-            model: agent.model || (openrouterKey ? 'anthropic/claude-sonnet-4-6' : 'google/gemini-2.5-flash'),
+            model: modelId,
           },
         },
         channels: {
@@ -138,6 +144,7 @@ export function generateAllConfigs(
           },
         },
         gateway: {
+          mode: 'local',
           port: openclawManager.getPortForAgent(index),
         },
       };
