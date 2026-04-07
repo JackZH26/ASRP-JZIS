@@ -1,10 +1,14 @@
 // ============================================================
 // Auto-Updater — ASRP Desktop
 // Uses electron-updater for automatic update checks/installs.
+// macOS: manual extract+replace (Squirrel.Mac requires code signing).
 // ============================================================
 
 import { app, BrowserWindow, dialog } from 'electron';
 import { EventEmitter } from 'events';
+import * as path from 'path';
+import * as fs from 'fs';
+import { execSync, spawn } from 'child_process';
 
 export interface UpdaterStatus {
   checking: boolean;
@@ -48,8 +52,8 @@ class AppAutoUpdater extends EventEmitter {
 
     // CRITICAL: autoDownload=false, we control download timing
     this.lib.autoDownload = false;
-    // CRITICAL: this ensures update installs when app quits normally
-    this.lib.autoInstallOnAppQuit = true;
+    // Disable Squirrel auto-install — we handle macOS updates manually
+    this.lib.autoInstallOnAppQuit = process.platform !== 'darwin';
 
     // ── Events ──
 
@@ -190,22 +194,15 @@ class AppAutoUpdater extends EventEmitter {
   /**
    * Install downloaded update.
    *
-   * macOS (Squirrel.Mac) flow:
-   *   1. electron-updater downloads ZIP and fires our `update-downloaded`
-   *   2. Concurrently, it starts a local HTTP proxy and tells Squirrel.Mac
-   *      to fetch the update from it (`nativeUpdater.checkForUpdates()`)
-   *   3. Squirrel.Mac downloads from proxy → sets `squirrelDownloadedUpdate`
-   *   4. On `quitAndInstall()`, if Squirrel finished → quits + ShipIt replaces .app
+   * macOS: Squirrel.Mac requires code-signed apps. Since the app is not
+   * signed, we bypass Squirrel entirely and do a manual extract + replace:
+   *   1. Find the downloaded ZIP in electron-updater's cache
+   *   2. Extract it to a temp directory
+   *   3. Spawn a detached shell script that waits for the app to quit,
+   *      replaces the .app bundle, and relaunches
+   *   4. Quit the app
    *
-   *   CRITICAL: We must NOT call `app.exit()` — it force-kills the process
-   *   and bypasses Squirrel's ShipIt installation. We must let the quit
-   *   complete through the normal lifecycle.
-   *
-   *   A delay before quitAndInstall gives Squirrel time to finish its
-   *   internal download from the proxy (our `update-downloaded` event fires
-   *   BEFORE Squirrel finishes).
-   *
-   * Windows/Linux: quitAndInstall() handles everything synchronously.
+   * Windows/Linux: Use electron-updater's built-in quitAndInstall().
    */
   installUpdate(): void {
     if (!this.lib || !this.status.ready) {
@@ -217,36 +214,172 @@ class AppAutoUpdater extends EventEmitter {
     console.log('[Updater] Version:', this.status.version);
     console.log('[Updater] Platform:', process.platform);
 
-    // Step 1: Signal that we're quitting for update.
-    // Sets isQuitting=true so window close handlers don't minimize to tray.
+    // Signal that we're quitting for update
     this.emit('before-quit-for-update');
 
-    const doQuitAndInstall = () => {
-      console.log('[Updater] Calling quitAndInstall()...');
+    if (process.platform === 'darwin') {
+      this._installMacUpdate();
+    } else {
+      // Windows/Linux: use electron-updater's built-in mechanism
       try {
         this.lib.quitAndInstall(false, true);
       } catch (err) {
         console.error('[Updater] quitAndInstall threw:', err);
-        // Fallback: use app.quit() which triggers autoInstallOnAppQuit
         app.quit();
       }
-
-      // Last-resort fallback: if still alive after 60s, use app.quit().
-      // NEVER use app.exit() — it bypasses Squirrel's install on macOS.
-      setTimeout(() => {
-        console.log('[Updater] Still alive after 60s — calling app.quit()');
-        app.quit();
-      }, 60000).unref();
-    };
-
-    if (process.platform === 'darwin') {
-      // On macOS, delay 5s to let Squirrel.Mac finish downloading
-      // from the local proxy before triggering the quit sequence.
-      console.log('[Updater] macOS: waiting 5s for Squirrel.Mac to stage update...');
-      setTimeout(doQuitAndInstall, 5000);
-    } else {
-      doQuitAndInstall();
+      // Fallback: if still alive after 30s
+      setTimeout(() => { app.quit(); }, 30000).unref();
     }
+  }
+
+  /**
+   * macOS manual update: extract ZIP, replace .app, relaunch.
+   * Bypasses Squirrel.Mac entirely (no code signing required).
+   */
+  private _installMacUpdate(): void {
+    try {
+      // 1. Find the downloaded update ZIP
+      const cacheDir = path.join(app.getPath('userData').replace(/\/Application Support\/.*$/, '/Caches'), 'asrp-desktop-updater');
+      const zipPath = path.join(cacheDir, 'update.zip');
+
+      // Also check pending directory
+      let actualZipPath = '';
+      if (fs.existsSync(zipPath)) {
+        actualZipPath = zipPath;
+      } else {
+        // Look for any ZIP in the pending dir
+        const pendingDir = path.join(cacheDir, 'pending');
+        if (fs.existsSync(pendingDir)) {
+          const zips = fs.readdirSync(pendingDir).filter(f => f.endsWith('.zip'));
+          if (zips.length > 0) {
+            actualZipPath = path.join(pendingDir, zips[0]);
+          }
+        }
+      }
+
+      if (!actualZipPath) {
+        console.error('[Updater] Cannot find downloaded update ZIP');
+        this._showUpdateError('Cannot find downloaded update file. Please re-download.');
+        return;
+      }
+
+      console.log('[Updater] Found update ZIP:', actualZipPath);
+
+      // 2. Determine the current .app path and extract location
+      const appPath = app.getPath('exe').replace(/\/Contents\/MacOS\/.*$/, '');
+      const appName = path.basename(appPath); // "ASRP Desktop.app"
+      const appDir = path.dirname(appPath);   // e.g. /Applications
+      const extractDir = path.join(app.getPath('temp'), 'asrp-update-extract');
+
+      console.log('[Updater] Current app:', appPath);
+      console.log('[Updater] App directory:', appDir);
+
+      // 3. Extract the ZIP to temp
+      if (fs.existsSync(extractDir)) {
+        execSync(`rm -rf "${extractDir}"`, { timeout: 10000, stdio: 'pipe' });
+      }
+      fs.mkdirSync(extractDir, { recursive: true });
+
+      console.log('[Updater] Extracting to:', extractDir);
+      execSync(`unzip -q -o "${actualZipPath}" -d "${extractDir}"`, {
+        timeout: 60000,
+        stdio: 'pipe',
+      });
+
+      // Find the extracted .app (name may differ)
+      const extractedApps = fs.readdirSync(extractDir).filter(f => f.endsWith('.app'));
+      if (extractedApps.length === 0) {
+        throw new Error('No .app found in update ZIP');
+      }
+      const extractedApp = path.join(extractDir, extractedApps[0]);
+      console.log('[Updater] Extracted app:', extractedApp);
+
+      // 4. Create a shell script to do the swap and relaunch
+      //    The script waits for the current process to die, then replaces the app.
+      const pid = process.pid;
+      const scriptPath = path.join(app.getPath('temp'), 'asrp-update.sh');
+      const newAppInPlace = path.join(appDir, appName);
+      const backupPath = path.join(appDir, `${appName}.bak`);
+      const macosExe = path.join(newAppInPlace, 'Contents', 'MacOS', appName.replace('.app', ''));
+
+      const script = `#!/bin/bash
+# ASRP Desktop updater script — auto-generated
+set -e
+
+echo "[ASRP Update] Waiting for app (PID ${pid}) to quit..."
+# Wait for the old process to die (max 30s)
+for i in $(seq 1 60); do
+  if ! kill -0 ${pid} 2>/dev/null; then
+    break
+  fi
+  sleep 0.5
+done
+
+# Brief extra pause for file locks to release
+sleep 1
+
+echo "[ASRP Update] Replacing app bundle..."
+# Remove old backup if exists
+rm -rf "${backupPath}"
+
+# Move current app to backup
+if [ -d "${newAppInPlace}" ]; then
+  mv "${newAppInPlace}" "${backupPath}"
+fi
+
+# Move new app into place
+mv "${extractedApp}" "${newAppInPlace}"
+
+# Remove quarantine attribute (macOS may block unsigned apps from Finder moves)
+xattr -rd com.apple.quarantine "${newAppInPlace}" 2>/dev/null || true
+
+echo "[ASRP Update] Relaunching app..."
+# Relaunch the app
+open "${newAppInPlace}"
+
+# Cleanup
+sleep 5
+rm -rf "${extractDir}"
+rm -rf "${backupPath}"
+rm -f "${scriptPath}"
+
+echo "[ASRP Update] Done."
+`;
+
+      fs.writeFileSync(scriptPath, script, { encoding: 'utf-8', mode: 0o755 });
+      console.log('[Updater] Update script written to:', scriptPath);
+
+      // 5. Spawn the script detached so it survives our quit
+      const child = spawn('/bin/bash', [scriptPath], {
+        detached: true,
+        stdio: 'ignore',
+        env: { ...process.env },
+      });
+      child.unref();
+      console.log('[Updater] Spawned update script, PID:', child.pid);
+
+      // 6. Quit the app — the script will replace it and relaunch
+      setTimeout(() => {
+        console.log('[Updater] Quitting for update...');
+        app.quit();
+      }, 500);
+
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error('[Updater] macOS update failed:', errMsg);
+      this._showUpdateError(`Update failed: ${errMsg}`);
+    }
+  }
+
+  private _showUpdateError(detail: string): void {
+    const win = this.getWindow?.() ?? undefined;
+    dialog.showMessageBox(win as BrowserWindow, {
+      type: 'error',
+      title: 'Update Failed',
+      message: 'Could not install the update',
+      detail,
+      buttons: ['OK'],
+    });
   }
 
   getStatus(): UpdaterStatus { return { ...this.status }; }
