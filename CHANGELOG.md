@@ -7,13 +7,13 @@ All notable changes to ASRP Desktop are documented here.
 ## [0.1.0] — 2026-04-03
 
 ### Summary
-First production release of ASRP Desktop — the Electron-based GUI for the
+First production release of ASRP Desktop — the desktop GUI for the
 Agent Science Research Platform (ASRP). Phases 0 through 9 complete (91/91 tasks).
 
 ---
 
 ### Phase 0 — Project Bootstrap
-- Electron + TypeScript project scaffold (`src/main`, `src/preload`, `src/renderer`)
+- TypeScript project scaffold (`src/main`, `src/preload`, `src/renderer`)
 - `ASRP Builder` config, `tsconfig.json`, `package.json`
 - Build pipeline: `npm run build` → `dist/`, `npm start`, `npm run dev` (hot-reload)
 - CSP header, contextBridge (nodeIntegration OFF), `window.asrp` typed API surface
@@ -80,7 +80,7 @@ Agent Science Research Platform (ASRP). Phases 0 through 9 complete (91/91 tasks
   updater status panel, About section
 - `ollama-manager.ts`: hardware detection (RAM, GPU, VRAM), `ollama pull` with
   streaming progress events, model list, delete, start/stop server, Ollama chat
-- `auto-updater.ts`: electron-updater integration stub
+- `auto-updater.ts`: auto-updater integration stub
 - Assistant chat panel (`js/assistant-chat.js`): collapsed / expanded / fullscreen
   states, quick action buttons, cloud + local model switching, chat history
   persistence, Cmd/Ctrl+J toggle
