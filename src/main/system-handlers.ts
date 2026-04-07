@@ -6,6 +6,7 @@ import { runSelfTest } from './self-test';
 import * as safeKeyStore from './safe-key-store';
 import { openclawManager } from './openclaw-manager';
 import { generateAllConfigs, hasConfig } from './openclaw-config-generator';
+import * as keyValidator from './key-validator';
 import {
   RESOURCES_PATH,
   getWorkspaceBase,
@@ -304,5 +305,14 @@ export function registerGatewayHandlers(): void {
 
   ipcMain.handle('gateway:has-config', async () => {
     return { hasConfig: hasConfig() };
+  });
+
+  // Key validation
+  ipcMain.handle('keys:validate-provider', async (_event, provider: string, key: string) => {
+    return keyValidator.validateKey(provider, key);
+  });
+
+  ipcMain.handle('keys:provider-list', async () => {
+    return { providers: keyValidator.getProviderList() };
   });
 }

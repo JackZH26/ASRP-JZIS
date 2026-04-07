@@ -89,41 +89,36 @@
       <div id="sw-step-2" class="panel" style="display:none">
         <h3 style="margin-bottom:6px">🔑 API Configuration</h3>
         <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">
-          ASRP needs at least one API key for AI models. You can add more keys later in Settings.
+          ASRP needs at least one valid API key to power your AI agents.
         </p>
 
-        <!-- OpenRouter Key (REQUIRED) -->
-        <div class="form-group">
-          <label for="s2-or-key">OpenRouter API Key <span style="font-weight:500;color:var(--error)">*required</span></label>
-          <input type="password" id="s2-or-key" placeholder="sk-or-v1-…" required>
-          <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">
-            Get a free key at <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--accent)">openrouter.ai/keys</a> — provides access to Claude, Gemini, and more.
+        <!-- Dynamic key entries -->
+        <div id="s2-key-entries" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">
+          <!-- First key row (always visible) -->
+          <div class="s2-key-row" data-idx="0">
+            <div style="display:flex;gap:8px;align-items:flex-start">
+              <select class="s2-provider-select" id="s2-provider-0" onchange="s2ProviderChanged(0)" style="width:180px;flex-shrink:0">
+                <option value="">Select provider…</option>
+              </select>
+              <div style="flex:1;position:relative">
+                <input type="password" class="s2-key-input" id="s2-key-0" placeholder="Paste your API key…" oninput="s2KeyChanged(0)" style="width:100%;padding-right:36px">
+                <span id="s2-status-0" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px"></span>
+              </div>
+            </div>
+            <div id="s2-msg-0" style="font-size:11px;margin-top:4px;min-height:16px"></div>
           </div>
         </div>
 
-        <!-- Anthropic Key (optional) -->
-        <div class="form-group">
-          <label for="s2-anthro-key">Anthropic API Key <span style="font-weight:400;color:var(--text-tertiary)">(optional)</span></label>
-          <div style="display:flex;gap:8px">
-            <input type="password" id="s2-anthro-key" placeholder="sk-ant-…" style="flex:1">
-            <button class="btn btn-outline btn-sm" onclick="swTestKey('anthropic')" style="white-space:nowrap;flex-shrink:0">Test</button>
-          </div>
-        </div>
-
-        <!-- Google Key (optional) -->
-        <div class="form-group">
-          <label for="s2-google-key">Google AI Key <span style="font-weight:400;color:var(--text-tertiary)">(optional)</span></label>
-          <div style="display:flex;gap:8px">
-            <input type="password" id="s2-google-key" placeholder="AIza…" style="flex:1">
-            <button class="btn btn-outline btn-sm" onclick="swTestKey('google')" style="white-space:nowrap;flex-shrink:0">Test</button>
-          </div>
-        </div>
+        <!-- Add more button -->
+        <button class="btn btn-ghost btn-sm" id="s2-add-more" onclick="s2AddKeyRow()" style="color:var(--accent);margin-bottom:12px">
+          + Add another key
+        </button>
 
         <div class="alert" id="s2-alert"></div>
 
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
           <button class="btn btn-ghost btn-sm" onclick="swGoTo(1)">← Back</button>
-          <button class="btn btn-primary" onclick="swSaveKeys()">Continue →</button>
+          <button class="btn btn-primary" id="s2-continue" onclick="swSaveKeys()" disabled>Continue →</button>
         </div>
       </div>
 
@@ -551,57 +546,167 @@
   }
 
   // ── Step 2: Keys ──────────────────────────────────────────
+  // ── Step 2: Dynamic API Key Management ──────────────────
+  var s2KeyRows = []; // [{provider, key, valid}]
+  var s2Providers = []; // loaded from backend
+  var s2ValidateTimers = {};
+
   function swInitStep2() {
-    if (!window.asrp || !state.token) return;
-    window.asrp.keys.assignTrial(state.token).then(function(res) {
-      if (res.success && res.key) {
-        state.trialKey = res.key;
-        var display = document.getElementById('s2-trial-key-display');
-        if (display) {
-          // Show masked key
-          var masked = res.key.slice(0, 10) + '•••' + res.key.slice(-6);
-          display.textContent = masked;
-        }
-      }
-    }).catch(function() {});
+    // Load provider list from backend
+    if (window.asrp && window.asrp.keys && window.asrp.keys.providerList) {
+      window.asrp.keys.providerList().then(function(res) {
+        s2Providers = res.providers || [];
+        s2PopulateSelects();
+      }).catch(function() {
+        // Fallback hardcoded providers
+        s2Providers = [
+          { id: 'openai', name: 'OpenAI', placeholder: 'sk-proj-...' },
+          { id: 'anthropic', name: 'Anthropic (Claude)', placeholder: 'sk-ant-...' },
+          { id: 'google', name: 'Google (Gemini)', placeholder: 'AIza...' },
+          { id: 'xai', name: 'xAI (Grok)', placeholder: 'xai-...' },
+          { id: 'openrouter', name: 'OpenRouter', placeholder: 'sk-or-v1-...' },
+          { id: 'minimax', name: 'MiniMax', placeholder: 'eyJ...' },
+        ];
+        s2PopulateSelects();
+      });
+    }
+    // Init first row
+    if (s2KeyRows.length === 0) {
+      s2KeyRows.push({ provider: '', key: '', valid: false });
+    }
   }
 
-  window.swTestKey = function(provider) {
-    swShowAlert('s2-alert', provider + ' key validation (stub) — OK', 'success');
-    setTimeout(function() { swHideAlert('s2-alert'); }, 2000);
+  function s2PopulateSelects() {
+    var selects = document.querySelectorAll('.s2-provider-select');
+    selects.forEach(function(sel) {
+      var current = sel.value;
+      // Keep first option
+      while (sel.options.length > 1) sel.remove(1);
+      s2Providers.forEach(function(p) {
+        var opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+      });
+      if (current) sel.value = current;
+    });
+  }
+
+  window.s2ProviderChanged = function(idx) {
+    var sel = document.getElementById('s2-provider-' + idx);
+    var input = document.getElementById('s2-key-' + idx);
+    var provider = sel ? sel.value : '';
+    s2KeyRows[idx] = s2KeyRows[idx] || { provider: '', key: '', valid: false };
+    s2KeyRows[idx].provider = provider;
+    // Update placeholder
+    var prov = s2Providers.find(function(p) { return p.id === provider; });
+    if (input && prov) input.placeholder = prov.placeholder;
+    else if (input) input.placeholder = 'Paste your API key…';
+    // Clear validation
+    s2SetStatus(idx, '');
+    s2UpdateContinue();
+  };
+
+  window.s2KeyChanged = function(idx) {
+    var input = document.getElementById('s2-key-' + idx);
+    var key = input ? input.value.trim() : '';
+    s2KeyRows[idx] = s2KeyRows[idx] || { provider: '', key: '', valid: false };
+    s2KeyRows[idx].key = key;
+    s2KeyRows[idx].valid = false;
+    s2UpdateContinue();
+
+    // Debounced auto-validate
+    if (s2ValidateTimers[idx]) clearTimeout(s2ValidateTimers[idx]);
+    if (key.length >= 8 && s2KeyRows[idx].provider) {
+      s2SetStatus(idx, '🔄');
+      s2SetMsg(idx, 'Validating…', 'var(--text-tertiary)');
+      s2ValidateTimers[idx] = setTimeout(function() { s2ValidateKey(idx); }, 800);
+    } else {
+      s2SetStatus(idx, '');
+      s2SetMsg(idx, '', '');
+    }
+  };
+
+  function s2ValidateKey(idx) {
+    var row = s2KeyRows[idx];
+    if (!row || !row.provider || !row.key) return;
+    if (!window.asrp || !window.asrp.keys) return;
+
+    window.asrp.keys.validateProvider(row.provider, row.key).then(function(res) {
+      if (res.valid) {
+        s2KeyRows[idx].valid = true;
+        s2SetStatus(idx, '✅');
+        s2SetMsg(idx, 'Key is valid', 'var(--success)');
+      } else {
+        s2KeyRows[idx].valid = false;
+        s2SetStatus(idx, '❌');
+        s2SetMsg(idx, res.error || 'Invalid key', 'var(--error)');
+      }
+      s2UpdateContinue();
+    }).catch(function() {
+      s2SetStatus(idx, '⚠️');
+      s2SetMsg(idx, 'Could not validate (network error)', 'var(--warning)');
+    });
+  }
+
+  function s2SetStatus(idx, icon) {
+    var el = document.getElementById('s2-status-' + idx);
+    if (el) el.textContent = icon;
+  }
+
+  function s2SetMsg(idx, text, color) {
+    var el = document.getElementById('s2-msg-' + idx);
+    if (el) {
+      el.textContent = text;
+      el.style.color = color || 'var(--text-tertiary)';
+    }
+  }
+
+  function s2UpdateContinue() {
+    var btn = document.getElementById('s2-continue');
+    var hasValid = s2KeyRows.some(function(r) { return r.valid; });
+    if (btn) btn.disabled = !hasValid;
+  }
+
+  window.s2AddKeyRow = function() {
+    var idx = s2KeyRows.length;
+    s2KeyRows.push({ provider: '', key: '', valid: false });
+
+    var container = document.getElementById('s2-key-entries');
+    var row = document.createElement('div');
+    row.className = 's2-key-row';
+    row.setAttribute('data-idx', String(idx));
+    row.innerHTML =
+      '<div style="display:flex;gap:8px;align-items:flex-start">' +
+        '<select class="s2-provider-select" id="s2-provider-' + idx + '" onchange="s2ProviderChanged(' + idx + ')" style="width:180px;flex-shrink:0">' +
+          '<option value="">Select provider…</option>' +
+        '</select>' +
+        '<div style="flex:1;position:relative">' +
+          '<input type="password" class="s2-key-input" id="s2-key-' + idx + '" placeholder="Paste your API key…" oninput="s2KeyChanged(' + idx + ')" style="width:100%;padding-right:36px">' +
+          '<span id="s2-status-' + idx + '" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px"></span>' +
+        '</div>' +
+      '</div>' +
+      '<div id="s2-msg-' + idx + '" style="font-size:11px;margin-top:4px;min-height:16px"></div>';
+    container.appendChild(row);
+    s2PopulateSelects();
   };
 
   window.swSaveKeys = function() {
-    var orKey = document.getElementById('s2-or-key').value.trim();
-    var anthKey = document.getElementById('s2-anthro-key').value.trim();
-    var gKey = document.getElementById('s2-google-key').value.trim();
-
-    // OpenRouter key is required
-    if (!orKey) {
-      var alert = document.getElementById('s2-alert');
-      if (alert) {
-        alert.textContent = 'Please enter your OpenRouter API key. Get one free at openrouter.ai/keys';
-        alert.className = 'alert error show';
-      }
-      document.getElementById('s2-or-key').focus();
+    var hasValid = s2KeyRows.some(function(r) { return r.valid; });
+    if (!hasValid) {
+      swShowAlert('s2-alert', 'Please add and validate at least one API key.', 'error');
       return;
     }
+    swHideAlert('s2-alert');
 
-    // Basic format validation
-    if (!orKey.startsWith('sk-or-')) {
-      var alert = document.getElementById('s2-alert');
-      if (alert) {
-        alert.textContent = 'Invalid key format — OpenRouter keys start with sk-or-';
-        alert.className = 'alert error show';
+    // Build keysData from validated rows
+    var keysData = {};
+    s2KeyRows.forEach(function(row) {
+      if (row.valid && row.provider && row.key) {
+        keysData[row.provider + 'Key'] = row.key;
       }
-      return;
-    }
-
-    state.keysData = {
-      openrouterKey: orKey,
-      anthropicKey: anthKey,
-      googleKey: gKey,
-    };
+    });
+    state.keysData = keysData;
 
     if (window.asrp && state.token) {
       window.asrp.setup.saveKeys(state.token, state.keysData).catch(function() {});

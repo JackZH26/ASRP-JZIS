@@ -208,7 +208,6 @@ const auth = {
 
 // ---- Keys API ----
 const keys = {
-  // Issue #3 (IDOR fix): accept token instead of raw userId
   assignTrial: (token: string) =>
     invoke<{ success: boolean; key?: string; error?: string }>('keys:assign-trial', token),
 
@@ -217,6 +216,12 @@ const keys = {
 
   validate: (key: string) =>
     invoke<{ valid: boolean; error?: string }>('keys:validate', key),
+
+  validateProvider: (provider: string, key: string) =>
+    invoke<{ valid: boolean; provider: string; error?: string }>('keys:validate-provider', provider, key),
+
+  providerList: () =>
+    invoke<{ providers: Array<{ id: string; name: string; placeholder: string }> }>('keys:provider-list'),
 };
 
 // ---- Setup API ----
