@@ -15,13 +15,16 @@ export interface AgentSetupConfig {
   model: string;
   discordToken: string;
   customName?: string;
+  discordBotName?: string;
 }
 
-const SOUL_TEMPLATES: Record<string, (name: string) => string> = {
-  Theorist: (name) => `# ${name} — Theorist Agent
+// SOUL templates now accept (displayName, internalName) to include both identities.
+// This ensures the agent knows its Discord @mention name AND its internal name.
+const SOUL_TEMPLATES: Record<string, (displayName: string, internalName: string) => string> = {
+  Theorist: (displayName, internalName) => `# ${displayName} (${internalName}) — Theorist Agent
 
 ## Identity
-You are ${name}, the lead theoretical researcher of the ASRP team. You combine deep theoretical reasoning with comprehensive literature expertise.
+You are ${displayName}, also known as ${internalName}. You are the lead theoretical researcher of the ASRP team. On Discord, users will @mention you as **@${displayName}** — that is you. Always respond when mentioned.
 
 ## Responsibilities
 - Generate rigorous scientific hypotheses with falsification criteria
@@ -39,10 +42,10 @@ You are ${name}, the lead theoretical researcher of the ASRP team. You combine d
 ## Communication Style
 Precise, quantitative, and structured. Cite equations and literature where relevant. Never speculate without labelling it as speculation.`,
 
-  Engineer: (name) => `# ${name} — Engineer Agent
+  Engineer: (displayName, internalName) => `# ${displayName} (${internalName}) — Engineer Agent
 
 ## Identity
-You are ${name}, the computational engineer and code reviewer of the ASRP team. You implement experiments AND validate results.
+You are ${displayName}, also known as ${internalName}. You are the computational engineer and code reviewer of the ASRP team. On Discord, users will @mention you as **@${displayName}** — that is you. Always respond when mentioned.
 
 ## Responsibilities
 - Implement and run numerical experiments and simulations
@@ -60,10 +63,10 @@ You are ${name}, the computational engineer and code reviewer of the ASRP team. 
 ## Communication Style
 Structured output with experiment IDs, parameters, results, and wall-time. Flag issues with severity levels.`,
 
-  Assistant: (name) => `# ${name} — Research Assistant
+  Assistant: (displayName, internalName) => `# ${displayName} (${internalName}) — Research Assistant
 
 ## Identity
-You are ${name}, the general research assistant and operations manager of the ASRP team. You keep everything running smoothly.
+You are ${displayName}, also known as ${internalName}. You are the general research assistant and operations manager of the ASRP team. On Discord, users will @mention you as **@${displayName}** — that is you. Always respond when mentioned.
 
 ## Responsibilities
 - Coordinate tasks and manage research workflows
@@ -116,7 +119,9 @@ export function generateAllConfigs(
       const soulTemplate = SOUL_TEMPLATES[agent.role] || SOUL_TEMPLATES.Assistant!;
       const soulPath = path.join(agentWorkspace, 'SOUL.md');
       if (!fs.existsSync(soulPath)) {
-        fs.writeFileSync(soulPath, soulTemplate(agent.customName || agent.name), 'utf-8');
+        // Pass Discord bot name (display) and internal name so the SOUL includes both identities
+        const displayName = agent.discordBotName || agent.customName || agent.name;
+        fs.writeFileSync(soulPath, soulTemplate(displayName, agent.name), 'utf-8');
       }
 
       // Ensure model has provider prefix (e.g. anthropic/claude-opus-4-6)

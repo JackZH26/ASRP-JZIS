@@ -329,7 +329,7 @@ export function registerGatewayHandlers(): void {
         const settingsFile = path.join(app.getPath('userData'), 'settings.json');
         if (fs.existsSync(settingsFile)) {
           const settings = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'));
-          const configs = settings.agentConfigs as Array<{ agentId?: string; role?: string; model?: string; discordToken?: string; customName?: string }> | undefined;
+          const configs = settings.agentConfigs as Array<{ agentId?: string; role?: string; model?: string; discordToken?: string; customName?: string; discordBotName?: string }> | undefined;
           const guildId = settings.guildId as string | undefined;
           if (Array.isArray(configs) && guildId) {
             const agents = configs.filter(c => c && c.discordToken).map(c => ({
@@ -338,6 +338,7 @@ export function registerGatewayHandlers(): void {
               model: c.model || 'claude-sonnet-4-6',
               discordToken: c.discordToken || '',
               customName: c.customName || '',
+              discordBotName: c.discordBotName || '',
             }));
             if (agents.length > 0) {
               generateAllConfigs(agents, guildId, getWorkspaceBase());

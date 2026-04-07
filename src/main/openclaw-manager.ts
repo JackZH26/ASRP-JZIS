@@ -13,6 +13,9 @@ import { app } from 'electron';
 import { EventEmitter } from 'events';
 
 const BASE_PORT = 18801;
+// OpenClaw gateway uses 2+ ports per instance (main port + internal ports at offset +2).
+// Stride of 4 ensures no overlap between agents.
+const PORT_STRIDE = 4;
 const MAX_RESTART_ATTEMPTS = 3;
 const HEALTH_POLL_INTERVAL_MS = 15000;
 
@@ -190,32 +193,43 @@ class OpenClawManager extends EventEmitter {
   }
 
   getPortForAgent(index: number): number {
-    return BASE_PORT + index;
+    return BASE_PORT + (index * PORT_STRIDE);
   }
 
   /**
-   * Kill any stale process listening on the given port.
-   * This prevents port conflicts when restarting after a crash or unclean exit.
+   * Kill any stale process listening on the given port or nearby ports.
+   * OpenClaw uses multiple ports per instance (main + internal at offset +2),
+   * so we clear the entire port range for this agent slot.
    */
   private killProcessOnPort(port: number): void {
     try {
-      // lsof finds the PID of whatever is listening on this port
-      const cmd = process.platform === 'win32'
-        ? `netstat -ano | findstr :${port}`
-        : `lsof -ti TCP:${port} -sTCP:LISTEN`;
-      const output = execSync(cmd, { timeout: 3000, stdio: 'pipe' }).toString().trim();
-      if (output) {
-        const pids = output.split('\n').map(s => parseInt(s.trim(), 10)).filter(n => n > 0);
-        for (const pid of pids) {
-          // Don't kill ourselves
-          if (pid === process.pid) continue;
-          console.log(`[OpenClaw] Killing stale process ${pid} on port ${port}`);
-          try { process.kill(pid, 'SIGTERM'); } catch { /* already dead */ }
-        }
-        // Brief wait for process to die
-        if (pids.length > 0) {
-          try { execSync('sleep 1', { timeout: 2000, stdio: 'ignore' }); } catch { /* ignore */ }
-        }
+      // Check main port and internal ports (offset +1, +2, +3)
+      const portsToCheck = [port, port + 1, port + 2, port + 3];
+      const allPids = new Set<number>();
+
+      for (const p of portsToCheck) {
+        try {
+          const cmd = process.platform === 'win32'
+            ? `netstat -ano | findstr :${p}`
+            : `lsof -ti TCP:${p} -sTCP:LISTEN`;
+          const output = execSync(cmd, { timeout: 3000, stdio: 'pipe' }).toString().trim();
+          if (output) {
+            for (const s of output.split('\n')) {
+              const pid = parseInt(s.trim(), 10);
+              if (pid > 0 && pid !== process.pid) allPids.add(pid);
+            }
+          }
+        } catch { /* no process on this port */ }
+      }
+
+      for (const pid of allPids) {
+        console.log(`[OpenClaw] Killing stale process ${pid} on port range ${port}-${port + 3}`);
+        try { process.kill(pid, 'SIGTERM'); } catch { /* already dead */ }
+      }
+
+      // Brief wait for processes to die
+      if (allPids.size > 0) {
+        try { execSync('sleep 1', { timeout: 2000, stdio: 'ignore' }); } catch { /* ignore */ }
       }
     } catch { /* no process on this port — good */ }
   }
