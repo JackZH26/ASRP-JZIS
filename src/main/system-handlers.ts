@@ -370,7 +370,7 @@ export function registerGatewayHandlers(): void {
 
   // Generate configs for all agents and start all gateways
   ipcMain.handle('gateway:setup-and-start', async (_event, token: string, agentConfigs: Array<{
-    name: string; role: string; model: string; discordToken: string; customName?: string;
+    name: string; role: string; model: string; discordToken: string; customName?: string; discordBotName?: string;
   }>, guildId: string) => {
     try {
       // H4 fix: verify auth

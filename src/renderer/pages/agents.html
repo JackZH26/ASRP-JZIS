@@ -550,7 +550,7 @@
         const savedConfigs = settings.agentConfigs;
         if (Array.isArray(savedConfigs)) {
           agents = savedConfigs.filter(c => c && c.agentId).map(c => ({
-            name: c.customName || c.agentId || 'Agent',
+            name: c.discordBotName || c.customName || c.agentId || 'Agent',
             role: c.role || 'Assistant',
             status: 'stopped',
             model: c.model || '',
