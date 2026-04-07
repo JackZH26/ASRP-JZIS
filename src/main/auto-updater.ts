@@ -1,10 +1,9 @@
 // ============================================================
 // Auto-Updater — ASRP Desktop
 // Uses electron-updater for automatic update checks/installs.
-// Loaded dynamically to avoid hard crash when not installed.
 // ============================================================
 
-import { app, BrowserWindow, Notification, dialog, Menu } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import { EventEmitter } from 'events';
 
 export interface UpdaterStatus {
@@ -17,187 +16,153 @@ export interface UpdaterStatus {
   error: string | null;
 }
 
-type UpdaterEvent =
-  | 'checking-for-update'
-  | 'update-available'
-  | 'update-not-available'
-  | 'download-progress'
-  | 'update-downloaded'
-  | 'error';
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AutoUpdaterLib = any;
 
-// Check interval: 4 hours
-const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
+const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 class AppAutoUpdater extends EventEmitter {
   private lib: AutoUpdaterLib = null;
   private status: UpdaterStatus = {
-    checking: false,
-    available: false,
-    downloading: false,
-    ready: false,
-    version: null,
-    progress: 0,
-    error: null,
+    checking: false, available: false, downloading: false,
+    ready: false, version: null, progress: 0, error: null,
   };
   private initialized = false;
   private getWindow: (() => BrowserWindow | null) | null = null;
   private periodicTimer: ReturnType<typeof setInterval> | null = null;
-  private manualCheck = false; // true when user clicked "Check for Updates..."
-  private userDeferredUpdate = false; // true when user clicked "Later" on update dialog
+  private manualCheck = false;
+  private userDeferredUpdate = false;
 
   initialize(getWindow: () => BrowserWindow | null): void {
     if (this.initialized) return;
     this.initialized = true;
     this.getWindow = getWindow;
 
-    // Try to load electron-updater dynamically
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const updaterPkg = require('electron-updater') as { autoUpdater: AutoUpdaterLib };
       this.lib = updaterPkg.autoUpdater;
     } catch {
-      // electron-updater not installed — updater is a no-op
-      console.log('[AutoUpdater] electron-updater not available, updates disabled.');
+      console.log('[Updater] electron-updater not available');
       return;
     }
 
+    // CRITICAL: autoDownload=false, we control download timing
     this.lib.autoDownload = false;
+    // CRITICAL: this ensures update installs when app quits normally
     this.lib.autoInstallOnAppQuit = true;
 
-    this.lib.on('checking-for-update' as UpdaterEvent, () => {
+    // ── Events ──
+
+    this.lib.on('checking-for-update', () => {
       this.status.checking = true;
       this.status.error = null;
       this._send('updater:status', this.getStatus());
     });
 
-    this.lib.on('update-available' as UpdaterEvent, (info: { version: string }) => {
+    this.lib.on('update-available', (info: { version: string }) => {
       this.status.checking = false;
       this.status.available = true;
       this.status.version = info.version;
       this._send('updater:status', this.getStatus());
 
-      // Show dialog to user on startup auto-check
-      if (!this.manualCheck) {
+      if (this.manualCheck) {
+        // User clicked "Check for Updates" — auto-download
+        this.manualCheck = false;
+        this.downloadUpdate().catch(() => {});
+      } else {
+        // Startup check — ask user
         const win = this.getWindow?.() ?? undefined;
         dialog.showMessageBox(win as BrowserWindow, {
           type: 'info',
           title: 'Update Available',
           message: `ASRP Desktop v${info.version} is available`,
-          detail: `You are running v${app.getVersion()}. The update will download in the background and you'll be prompted to restart when ready.`,
+          detail: `Current: v${app.getVersion()}`,
           buttons: ['Download Now', 'Later'],
           defaultId: 0,
         }).then(({ response }) => {
           if (response === 0) {
-            this.downloadUpdate().catch(() => { /* handled by error event */ });
+            this.downloadUpdate().catch(() => {});
           } else {
-            this.userDeferredUpdate = true; // Don't show download-complete dialog this session
+            this.userDeferredUpdate = true;
           }
         });
       }
-
-      if (this.manualCheck) {
-        this.manualCheck = false;
-        this.downloadUpdate().catch(() => { /* handled by error event */ });
-      }
-
-      // Update the app menu to show update available
       this._updateMenu();
     });
 
-    this.lib.on('update-not-available' as UpdaterEvent, () => {
+    this.lib.on('update-not-available', () => {
       this.status.checking = false;
       this.status.available = false;
       this._send('updater:status', this.getStatus());
-
       if (this.manualCheck) {
         this.manualCheck = false;
         const win = this.getWindow?.() ?? undefined;
         dialog.showMessageBox(win as BrowserWindow, {
-          type: 'info',
-          title: 'No Updates',
-          message: 'You\'re up to date!',
-          detail: `ASRP Desktop v${app.getVersion()} is the latest version.`,
+          type: 'info', title: 'Up to Date',
+          message: `v${app.getVersion()} is the latest version.`,
           buttons: ['OK'],
         });
       }
     });
 
-    this.lib.on('download-progress' as UpdaterEvent, (progress: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => {
+    this.lib.on('download-progress', (progress: { percent: number }) => {
       this.status.downloading = true;
       this.status.progress = Math.round(progress.percent);
       this._send('updater:status', this.getStatus());
     });
 
-    this.lib.on('update-downloaded' as UpdaterEvent, (info: { version: string }) => {
+    this.lib.on('update-downloaded', (info: { version: string }) => {
       this.status.downloading = false;
       this.status.ready = true;
       this.status.version = info.version;
       this.status.progress = 100;
       this._send('updater:status', this.getStatus());
 
-      // Show prominent dialog asking user to restart (unless they deferred)
+      console.log('[Updater] Update downloaded:', info.version);
+
       if (!this.userDeferredUpdate) {
         const win = this.getWindow?.() ?? undefined;
         dialog.showMessageBox(win as BrowserWindow, {
           type: 'info',
           title: 'Update Ready',
-          message: `ASRP Desktop v${info.version} is ready to install`,
-          detail: 'Restart now to apply the update, or restart later at your convenience.',
+          message: `v${info.version} is ready to install`,
+          detail: 'The app will quit, install the update, and relaunch.',
           buttons: ['Restart Now', 'Later'],
           defaultId: 0,
         }).then(({ response }) => {
-          if (response === 0) {
-            this.installUpdate();
-          }
+          if (response === 0) this.installUpdate();
         });
       }
-
-      // Update menu
       this._updateMenu();
     });
 
-    this.lib.on('error' as UpdaterEvent, (err: Error) => {
+    this.lib.on('error', (err: Error) => {
       this.status.checking = false;
       this.status.downloading = false;
       this.status.error = err.message;
       this._send('updater:status', this.getStatus());
-      console.error('[AutoUpdater] Error:', err.message);
-
+      console.error('[Updater] Error:', err.message);
       if (this.manualCheck) {
         this.manualCheck = false;
         const win = this.getWindow?.() ?? undefined;
         dialog.showMessageBox(win as BrowserWindow, {
-          type: 'error',
-          title: 'Update Error',
-          message: 'Failed to check for updates.',
-          detail: err.message,
-          buttons: ['OK'],
+          type: 'error', title: 'Update Error',
+          message: 'Update check failed', detail: err.message, buttons: ['OK'],
         });
       }
     });
 
-    // Silent check after 10s on startup
-    setTimeout(() => {
-      this.checkForUpdates().catch(() => { /* ignore startup check errors */ });
-    }, 10000);
+    // Check on startup (10s delay)
+    setTimeout(() => this.checkForUpdates().catch(() => {}), 10000);
+    // Periodic check
+    this.periodicTimer = setInterval(() => this.checkForUpdates().catch(() => {}), CHECK_INTERVAL_MS);
 
-    // Periodic check every 4 hours
-    this.periodicTimer = setInterval(() => {
-      this.checkForUpdates().catch(() => { /* ignore periodic check errors */ });
-    }, CHECK_INTERVAL_MS);
-
-    // Clean up on quit
+    // Cleanup timer on quit
     app.on('before-quit', () => {
       if (this.periodicTimer) clearInterval(this.periodicTimer);
-      // autoInstallOnAppQuit=true handles installation automatically
-      // No need to call quitAndInstall here (it would cause double-call)
     });
   }
 
-  /** Triggered by user clicking "Check for Updates..." in menu */
   async checkForUpdatesManual(): Promise<void> {
     this.manualCheck = true;
     return this.checkForUpdates();
@@ -205,11 +170,8 @@ class AppAutoUpdater extends EventEmitter {
 
   async checkForUpdates(): Promise<void> {
     if (!this.lib) return;
-    try {
-      await this.lib.checkForUpdates();
-    } catch (err) {
-      this.status.error = err instanceof Error ? err.message : String(err);
-    }
+    try { await this.lib.checkForUpdates(); }
+    catch (err) { this.status.error = err instanceof Error ? err.message : String(err); }
   }
 
   async downloadUpdate(): Promise<void> {
@@ -222,71 +184,71 @@ class AppAutoUpdater extends EventEmitter {
       this.status.downloading = false;
       this.status.error = err instanceof Error ? err.message : String(err);
       this._send('updater:status', this.getStatus());
-      console.error('[AutoUpdater] Download failed:', this.status.error);
     }
   }
 
+  /**
+   * Install downloaded update. The ONLY reliable approach on macOS:
+   * 1. Set isQuitting flag (so window close handlers don't block)
+   * 2. Call quitAndInstall which internally does app.quit() + install
+   * 3. If still alive after 3s, force process.exit()
+   */
   installUpdate(): void {
     if (!this.lib || !this.status.ready) {
-      console.log('[AutoUpdater] installUpdate called but not ready:', { lib: !!this.lib, ready: this.status.ready });
+      console.log('[Updater] installUpdate: not ready');
       return;
     }
-    console.log('[AutoUpdater] Calling quitAndInstall...');
 
-    // CRITICAL: Set isQuitting so window close handler doesn't preventDefault()
+    console.log('[Updater] === INSTALLING UPDATE ===');
+
+    // Step 1: Signal that we're quitting (prevents minimize-to-tray)
     this.emit('before-quit-for-update');
 
-    // On macOS, quitAndInstall with isSilent=true works more reliably:
-    // it extracts the zip, replaces the .app bundle, and relaunches.
-    // isSilent=true: don't open DMG/installer UI
-    // isForceRunAfter=true: relaunch after install
-    //
-    // The 500ms delay ensures the IPC response reaches the renderer.
+    // Step 2: Destroy all windows (not just close — DESTROY)
+    try {
+      for (const win of BrowserWindow.getAllWindows()) {
+        win.removeAllListeners('close');
+        win.destroy(); // destroy() is immediate, unlike close()
+      }
+    } catch (e) {
+      console.error('[Updater] Error destroying windows:', e);
+    }
+
+    // Step 3: Call quitAndInstall
+    // On macOS: extracts zip, replaces .app bundle, relaunches
+    // On Windows: runs NSIS installer after quit
+    // On Linux: replaces AppImage
+    console.log('[Updater] Calling quitAndInstall...');
+    try {
+      this.lib.quitAndInstall(false, true);
+    } catch (err) {
+      console.error('[Updater] quitAndInstall threw:', err);
+    }
+
+    // Step 4: Nuclear fallback — if still alive after 3s, force exit
+    // process.exit() is the absolute last resort. It bypasses ALL
+    // event handlers and guarantees the process terminates.
+    // autoInstallOnAppQuit should have already queued the install.
     setTimeout(() => {
-      try {
-        // Close all windows first to ensure clean quit
-        const { BrowserWindow: BW } = require('electron') as typeof import('electron');
-        for (const win of BW.getAllWindows()) {
-          win.removeAllListeners('close');
-          win.close();
-        }
-      } catch { /* ignore */ }
-
-      setTimeout(() => {
-        try {
-          console.log('[AutoUpdater] Executing quitAndInstall(true, true)...');
-          this.lib.quitAndInstall(true, true);
-        } catch (err) {
-          console.error('[AutoUpdater] quitAndInstall failed:', err);
-          // Last resort: use app.quit() which triggers autoInstallOnAppQuit
-          app.quit();
-        }
-      }, 300);
-    }, 500);
+      console.log('[Updater] Still alive after 3s — force exiting');
+      process.exit(0);
+    }, 3000);
   }
 
-  getStatus(): UpdaterStatus {
-    return { ...this.status };
-  }
+  getStatus(): UpdaterStatus { return { ...this.status }; }
 
-  /** Update the application menu to reflect update state */
-  private _updateMenu(): void {
-    // Emit event so index.ts can rebuild the menu
-    this.emit('menu-update-needed');
-  }
+  private _updateMenu(): void { this.emit('menu-update-needed'); }
 
-  /** Get the label for the update menu item */
   getMenuLabel(): string {
     if (this.status.ready) return `Restart to Update (v${this.status.version})`;
-    if (this.status.downloading) return `Downloading Update... (${this.status.progress}%)`;
+    if (this.status.downloading) return `Downloading... (${this.status.progress}%)`;
     if (this.status.available) return `Download Update (v${this.status.version})`;
     return 'Check for Updates...';
   }
 
-  /** Get the menu click handler */
   getMenuAction(): () => void {
     if (this.status.ready) return () => this.installUpdate();
-    if (this.status.downloading) return () => { /* downloading, no action */ };
+    if (this.status.downloading) return () => {};
     if (this.status.available) return () => { this.downloadUpdate().catch(() => {}); };
     return () => { this.checkForUpdatesManual().catch(() => {}); };
   }
@@ -294,12 +256,8 @@ class AppAutoUpdater extends EventEmitter {
   private _send(channel: string, data: unknown): void {
     try {
       const win = this.getWindow?.();
-      if (win && !win.isDestroyed()) {
-        win.webContents.send(channel, data);
-      }
-    } catch {
-      // window may be gone
-    }
+      if (win && !win.isDestroyed()) win.webContents.send(channel, data);
+    } catch { /* window gone */ }
   }
 }
 
