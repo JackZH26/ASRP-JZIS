@@ -2,7 +2,7 @@ import { ipcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { getWorkspaceBase, atomicWriteJSON } from './ipc-handlers';
+import { getWorkspaceBase, atomicWriteJSON, withAuth } from './ipc-handlers';
 
 // ============================================================
 // RESEARCH HANDLERS (channel: 'experiments:*')
@@ -158,17 +158,27 @@ function ensureResearchDirs(researchId: string): void {
 
 export function registerExperimentHandlers(): void {
 
+  // Cache: track research IDs whose dirs have already been ensured this session
+  const _ensuredDirIds = new Set<string>();
+  let _generalDirsEnsured = false;
+
   ipcMain.handle('experiments:list', async () => {
     const records = loadResearches();
-    // Ensure directory structure exists for all records
+    // Ensure directory structure exists only for new/unchecked records
     for (const r of records) {
-      ensureResearchDirs(r.id);
+      if (!_ensuredDirIds.has(r.id)) {
+        ensureResearchDirs(r.id);
+        _ensuredDirIds.add(r.id);
+      }
     }
-    // Also ensure general folder
-    const workspace = getWorkspaceBase();
-    for (const sub of ['general/papers', 'general/files']) {
-      const d = path.join(workspace, sub);
-      if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+    // Also ensure general folder (once per session)
+    if (!_generalDirsEnsured) {
+      const workspace = getWorkspaceBase();
+      for (const sub of ['general/papers', 'general/files']) {
+        const d = path.join(workspace, sub);
+        if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+      }
+      _generalDirsEnsured = true;
     }
     return { experiments: records };
   });
@@ -182,7 +192,7 @@ export function registerExperimentHandlers(): void {
     return { success: true, experiment: record };
   });
 
-  ipcMain.handle('experiments:register', async (_event, _hypothesis: string, metadata: Record<string, unknown>) => {
+  ipcMain.handle('experiments:register', withAuth(async (_userId: number, _hypothesis: string, metadata: Record<string, unknown>) => {
     const records = loadResearches();
     const id = `EXP-${new Date().toISOString().slice(0, 10)}-${crypto.randomBytes(3).toString('hex')}`;
     const code = nextCode(records as unknown as Array<Record<string, unknown>>);
@@ -205,10 +215,10 @@ export function registerExperimentHandlers(): void {
     ensureResearchDirs(id);
 
     return { success: true, id, code, title: record.title };
-  });
+  }));
 
   // Edit a research record (title, abstract, tags)
-  ipcMain.handle('experiments:update', async (_event, expId: string, data: Record<string, unknown>) => {
+  ipcMain.handle('experiments:update', withAuth(async (_userId: number, expId: string, data: Record<string, unknown>) => {
     const records = loadResearches();
     const record = records.find(r => r.id === expId);
     if (!record) {
@@ -222,9 +232,9 @@ export function registerExperimentHandlers(): void {
     if (typeof data.result === 'string') record.result = data.result;
     saveResearches(records);
     return { success: true };
-  });
+  }));
 
-  ipcMain.handle('experiments:update-status', async (_event, expId: string, status: string, extra?: Record<string, unknown>) => {
+  ipcMain.handle('experiments:update-status', withAuth(async (_userId: number, expId: string, status: string, extra?: Record<string, unknown>) => {
     const records = loadResearches();
     const record = records.find(r => r.id === expId);
     if (!record) {
@@ -237,5 +247,5 @@ export function registerExperimentHandlers(): void {
     }
     saveResearches(records);
     return { success: true, expId, status };
-  });
+  }));
 }

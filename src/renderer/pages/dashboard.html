@@ -269,7 +269,7 @@
         summaryEl.innerHTML = `
           <div class="health-item">
             <span class="icon" style="color:${usedColor}">●</span>
-            Daily total: <strong>$${tokenData.dailyTotal.toFixed(2)}</strong> of $${tokenData.dailyBudget.toFixed(2)} (${pct}%)
+            Daily total: <strong>$${escHtml(tokenData.dailyTotal.toFixed(2))}</strong> of $${escHtml(tokenData.dailyBudget.toFixed(2))} (${escHtml(String(pct))}%)
           </div>
         `;
 
@@ -294,10 +294,10 @@
           <div class="db-progress-row">
             <div class="db-progress-label">
               <strong>${b.label}</strong>
-              <span>${progress[b.key]}%</span>
+              <span>${escHtml(String(progress[b.key]))}%</span>
             </div>
             <div class="db-progress-bar-bg">
-              <div class="db-progress-bar-fill" style="width:${progress[b.key]}%;background:${b.color}"></div>
+              <div class="db-progress-bar-fill" style="width:${escHtml(String(progress[b.key]))}%;background:${b.color}"></div>
             </div>
             <div style="font-size:11px;color:var(--text-tertiary);margin-top:3px">${b.desc}</div>
           </div>
@@ -410,14 +410,14 @@
           banner.style.borderColor = 'rgba(74,140,106,0.3)';
           banner.style.color = '#2d5a3d';
           if (icon) icon.innerHTML = svgCheck;
-          if (text) text.innerHTML = '<strong>' + running + '/' + total + ' agents online</strong> — All gateways running';
+          if (text) text.innerHTML = '<strong>' + escHtml(String(running)) + '/' + escHtml(String(total)) + ' agents online</strong> — All gateways running';
           if (btn) btn.style.display = 'none';
         } else if (running > 0) {
           banner.style.background = 'rgba(184,134,11,0.06)';
           banner.style.borderColor = 'rgba(184,134,11,0.3)';
           banner.style.color = '#856404';
           if (icon) icon.innerHTML = svgWarn;
-          if (text) text.innerHTML = '<strong>' + running + '/' + total + ' agents online</strong> — Some agents failed to start';
+          if (text) text.innerHTML = '<strong>' + escHtml(String(running)) + '/' + escHtml(String(total)) + ' agents online</strong> — Some agents failed to start';
           if (btn) btn.style.display = '';
         } else {
           banner.style.background = 'var(--bg-secondary)';
@@ -486,7 +486,8 @@
             'Current: `' + (result.currentVersion || 'unknown') + '`\n' +
             'Latest: `' + result.latestVersion + '`\n\n' +
             'Go to **Settings → Gateway** and click "Update OpenClaw" to install the latest version, or I can do it for you — just say "update openclaw".';
-          await window.asrp.assistant.saveMessage('assistant', msg);
+          var _tk = localStorage.getItem('asrp_token') || '';
+          await window.asrp.assistant.saveMessage(_tk, 'assistant', msg);
         }
         Toast.show('OpenClaw update available: ' + result.latestVersion, 'info');
       }

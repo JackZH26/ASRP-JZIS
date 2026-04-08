@@ -204,7 +204,7 @@
   function defaultAvatar(name, role) {
     const color = ROLE_COLORS[role] || 'var(--accent)';
     const initial = (name || '?').charAt(0).toUpperCase();
-    return `<div class="agent-avatar" style="background:${color}">${initial}</div>`;
+    return `<div class="agent-avatar" style="background:${color}">${escHtml(initial)}</div>`;
   }
 
   let currentAgents = [];
@@ -297,7 +297,7 @@
             '<span class="info-icon">' + IC.cost + '</span>' +
             '<span class="info-label">Tokens</span>' +
             '<div class="agent-token-bar-bg">' +
-              '<div class="agent-token-bar-fill" style="width:' + pct + '%"></div>' +
+              '<div class="agent-token-bar-fill" style="width:' + escHtml(String(pct)) + '%"></div>' +
             '</div>' +
             '<span style="font-size:11px;color:var(--text-tertiary);min-width:40px;text-align:right">$' + escHtml(cost.toFixed(2)) + '</span>' +
           '</div>' +
@@ -354,7 +354,7 @@
     if (tsMatch) {
       var ts = tsMatch[0];
       var rest = line.slice(ts.length);
-      return '<span class="log-line ' + cls + '"><span class="log-timestamp">' + ts + '</span>' + escHtml(rest) + '</span>';
+      return '<span class="log-line ' + cls + '"><span class="log-timestamp">' + escHtml(ts) + '</span>' + escHtml(rest) + '</span>';
     }
     return '<span class="log-line ' + cls + '">' + escHtml(line) + '</span>';
   }

@@ -106,14 +106,14 @@ const files = {
   read: (filePath: string) =>
     invoke<{ success: boolean; content?: string; error?: string }>('files:read', filePath),
 
-  write: (filePath: string, content: string) =>
-    invoke<{ success: boolean; error?: string }>('files:write', filePath, content),
+  write: (token: string, filePath: string, content: string) =>
+    invoke<{ success: boolean; error?: string }>('files:write', token, filePath, content),
 
-  delete: (filePath: string) =>
-    invoke<{ success: boolean; error?: string }>('files:delete', filePath),
+  delete: (token: string, filePath: string) =>
+    invoke<{ success: boolean; error?: string }>('files:delete', token, filePath),
 
-  copy: (srcPath: string, destPath: string) =>
-    invoke<{ success: boolean; error?: string }>('files:copy', srcPath, destPath),
+  copy: (token: string, srcPath: string, destPath: string) =>
+    invoke<{ success: boolean; error?: string }>('files:copy', token, srcPath, destPath),
 
   openDialog: (options?: Electron.OpenDialogOptions) =>
     invoke<Electron.OpenDialogReturnValue>('files:open-dialog', options),
@@ -133,11 +133,11 @@ const papers = {
   get: (paperId: string) =>
     invoke<{ success: boolean; paper?: Record<string, unknown>; error?: string }>('papers:get', paperId),
 
-  create: (metadata: Record<string, unknown>) =>
-    invoke<{ success: boolean; paperId?: string; error?: string }>('papers:create', metadata),
+  create: (token: string, metadata: Record<string, unknown>) =>
+    invoke<{ success: boolean; paperId?: string; error?: string }>('papers:create', token, metadata),
 
-  update: (paperId: string, data: Record<string, unknown>) =>
-    invoke<{ success: boolean; error?: string }>('papers:update', paperId, data),
+  update: (token: string, paperId: string, data: Record<string, unknown>) =>
+    invoke<{ success: boolean; error?: string }>('papers:update', token, paperId, data),
 
   export: (paperId: string, format: string) =>
     invoke<{ success: boolean; message?: string; error?: string }>('papers:export', paperId, format),
@@ -148,14 +148,14 @@ const authors = {
   list: () =>
     invoke<{ authors: Array<{ id: string; name: string; title: string; institution: string; email: string }>; projectDefaults: Array<{ researchId: string; authorIds: string[] }> }>('authors:list'),
 
-  save: (author: Record<string, unknown>) =>
-    invoke<{ success: boolean; id?: string; error?: string }>('authors:save', author),
+  save: (token: string, author: Record<string, unknown>) =>
+    invoke<{ success: boolean; id?: string; error?: string }>('authors:save', token, author),
 
-  delete: (authorId: string) =>
-    invoke<{ success: boolean; error?: string }>('authors:delete', authorId),
+  delete: (token: string, authorId: string) =>
+    invoke<{ success: boolean; error?: string }>('authors:delete', token, authorId),
 
-  setProjectDefaults: (researchId: string, authorIds: string[]) =>
-    invoke<{ success: boolean; error?: string }>('authors:set-project-defaults', researchId, authorIds),
+  setProjectDefaults: (token: string, researchId: string, authorIds: string[]) =>
+    invoke<{ success: boolean; error?: string }>('authors:set-project-defaults', token, researchId, authorIds),
 };
 
 // ---- Experiments API ----
@@ -171,14 +171,14 @@ const experiments = {
   get: (expId: string) =>
     invoke<{ success: boolean; experiment?: Record<string, unknown>; error?: string }>('experiments:get', expId),
 
-  register: (hypothesis: string, metadata: Record<string, unknown>) =>
-    invoke<{ success: boolean; id?: string; error?: string }>('experiments:register', hypothesis, metadata),
+  register: (token: string, hypothesis: string, metadata: Record<string, unknown>) =>
+    invoke<{ success: boolean; id?: string; error?: string }>('experiments:register', token, hypothesis, metadata),
 
-  update: (expId: string, data: Record<string, unknown>) =>
-    invoke<{ success: boolean; error?: string }>('experiments:update', expId, data),
+  update: (token: string, expId: string, data: Record<string, unknown>) =>
+    invoke<{ success: boolean; error?: string }>('experiments:update', token, expId, data),
 
-  updateStatus: (expId: string, status: string) =>
-    invoke<{ success: boolean; error?: string }>('experiments:update-status', expId, status),
+  updateStatus: (token: string, expId: string, status: string, extra?: Record<string, unknown>) =>
+    invoke<{ success: boolean; error?: string }>('experiments:update-status', token, expId, status, extra),
 };
 
 // ---- Audit API ----
@@ -189,8 +189,8 @@ const audit = {
       total: number;
     }>('audit:list', options),
 
-  log: (entry: Record<string, unknown>) =>
-    invoke<{ success: boolean; error?: string }>('audit:log', entry),
+  log: (token: string, entry: Record<string, unknown>) =>
+    invoke<{ success: boolean; error?: string }>('audit:log', token, entry),
 
   export: () =>
     invoke<{ success: boolean; message?: string; error?: string }>('audit:export'),
@@ -201,11 +201,11 @@ const settings = {
   get: () =>
     invoke<Record<string, unknown>>('settings:get'),
 
-  set: (updates: Record<string, unknown>) =>
-    invoke<{ success: boolean; settings?: Record<string, unknown>; error?: string }>('settings:set', updates),
+  set: (token: string, updates: Record<string, unknown>) =>
+    invoke<{ success: boolean; settings?: Record<string, unknown>; error?: string }>('settings:set', token, updates),
 
-  reset: () =>
-    invoke<{ success: boolean; settings?: Record<string, unknown>; error?: string }>('settings:reset'),
+  reset: (token: string) =>
+    invoke<{ success: boolean; settings?: Record<string, unknown>; error?: string }>('settings:reset', token),
 };
 
 // ---- Auth API ----
@@ -295,9 +295,9 @@ const openclaw = {
 
 // ---- Assistant Chat API ----
 const assistant = {
-  chat: (message: string, context?: string, preferredModel?: string) =>
+  chat: (token: string, message: string, context?: string, preferredModel?: string) =>
     invoke<{ success: boolean; reply: string; model: string; error?: string }>(
-      'assistant:chat', message, context, preferredModel
+      'assistant:chat', token, message, context, preferredModel
     ),
 
   getModel: () =>
@@ -306,11 +306,11 @@ const assistant = {
   history: () =>
     invoke<{ messages: Array<{ role: string; content: string; ts: string }> }>('assistant:history'),
 
-  saveMessage: (role: string, content: string) =>
-    invoke<{ success: boolean; error?: string }>('assistant:save-message', role, content),
+  saveMessage: (token: string, role: string, content: string) =>
+    invoke<{ success: boolean; error?: string }>('assistant:save-message', token, role, content),
 
-  clearHistory: () =>
-    invoke<{ success: boolean; error?: string }>('assistant:clear-history'),
+  clearHistory: (token: string) =>
+    invoke<{ success: boolean; error?: string }>('assistant:clear-history', token),
 
   onToggle: (callback: () => void): (() => void) => {
     const handler = () => callback();
@@ -341,8 +341,8 @@ const ollama = {
       error?: string;
     }>('ollama:detect-hardware'),
 
-  pullModel: (modelName?: string) =>
-    invoke<{ success: boolean; message?: string; error?: string }>('ollama:pull-model', modelName),
+  pullModel: (token: string, modelName?: string) =>
+    invoke<{ success: boolean; message?: string; error?: string }>('ollama:pull-model', token, modelName),
 
   cancelPull: () =>
     invoke<{ success: boolean; error?: string }>('ollama:cancel-pull'),
@@ -353,14 +353,14 @@ const ollama = {
   chat: (messages: Array<{ role: string; content: string }>, model?: string) =>
     invoke<{ success: boolean; reply: string; error?: string }>('ollama:chat', messages, model),
 
-  deleteModel: (modelName: string) =>
-    invoke<{ success: boolean; error?: string }>('ollama:delete-model', modelName),
+  deleteModel: (token: string, modelName: string) =>
+    invoke<{ success: boolean; error?: string }>('ollama:delete-model', token, modelName),
 
-  start: () =>
-    invoke<{ success: boolean; error?: string }>('ollama:start'),
+  start: (token: string) =>
+    invoke<{ success: boolean; error?: string }>('ollama:start', token),
 
-  stop: () =>
-    invoke<{ success: boolean; error?: string }>('ollama:stop'),
+  stop: (token: string) =>
+    invoke<{ success: boolean; error?: string }>('ollama:stop', token),
 
   installInstructions: () =>
     invoke<{ url: string; instructions: string }>('ollama:install-instructions'),
@@ -399,11 +399,11 @@ const updater = {
   check: () =>
     invoke<{ success: boolean; error?: string }>('updater:check'),
 
-  download: () =>
-    invoke<{ success: boolean; error?: string }>('updater:download'),
+  download: (token: string) =>
+    invoke<{ success: boolean; error?: string }>('updater:download', token),
 
-  install: () =>
-    invoke<{ success: boolean; error?: string }>('updater:install'),
+  install: (token: string) =>
+    invoke<{ success: boolean; error?: string }>('updater:install', token),
 
   onStatus: (callback: (status: {
     checking: boolean; available: boolean; downloading: boolean;
@@ -468,11 +468,11 @@ const gateway = {
   stop: (token: string) =>
     invoke<{ success: boolean }>('gateway:stop', token),
 
-  restart: (agentName?: string) =>
-    invoke<{ success: boolean; error?: string }>('gateway:restart', agentName),
+  restart: (token: string, agentName?: string) =>
+    invoke<{ success: boolean; error?: string }>('gateway:restart', token, agentName),
 
-  install: () =>
-    invoke<{ success: boolean; error?: string }>('gateway:install'),
+  install: (token: string) =>
+    invoke<{ success: boolean; error?: string }>('gateway:install', token),
 
   setupAndStart: (token: string, agentConfigs: Array<{
     name: string; role: string; model: string; discordToken: string; customName?: string;
@@ -485,6 +485,11 @@ const gateway = {
   checkUpdate: () =>
     invoke<{ updateAvailable: boolean; currentVersion: string | null; latestVersion: string | null }>(
       'gateway:check-update'
+    ),
+
+  logs: (token: string) =>
+    invoke<{ status: unknown; installed: boolean; binary: string | null }>(
+      'gateway:logs', token
     ),
 };
 

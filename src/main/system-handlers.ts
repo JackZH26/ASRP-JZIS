@@ -24,19 +24,27 @@ import {
 
 export function registerSystemHandlers(): void {
   ipcMain.handle('system:info', async () => {
-    return {
-      version: app.getVersion(),
-      platform: process.platform,
-      arch: process.arch,
-      electron: process.versions.electron,
-      node: process.versions.node,
-      resourcesPath: RESOURCES_PATH,
-    };
+    try {
+      return {
+        version: app.getVersion(),
+        platform: process.platform,
+        arch: process.arch,
+        electron: process.versions.electron,
+        node: process.versions.node,
+        resourcesPath: RESOURCES_PATH,
+      };
+    } catch (err: unknown) {
+      return { version: '?', platform: '?', arch: '?', electron: '?', node: '?', resourcesPath: '', error: String(err) };
+    }
   });
 
   // Issue #9: Read workspace path from settings (user-configured), not hardcoded internal path
   ipcMain.handle('system:workspace', async () => {
-    return { path: getWorkspaceBase() };
+    try {
+      return { path: getWorkspaceBase() };
+    } catch (err: unknown) {
+      return { path: '', error: String(err) };
+    }
   });
 
   ipcMain.handle('system:open-path', async (_event, targetPath: string) => {
@@ -53,19 +61,27 @@ export function registerSystemHandlers(): void {
   });
 
   ipcMain.handle('system:select-directory', async () => {
-    const result = await dialog.showOpenDialog({
-      properties: ['openDirectory', 'createDirectory'],
-    });
-    if (result.canceled) return { canceled: true, path: null };
-    return { canceled: false, path: result.filePaths[0] };
+    try {
+      const result = await dialog.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory'],
+      });
+      if (result.canceled) return { canceled: true, path: null };
+      return { canceled: false, path: result.filePaths[0] };
+    } catch (err: unknown) {
+      return { canceled: true, path: null, error: String(err) };
+    }
   });
 
   ipcMain.handle('system:health', async () => {
-    return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-    };
+    try {
+      return {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+      };
+    } catch (err: unknown) {
+      return { status: 'error', timestamp: '', uptime: 0, error: String(err) };
+    }
   });
 }
 
@@ -184,7 +200,7 @@ export function registerSettingsHandlers(): void {
     return settings;
   });
 
-  ipcMain.handle('settings:set', async (_event, updates: Record<string, unknown>) => {
+  ipcMain.handle('settings:set', withAuth(async (_userId: number, updates: Record<string, unknown>) => {
     try {
       // Route API key updates through safeKeyStore (encrypted)
       const keyFields = ['openrouterKey', 'anthropicKey', 'googleKey'];
@@ -236,16 +252,16 @@ export function registerSettingsHandlers(): void {
     } catch (err: unknown) {
       return { success: false, error: String(err) };
     }
-  });
+  }));
 
-  ipcMain.handle('settings:reset', async () => {
+  ipcMain.handle('settings:reset', withAuth(async () => {
     try {
       atomicWriteJSON(settingsPath, defaultSettings);
       return { success: true, settings: defaultSettings };
     } catch (err: unknown) {
       return { success: false, error: String(err) };
     }
-  });
+  }));
 }
 
 // ============================================================
@@ -254,7 +270,11 @@ export function registerSettingsHandlers(): void {
 
 export function registerUpdaterHandlers(): void {
   ipcMain.handle('updater:status', async () => {
-    return autoUpdater.getStatus();
+    try {
+      return autoUpdater.getStatus();
+    } catch (err: unknown) {
+      return { checking: false, available: false, downloading: false, ready: false, version: null, progress: 0, error: String(err) };
+    }
   });
 
   ipcMain.handle('updater:check', async () => {
@@ -266,23 +286,23 @@ export function registerUpdaterHandlers(): void {
     }
   });
 
-  ipcMain.handle('updater:download', async () => {
+  ipcMain.handle('updater:download', withAuth(async () => {
     try {
       await autoUpdater.downloadUpdate();
       return { success: true };
     } catch (err: unknown) {
       return { success: false, error: String(err) };
     }
-  });
+  }));
 
-  ipcMain.handle('updater:install', async () => {
+  ipcMain.handle('updater:install', withAuth(async () => {
     try {
       autoUpdater.installUpdate();
       return { success: true };
     } catch (err: unknown) {
       return { success: false, error: String(err) };
     }
-  });
+  }));
 }
 
 // ============================================================
@@ -299,7 +319,8 @@ export function registerSelfTestHandlers(): void {
     }
   });
 
-  // Issue #16: Rate-limited (max 10/minute) to prevent disk exhaustion
+  // Issue #16: Rate-limited (max 10/minute) + log rotation (max 5 MB) to prevent disk exhaustion
+  const LOG_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
   ipcMain.handle('system:log-error', async (_event, errorInfo: Record<string, unknown>) => {
     if (isLogErrorRateLimited()) {
       return { success: false, error: 'Rate limit exceeded' };
@@ -309,6 +330,16 @@ export function registerSelfTestHandlers(): void {
       const logsPath = path.join(userDataPath, 'logs');
       fs.mkdirSync(logsPath, { recursive: true });
       const logFile = path.join(logsPath, 'error.log');
+
+      // Rotate: if log exceeds 5 MB, rename to .old (overwrite previous .old) and start fresh
+      try {
+        const stat = fs.statSync(logFile);
+        if (stat.size > LOG_MAX_BYTES) {
+          const oldFile = logFile + '.old';
+          fs.renameSync(logFile, oldFile);
+        }
+      } catch { /* file may not exist yet */ }
+
       const line = JSON.stringify({ ts: new Date().toISOString(), ...errorInfo }) + '\n';
       fs.appendFileSync(logFile, line, 'utf-8');
       return { success: true };
@@ -330,7 +361,11 @@ export function registerSelfTestHandlers(): void {
 
 export function registerGatewayHandlers(): void {
   ipcMain.handle('gateway:status', async () => {
-    return openclawManager.getStatus();
+    try {
+      return openclawManager.getStatus();
+    } catch (err: unknown) {
+      return { installed: false, version: null, agents: [], error: String(err) };
+    }
   });
 
   // P0-fix: Gateway start/stop require auth — controls all agent processes
@@ -367,18 +402,18 @@ export function registerGatewayHandlers(): void {
     return { success: true };
   }));
 
-  ipcMain.handle('gateway:restart', async (_event, agentName?: string) => {
+  ipcMain.handle('gateway:restart', withAuth(async (_userId: number, agentName?: string) => {
     if (agentName) {
       return openclawManager.restartAgent(agentName);
     }
     openclawManager.stopAll();
     await new Promise(resolve => setTimeout(resolve, 1000));
     return openclawManager.startAll();
-  });
+  }));
 
-  ipcMain.handle('gateway:install', async () => {
+  ipcMain.handle('gateway:install', withAuth(async () => {
     return openclawManager.install();
-  });
+  }));
 
   // Generate configs for all agents and start all gateways
   ipcMain.handle('gateway:setup-and-start', async (_event, token: string, agentConfigs: Array<{
@@ -410,7 +445,11 @@ export function registerGatewayHandlers(): void {
   });
 
   ipcMain.handle('gateway:has-config', async () => {
-    return { hasConfig: hasConfig() };
+    try {
+      return { hasConfig: hasConfig() };
+    } catch {
+      return { hasConfig: false };
+    }
   });
 
   ipcMain.handle('gateway:check-update', async () => {
@@ -421,18 +460,26 @@ export function registerGatewayHandlers(): void {
     }
   });
 
-  // Gateway logs (for debugging)
-  ipcMain.handle('gateway:logs', async () => {
+  // Gateway logs (for debugging) — requires auth (may contain sensitive info)
+  ipcMain.handle('gateway:logs', withAuth(async () => {
     const status = openclawManager.getStatus();
     return { status, installed: openclawManager.isInstalled(), binary: openclawManager.findBinary() };
-  });
+  }));
 
   // Key validation
   ipcMain.handle('keys:validate-provider', async (_event, provider: string, key: string) => {
-    return keyValidator.validateKey(provider, key);
+    try {
+      return await keyValidator.validateKey(provider, key);
+    } catch (err: unknown) {
+      return { valid: false, provider, error: String(err) };
+    }
   });
 
   ipcMain.handle('keys:provider-list', async () => {
-    return { providers: keyValidator.getProviderList() };
+    try {
+      return { providers: keyValidator.getProviderList() };
+    } catch (err: unknown) {
+      return { providers: [], error: String(err) };
+    }
   });
 }

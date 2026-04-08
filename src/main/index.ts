@@ -5,7 +5,6 @@ import {
   Tray,
   nativeImage,
   shell,
-  ipcMain,
   globalShortcut,
   protocol,
   dialog,
@@ -343,9 +342,26 @@ app.whenReady().then(() => {
       const data = fs.readFileSync(filePath);
       const ext = path.extname(filePath).toLowerCase();
       const contentType = mimeTypes[ext] || 'application/octet-stream';
+      const headers: Record<string, string> = { 'Content-Type': contentType };
+
+      // CSP: only set on HTML responses (page shell + fragments)
+      if (ext === '.html') {
+        headers['Content-Security-Policy'] = [
+          "default-src 'self' app:",
+          "script-src 'self' app: 'unsafe-inline'",  // required for page fragment inline scripts
+          "style-src 'self' app: 'unsafe-inline'",
+          "img-src 'self' app: data:",
+          "font-src 'self' app:",
+          "connect-src 'self' https://openrouter.ai https://asrp.jzis.org https://discord.com https://registry.npmjs.org https://ollama.local",
+          "form-action 'none'",
+          "base-uri 'self'",
+          "frame-ancestors 'none'",
+        ].join('; ');
+      }
+
       return new Response(data, {
         status: 200,
-        headers: { 'Content-Type': contentType },
+        headers,
       });
     } catch (err) {
       console.error(`[app://] Failed to load: ${filePath}`, err);

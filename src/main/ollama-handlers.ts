@@ -1,5 +1,6 @@
-import { ipcMain, BrowserWindow } from 'electron';
+import { ipcMain, BrowserWindow, IpcMainInvokeEvent } from 'electron';
 import { ollamaManager } from './ollama-manager';
+import { getAuthenticatedUserId, withAuth } from './ipc-handlers';
 
 // ============================================================
 // OLLAMA HANDLERS (channel: 'ollama:*')
@@ -24,7 +25,9 @@ export function registerOllamaHandlers(): void {
     }
   });
 
-  ipcMain.handle('ollama:pull-model', async (event, modelName: string = 'gemma3:27b') => {
+  // ollama:pull-model needs event.sender for progress, so uses manual auth instead of withAuth
+  ipcMain.handle('ollama:pull-model', async (event: IpcMainInvokeEvent, token: string, modelName: string = 'gemma3:27b') => {
+    try { getAuthenticatedUserId(token); } catch { return { success: false, error: 'Unauthorized' }; }
     // L2: Validate modelName — only allow alphanumeric, colon, hyphen, dot, underscore
     if (typeof modelName !== 'string' || !/^[a-zA-Z0-9:.\-_]+$/.test(modelName) || modelName.length > 128) {
       return { success: false, error: 'Invalid model name' };
@@ -113,7 +116,7 @@ export function registerOllamaHandlers(): void {
     }
   });
 
-  ipcMain.handle('ollama:delete-model', async (_event, modelName: string) => {
+  ipcMain.handle('ollama:delete-model', withAuth(async (_userId: number, modelName: string) => {
     // L2: Validate modelName — same check as pull-model
     if (typeof modelName !== 'string' || !/^[a-zA-Z0-9:.\-_]+$/.test(modelName) || modelName.length > 128) {
       return { success: false, error: 'Invalid model name' };
@@ -124,27 +127,31 @@ export function registerOllamaHandlers(): void {
     } catch (err: unknown) {
       return { success: false, error: String(err) };
     }
-  });
+  }));
 
-  ipcMain.handle('ollama:start', async () => {
+  ipcMain.handle('ollama:start', withAuth(async () => {
     try {
       await ollamaManager.startOllama();
       return { success: true };
     } catch (err: unknown) {
       return { success: false, error: String(err) };
     }
-  });
+  }));
 
-  ipcMain.handle('ollama:stop', async () => {
+  ipcMain.handle('ollama:stop', withAuth(async () => {
     try {
       ollamaManager.stopOllama();
       return { success: true };
     } catch (err: unknown) {
       return { success: false, error: String(err) };
     }
-  });
+  }));
 
   ipcMain.handle('ollama:install-instructions', async () => {
-    return ollamaManager.installOllama();
+    try {
+      return ollamaManager.installOllama();
+    } catch (err: unknown) {
+      return { url: '', instructions: '', error: String(err) };
+    }
   });
 }

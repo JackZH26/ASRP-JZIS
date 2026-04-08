@@ -421,7 +421,8 @@
     } catch (e) { /* ignore */ }
 
     if (window.asrp && window.asrp.assistant) {
-      window.asrp.assistant.chat(text, context, currentModel.model).then(function (res) {
+      var token = localStorage.getItem('asrp_token');
+      window.asrp.assistant.chat(token, text, context, currentModel.model).then(function (res) {
         setLoading(false);
         var reply = (res && res.reply) ? res.reply : 'Sorry, I could not process that request.';
         messages.push({ role: 'assistant', content: reply });
@@ -609,7 +610,8 @@
         messages = [];
         renderMessages();
         if (window.asrp && window.asrp.assistant) {
-          window.asrp.assistant.clearHistory().catch(function () { /* ignore */ });
+          var token = localStorage.getItem('asrp_token');
+          window.asrp.assistant.clearHistory(token).catch(function () { /* ignore */ });
         }
       });
     }

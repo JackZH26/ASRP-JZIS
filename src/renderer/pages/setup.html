@@ -829,9 +829,9 @@
     list.innerHTML = AGENTS.map(function(a, i) {
       return '<div class="sw-agent-card" id="sw-card-' + i + '">' +
         '<span class="sw-agent-status" id="sw-status-' + i + '">⏳</span>' +
-        '<div style="flex:1"><div class="sw-agent-name">' + a.emoji + ' ' + a.name + '</div>' +
-        '<div class="sw-agent-role">' + a.role + '</div></div>' +
-        '<span class="sw-agent-model">' + a.model.replace('claude-', '').replace('-4-6','').replace('-4-5','') + '</span>' +
+        '<div style="flex:1"><div class="sw-agent-name">' + swEscape(a.emoji) + ' ' + swEscape(a.name) + '</div>' +
+        '<div class="sw-agent-role">' + swEscape(a.role) + '</div></div>' +
+        '<span class="sw-agent-model">' + swEscape(a.model.replace('claude-', '').replace('-4-6','').replace('-4-5','')) + '</span>' +
       '</div>';
     }).join('');
 

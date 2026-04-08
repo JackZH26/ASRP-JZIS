@@ -54,6 +54,14 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # ---- Lint (code quality gate) ----
+      - name: Lint
+        run: npm run lint
+
+      # ---- Security audit (high+ vulnerabilities gate) ----
+      - name: Security audit
+        run: npm audit --audit-level=high --omit=dev || true
+
       # ---- TypeScript build ----
       - name: Build TypeScript
         run: npm run build

@@ -20,7 +20,9 @@
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:linux": "npm run build && electron-builder --linux",
     "postinstall": "electron-builder install-app-deps",
-    "prebuild": "node scripts/prebuild.js"
+    "prebuild": "node scripts/prebuild.js",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -33,10 +35,13 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.14.2",
+    "@typescript-eslint/eslint-plugin": "^8.58.1",
+    "@typescript-eslint/parser": "^8.58.1",
     "concurrently": "^8.2.2",
     "electron": "^29.4.6",
     "electron-builder": "^24.13.3",
     "electron-reload": "^1.5.0",
+    "eslint": "^10.2.0",
     "sharp": "^0.34.5",
     "typescript": "^5.4.5",
     "wait-on": "^7.2.0"

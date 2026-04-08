@@ -246,18 +246,18 @@
       return;
     }
     container.innerHTML = list.map(e => {
-      const scoreBar = e.score !== null ? `<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);margin-bottom:3px"><span>Score</span><span>${(e.score * 100).toFixed(0)}%</span></div><div class="exp-score-bar"><div class="exp-score-fill" style="width:${(e.score*100).toFixed(0)}%;background:${e.score>0.5?'var(--success)':'var(--error)'}"></div></div></div>` : '';
+      const scoreBar = e.score !== null ? `<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);margin-bottom:3px"><span>Score</span><span>${escHtml((e.score * 100).toFixed(0))}%</span></div><div class="exp-score-bar"><div class="exp-score-fill" style="width:${escHtml((e.score*100).toFixed(0))}%;background:${e.score>0.5?'var(--success)':'var(--error)'}"></div></div></div>` : '';
       const abs = (e.abstract||'').length > 120 ? (e.abstract||'').slice(0,120) + '...' : (e.abstract||'');
       const tagsHtml = (e.tags||[]).slice(0,4).map(t => `<span class="research-tag">${escHtml(t)}</span>`).join('');
-      return `<div class="card exp-card" style="cursor:pointer;border-left:3px solid ${statusColor(e.status)}${e.status==='archived'?';opacity:0.7':''}" onclick="openExpDetail('${e.id}')">
+      return `<div class="card exp-card" style="cursor:pointer;border-left:3px solid ${statusColor(e.status)}${escHtml(e.status)==='archived'?';opacity:0.7':''}" onclick="openExpDetail('${escAttr(e.id)}')">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
-          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary)">${e.code ? '<strong style="color:var(--accent)">' + escHtml(e.code) + '</strong> · ' : ''}${e.id}</span>
-          <span class="exp-status-badge ${e.status}">${capitalize(e.status)}</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary)">${e.code ? '<strong style="color:var(--accent)">' + escHtml(e.code) + '</strong> · ' : ''}${escHtml(e.id)}</span>
+          <span class="exp-status-badge ${escHtml(e.status)}">${capitalize(escHtml(e.status))}</span>
         </div>
         <div style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:6px">${escHtml(e.title||e.id)}</div>
         <p style="font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:8px">${escHtml(abs)}</p>
         <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${tagsHtml}</div>
-        <div style="font-size:11px;color:var(--text-tertiary)">📅 ${e.created}</div>
+        <div style="font-size:11px;color:var(--text-tertiary)">${escHtml(e.created)}</div>
         ${scoreBar}
       </div>`;
     }).join('');
@@ -303,8 +303,8 @@
 
     const scoreDisplay = e.score !== null ? `
       <div style="margin-top:16px">
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary);margin-bottom:4px"><span>Confidence Score</span><span style="font-weight:700;color:${e.score>0.5?'var(--success)':'var(--error)'}">${(e.score*100).toFixed(0)}%</span></div>
-        <div class="exp-score-bar" style="height:10px"><div class="exp-score-fill" style="width:${(e.score*100).toFixed(0)}%;background:${e.score>0.5?'var(--success)':'var(--error)'}"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary);margin-bottom:4px"><span>Confidence Score</span><span style="font-weight:700;color:${e.score>0.5?'var(--success)':'var(--error)'}">${escHtml((e.score*100).toFixed(0))}%</span></div>
+        <div class="exp-score-bar" style="height:10px"><div class="exp-score-fill" style="width:${escHtml((e.score*100).toFixed(0))}%;background:${e.score>0.5?'var(--success)':'var(--error)'}"></div></div>
       </div>` : '';
 
     const tagsHtml = (e.tags||[]).map(t => `<span class="research-tag">${escHtml(t)}</span>`).join('');
@@ -315,10 +315,10 @@
       <div class="panel" style="margin-bottom:12px">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
           <div style="flex:1">
-            <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-tertiary);margin-bottom:4px">${e.code ? '<strong style="color:var(--accent)">' + escHtml(e.code) + '</strong> · ' : ''}${e.id} · ${e.created}</div>
+            <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-tertiary);margin-bottom:4px">${e.code ? '<strong style="color:var(--accent)">' + escHtml(e.code) + '</strong> · ' : ''}${escHtml(e.id)} · ${escHtml(e.created)}</div>
             <h2 style="font-size:18px;font-weight:700;line-height:1.4;color:var(--text);margin-bottom:0">${escHtml(e.title||e.id)}</h2>
           </div>
-          <span class="exp-status-badge ${e.status}" style="flex-shrink:0">${capitalize(e.status)}</span>
+          <span class="exp-status-badge ${escHtml(e.status)}" style="flex-shrink:0">${capitalize(escHtml(e.status))}</span>
         </div>
         ${tagsHtml ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${tagsHtml}</div>` : ''}
         <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;margin-bottom:6px">Abstract</div>
@@ -330,10 +330,10 @@
         <div style="font-size:13px;line-height:1.6;color:var(--text)">${escHtml(e.result)}</div>
       </div>` : ''}
       <div style="display:flex;gap:8px;margin-top:4px">
-        <button class="detail-action-btn" onclick="openEditModal('${e.id}')">✏️ Edit</button>
+        <button class="detail-action-btn" onclick="openEditModal('${escAttr(e.id)}')">✏️ Edit</button>
         ${isArchived
-          ? `<button class="detail-action-btn" onclick="unarchiveResearch('${e.id}')">📤 Restore</button>`
-          : `<button class="detail-action-btn archive" onclick="archiveResearch('${e.id}')">📦 Archive</button>`
+          ? `<button class="detail-action-btn" onclick="unarchiveResearch('${escAttr(e.id)}')">📤 Restore</button>`
+          : `<button class="detail-action-btn archive" onclick="archiveResearch('${escAttr(e.id)}')">📦 Archive</button>`
         }
       </div>`;
   };
@@ -349,7 +349,8 @@
     if (!e) return;
     e.status = 'archived';
     if (window.asrp) {
-      await window.asrp.experiments.update(id, { status: 'archived' });
+      var token = localStorage.getItem('asrp_token');
+      await window.asrp.experiments.update(token, id, { status: 'archived' });
     }
     backToExpList();
     applyFilters();
@@ -360,7 +361,8 @@
     if (!e) return;
     e.status = 'registered';
     if (window.asrp) {
-      await window.asrp.experiments.update(id, { status: 'registered' });
+      var token = localStorage.getItem('asrp_token');
+      await window.asrp.experiments.update(token, id, { status: 'registered' });
     }
     // Re-open detail to refresh buttons
     openExpDetail(id);
@@ -428,7 +430,8 @@
     const metadata = { title, abstract, tags };
 
     if (window.asrp) {
-      const result = await window.asrp.experiments.register(title, metadata);
+      const token = localStorage.getItem('asrp_token');
+      const result = await window.asrp.experiments.register(token, title, metadata);
       if (result.success) {
         // Create Discord channel named after the research title
         try {
@@ -467,7 +470,8 @@
     const tags = [...currentRegTags];
 
     if (window.asrp) {
-      const res = await window.asrp.experiments.update(editingId, { title, abstract, tags });
+      const token = localStorage.getItem('asrp_token');
+      const res = await window.asrp.experiments.update(token, editingId, { title, abstract, tags });
       if (res.success) {
         // Update local data
         const e = allResearches.find(x => x.id === editingId);

@@ -24,7 +24,7 @@ function getJwtSecret(): string {
   } catch { /* fall through to generate */ }
 
   // Generate a new random 64-char hex secret
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const crypto = require('crypto') as typeof import('crypto');
   const newSecret = (crypto.randomBytes(32) as Buffer).toString('hex');
   try {

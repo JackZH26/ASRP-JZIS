@@ -395,7 +395,8 @@
 
   window.saveFile = async function() {
     var content = document.getElementById('edit-textarea').value;
-    var result = await window.asrp.files.write(currentFilePath, content);
+    var token = localStorage.getItem('asrp_token');
+    var result = await window.asrp.files.write(token, currentFilePath, content);
     if (result.success) {
       unsaved = false;
       document.getElementById('unsaved-banner').style.display = 'none';
@@ -457,7 +458,8 @@
     var destPath = destDir + '/' + srcName;
 
     // Use binary-safe copy (supports PDFs, images, etc.)
-    var copyResult = await window.asrp.files.copy(addFileSrcPath, destPath);
+    var token = localStorage.getItem('asrp_token');
+    var copyResult = await window.asrp.files.copy(token, addFileSrcPath, destPath);
     if (copyResult.success) {
       if (typeof Toast !== 'undefined') Toast.show('Added: ' + srcName, 'success');
       closeAddFileModal();
@@ -472,7 +474,8 @@
     var result = await window.asrp.files.saveDialog({ defaultPath: currentFileName, title: 'Save file' });
     if (result.canceled) return;
     var content = document.getElementById('edit-textarea').value || '';
-    await window.asrp.files.write(result.filePath, content);
+    var dlToken = localStorage.getItem('asrp_token');
+    await window.asrp.files.write(dlToken, result.filePath, content);
     if (typeof Toast !== 'undefined') Toast.show('File saved', 'success');
   };
 

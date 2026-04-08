@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getWorkspaceBase, atomicWriteJSON } from './ipc-handlers';
+import { getWorkspaceBase, atomicWriteJSON, withAuth } from './ipc-handlers';
 
 // ============================================================
 // AUTHOR HANDLERS (channel: 'authors:*')
@@ -63,7 +63,7 @@ export function registerAuthorHandlers(): void {
   });
 
   // Add or update an author
-  ipcMain.handle('authors:save', async (_event, author: Record<string, unknown>) => {
+  ipcMain.handle('authors:save', withAuth(async (_userId: number, author: Record<string, unknown>) => {
     const data = loadAuthorsData();
     const id = typeof author.id === 'string' && author.id ? author.id : `A-${Date.now()}`;
     const record: AuthorRecord = {
@@ -81,10 +81,10 @@ export function registerAuthorHandlers(): void {
     }
     saveAuthorsData(data);
     return { success: true, id };
-  });
+  }));
 
   // Delete an author
-  ipcMain.handle('authors:delete', async (_event, authorId: string) => {
+  ipcMain.handle('authors:delete', withAuth(async (_userId: number, authorId: string) => {
     const data = loadAuthorsData();
     data.authors = data.authors.filter(a => a.id !== authorId);
     // Also remove from project defaults
@@ -93,10 +93,10 @@ export function registerAuthorHandlers(): void {
     }
     saveAuthorsData(data);
     return { success: true };
-  });
+  }));
 
   // Set default authors for a research project (or 'default' for global default)
-  ipcMain.handle('authors:set-project-defaults', async (_event, researchId: string, authorIds: string[]) => {
+  ipcMain.handle('authors:set-project-defaults', withAuth(async (_userId: number, researchId: string, authorIds: string[]) => {
     const data = loadAuthorsData();
     const idx = data.projectDefaults.findIndex(pd => pd.researchId === researchId);
     if (idx >= 0) {
@@ -106,7 +106,7 @@ export function registerAuthorHandlers(): void {
     }
     saveAuthorsData(data);
     return { success: true };
-  });
+  }));
 
   // Scan workspace for paper files and return structured list
   ipcMain.handle('papers:scan', async () => {

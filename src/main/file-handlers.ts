@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import {
   isPathAllowed,
+  withAuth,
 } from './ipc-handlers';
 
 // ============================================================
@@ -43,7 +44,7 @@ export function registerFileHandlers(): void {
     }
   });
 
-  ipcMain.handle('files:write', async (_event, filePath: string, content: string) => {
+  ipcMain.handle('files:write', withAuth(async (_userId: number, filePath: string, content: string) => {
     if (!isPathAllowed(filePath)) {
       return { success: false, error: 'Path outside workspace' };
     }
@@ -54,9 +55,9 @@ export function registerFileHandlers(): void {
     } catch (err: unknown) {
       return { success: false, error: String(err) };
     }
-  });
+  }));
 
-  ipcMain.handle('files:delete', async (_event, filePath: string) => {
+  ipcMain.handle('files:delete', withAuth(async (_userId: number, filePath: string) => {
     if (!isPathAllowed(filePath)) {
       return { success: false, error: 'Path outside workspace' };
     }
@@ -66,11 +67,11 @@ export function registerFileHandlers(): void {
     } catch (err: unknown) {
       return { success: false, error: String(err) };
     }
-  });
+  }));
 
   // Binary-safe file copy — source can be outside workspace (user-selected),
   // but destination must be inside workspace.
-  ipcMain.handle('files:copy', async (_event, srcPath: string, destPath: string) => {
+  ipcMain.handle('files:copy', withAuth(async (_userId: number, srcPath: string, destPath: string) => {
     if (!isPathAllowed(destPath)) {
       return { success: false, error: 'Destination outside workspace' };
     }
@@ -81,13 +82,21 @@ export function registerFileHandlers(): void {
     } catch (err: unknown) {
       return { success: false, error: String(err) };
     }
-  });
+  }));
 
   ipcMain.handle('files:open-dialog', async (_event, options: Electron.OpenDialogOptions) => {
-    return dialog.showOpenDialog(options || {});
+    try {
+      return dialog.showOpenDialog(options || {});
+    } catch (err: unknown) {
+      return { canceled: true, filePaths: [], error: String(err) };
+    }
   });
 
   ipcMain.handle('files:save-dialog', async (_event, options: Electron.SaveDialogOptions) => {
-    return dialog.showSaveDialog(options || {});
+    try {
+      return dialog.showSaveDialog(options || {});
+    } catch (err: unknown) {
+      return { canceled: true, filePath: '', error: String(err) };
+    }
   });
 }

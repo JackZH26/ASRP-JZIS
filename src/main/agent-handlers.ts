@@ -6,7 +6,6 @@ import * as safeKeyStore from './safe-key-store';
 import {
   RESOURCES_PATH,
   isValidAgentName,
-  getAuthenticatedUserId,
   isAllowedChatRole,
   withAuth,
 } from './ipc-handlers';
@@ -54,35 +53,29 @@ export function registerAgentHandlers(): void {
 
   // Issue #18: Replaced conflicting hardcoded list with openclaw bridge (single source of truth)
   ipcMain.handle('agents:status', async () => {
-    const agents = openclawBridge.getAgentStatuses();
-    return {
-      agents: agents.map(a => ({
-        name: a.name,
-        role: a.role,
-        status: a.status,
-        model: a.model,
-      })),
-    };
-  });
-
-  // Issue #H1: Mutating agent actions require auth
-  ipcMain.handle('agents:start', async (_event, token: string, agentName: string) => {
     try {
-      getAuthenticatedUserId(token);
-      return { success: true, message: `Agent ${agentName} start requested (stub)` };
+      const agents = openclawBridge.getAgentStatuses();
+      return {
+        agents: agents.map(a => ({
+          name: a.name,
+          role: a.role,
+          status: a.status,
+          model: a.model,
+        })),
+      };
     } catch (err: unknown) {
-      return { success: false, message: String(err) };
+      return { agents: [], error: String(err) };
     }
   });
 
-  ipcMain.handle('agents:stop', async (_event, token: string, agentName: string) => {
-    try {
-      getAuthenticatedUserId(token);
-      return { success: true, message: `Agent ${agentName} stop requested (stub)` };
-    } catch (err: unknown) {
-      return { success: false, message: String(err) };
-    }
-  });
+  // Issue #H1: Mutating agent actions require auth (standardized to withAuth)
+  ipcMain.handle('agents:start', withAuth(async (_userId: number, agentName: string) => {
+    return { success: true, message: `Agent ${agentName} start requested (stub)` };
+  }));
+
+  ipcMain.handle('agents:stop', withAuth(async (_userId: number, agentName: string) => {
+    return { success: true, message: `Agent ${agentName} stop requested (stub)` };
+  }));
 }
 
 // ============================================================
@@ -91,33 +84,48 @@ export function registerAgentHandlers(): void {
 
 export function registerOpenClawHandlers(): void {
   ipcMain.handle('openclaw:agent-statuses', async () => {
-    return { agents: openclawBridge.getAgentStatuses() };
+    try {
+      return { agents: openclawBridge.getAgentStatuses() };
+    } catch (err: unknown) {
+      return { agents: [], error: String(err) };
+    }
   });
 
   ipcMain.handle('openclaw:workspace-stats', async () => {
-    return openclawBridge.getWorkspaceStats();
+    try {
+      return openclawBridge.getWorkspaceStats();
+    } catch (err: unknown) {
+      return { experiments: 0, confirmed: 0, refuted: 0, papers: 0, error: String(err) };
+    }
   });
 
   ipcMain.handle('openclaw:token-usage', async () => {
-    return openclawBridge.getTokenUsage();
+    try {
+      return openclawBridge.getTokenUsage();
+    } catch (err: unknown) {
+      return { models: [], dailyTotal: 0, dailyBudget: 0, pct: 0, error: String(err) };
+    }
   });
 
   ipcMain.handle('openclaw:research-progress', async () => {
-    return openclawBridge.getResearchProgress();
+    try {
+      return openclawBridge.getResearchProgress();
+    } catch (err: unknown) {
+      return { rh: 0, sc: 0, bc: 0, error: String(err) };
+    }
   });
 
   ipcMain.handle('openclaw:gateway-status', async () => {
-    return openclawBridge.getGatewayStatus();
-  });
-
-  ipcMain.handle('agents:restart', async (_event, token: string, agentName: string) => {
     try {
-      getAuthenticatedUserId(token);
-      return openclawBridge.restartAgent(agentName);
+      return openclawBridge.getGatewayStatus();
     } catch (err: unknown) {
-      return { success: false, message: String(err) };
+      return { running: false, pid: null, uptime: 0, error: String(err) };
     }
   });
+
+  ipcMain.handle('agents:restart', withAuth(async (_userId: number, agentName: string) => {
+    return openclawBridge.restartAgent(agentName);
+  }));
 
   // Issue #13: Validate agentName to prevent path traversal
   // Reads SOUL.md from the agent's workspace directory (where OpenClaw reads it)
@@ -141,24 +149,14 @@ export function registerOpenClawHandlers(): void {
     return openclawBridge.saveAgentSoul(agentName, content);
   }));
 
-  // Issue #H1: Mutating agent actions require auth
-  ipcMain.handle('agents:rename', async (_event, token: string, oldName: string, newName: string) => {
-    try {
-      getAuthenticatedUserId(token);
-      return openclawBridge.renameAgent(oldName, newName);
-    } catch (err: unknown) {
-      return { success: false, error: String(err) };
-    }
-  });
+  // Issue #H1: Mutating agent actions require auth (standardized to withAuth)
+  ipcMain.handle('agents:rename', withAuth(async (_userId: number, oldName: string, newName: string) => {
+    return openclawBridge.renameAgent(oldName, newName);
+  }));
 
-  ipcMain.handle('agents:set-model', async (_event, token: string, agentName: string, model: string) => {
-    try {
-      getAuthenticatedUserId(token);
-      return openclawBridge.setAgentModel(agentName, model);
-    } catch (err: unknown) {
-      return { success: false, error: String(err) };
-    }
-  });
+  ipcMain.handle('agents:set-model', withAuth(async (_userId: number, agentName: string, model: string) => {
+    return openclawBridge.setAgentModel(agentName, model);
+  }));
 
   // P0-fix: Logs may contain sensitive info — require auth
   ipcMain.handle('agents:logs', withAuth(async (_userId: number, agentName: string) => {
@@ -199,7 +197,11 @@ export function registerAssistantHandlers(): void {
   const DEFAULT_ASSISTANT_MODEL_LABEL = 'Gemini 2.5 Flash';
 
   ipcMain.handle('assistant:get-model', async () => {
-    return { model: DEFAULT_ASSISTANT_MODEL_LABEL, type: 'cloud' as const };
+    try {
+      return { model: DEFAULT_ASSISTANT_MODEL_LABEL, type: 'cloud' as const };
+    } catch {
+      return { model: 'unknown', type: 'cloud' as const };
+    }
   });
 
   // Map user-facing model names to OpenRouter model IDs
@@ -209,7 +211,7 @@ export function registerAssistantHandlers(): void {
     'Claude Haiku 4.5': 'anthropic/claude-haiku-4-5',
   };
 
-  ipcMain.handle('assistant:chat', async (_event, message: string, context?: string, preferredModel?: string) => {
+  ipcMain.handle('assistant:chat', withAuth(async (_userId: number, message: string, context?: string, preferredModel?: string) => {
     try {
       // Resolve model: preferred → default
       const resolvedModel = (preferredModel && MODEL_NAME_MAP[preferredModel])
@@ -258,12 +260,17 @@ export function registerAssistantHandlers(): void {
         try {
           const https = require('https');
           const trialKeyFile = path.join(app.getPath('userData'), '.trial-key');
+          const provisionBody = JSON.stringify({});
           const provisionedKey = await new Promise<string>((resolve) => {
             const req = https.request({
               hostname: 'asrp.jzis.org',
               path: '/api/key/provision',
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              timeout: 10000, // 10s timeout for provisioning
+              headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(provisionBody),
+              },
             }, (res: import('http').IncomingMessage) => {
               let data = '';
               res.on('data', (chunk: Buffer) => { data += chunk.toString(); });
@@ -277,8 +284,9 @@ export function registerAssistantHandlers(): void {
                 } catch { resolve(''); }
               });
             });
+            req.on('timeout', () => { req.destroy(); resolve(''); });
             req.on('error', () => resolve(''));
-            req.write(JSON.stringify({}));
+            req.write(provisionBody);
             req.end();
           });
           apiKey = provisionedKey;
@@ -302,9 +310,11 @@ export function registerAssistantHandlers(): void {
               hostname: 'openrouter.ai',
               path: '/api/v1/chat/completions',
               method: 'POST',
+              timeout: 30000, // 30s timeout
               headers: {
                 'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(requestBody),
                 'HTTP-Referer': 'https://asrp.jzis.org',
                 'X-Title': 'ASRP',
               },
@@ -328,6 +338,7 @@ export function registerAssistantHandlers(): void {
                 }
               });
             });
+            req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out (30s)')); });
             req.on('error', (err: Error) => reject(err));
             req.write(requestBody);
             req.end();
@@ -348,7 +359,7 @@ export function registerAssistantHandlers(): void {
     } catch (err: unknown) {
       return { success: false, reply: 'Error processing message', error: String(err), model: 'unknown' };
     }
-  });
+  }));
 
   ipcMain.handle('assistant:history', async () => {
     try {
@@ -366,7 +377,7 @@ export function registerAssistantHandlers(): void {
   });
 
   // P0-fix: Validate role to prevent system prompt injection
-  ipcMain.handle('assistant:save-message', async (_event, role: string, content: string) => {
+  ipcMain.handle('assistant:save-message', withAuth(async (_userId: number, role: string, content: string) => {
     if (!isAllowedChatRole(role)) {
       return { success: false, error: 'Invalid role — only "user" and "assistant" are allowed' };
     }
@@ -379,16 +390,16 @@ export function registerAssistantHandlers(): void {
     } catch (err: unknown) {
       return { success: false, error: String(err) };
     }
-  });
+  }));
 
-  ipcMain.handle('assistant:clear-history', async () => {
+  ipcMain.handle('assistant:clear-history', withAuth(async () => {
     try {
       fs.writeFileSync(chatHistoryPath, '', 'utf-8');
       return { success: true };
     } catch (err: unknown) {
       return { success: false, error: String(err) };
     }
-  });
+  }));
 }
 
 // ============================================================
@@ -396,7 +407,7 @@ export function registerAssistantHandlers(): void {
 // ============================================================
 
 export function registerDiscordHandlers(): void {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+   
   const https = require('https') as typeof import('https');
 
   // Helper: make a GET request to the Discord API with a Bot token
@@ -407,6 +418,7 @@ export function registerDiscordHandlers(): void {
           hostname: 'discord.com',
           path: `/api/v10${apiPath}`,
           method: 'GET',
+          timeout: 15000, // 15s timeout
           headers: {
             Authorization: `Bot ${token}`,
             'Content-Type': 'application/json',
@@ -422,6 +434,7 @@ export function registerDiscordHandlers(): void {
           });
         },
       );
+      req.on('timeout', () => { req.destroy(); reject(new Error('Discord API request timed out (15s)')); });
       req.on('error', reject);
       req.end();
     });
@@ -451,7 +464,7 @@ export function registerDiscordHandlers(): void {
     const scope = 'bot';
     let url = `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(botAppId)}&permissions=${permissions}&scope=${scope}`;
     if (guildId) url += `&guild_id=${encodeURIComponent(guildId)}`;
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     const { shell } = require('electron') as typeof import('electron');
     await shell.openExternal(url);
     return { url };
@@ -496,6 +509,7 @@ export function registerDiscordHandlers(): void {
           hostname: 'discord.com',
           path: `/api/v10${apiPath}`,
           method: 'POST',
+          timeout: 15000, // 15s timeout
           headers: {
             Authorization: `Bot ${token}`,
             'Content-Type': 'application/json',
@@ -512,6 +526,7 @@ export function registerDiscordHandlers(): void {
           });
         },
       );
+      req.on('timeout', () => { req.destroy(); reject(new Error('Discord API request timed out (15s)')); });
       req.on('error', reject);
       req.write(bodyStr);
       req.end();
@@ -590,7 +605,7 @@ export function registerDiscordHandlers(): void {
     if (typeof url !== 'string' || !url.startsWith('https://discord.com/')) {
       return { success: false, error: 'Only https://discord.com/ URLs are permitted' };
     }
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     const { shell } = require('electron') as typeof import('electron');
     await shell.openExternal(url);
     return { success: true };

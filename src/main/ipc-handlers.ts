@@ -1,4 +1,4 @@
-import { app, ipcMain, IpcMainInvokeEvent } from 'electron';
+import { app, IpcMainInvokeEvent } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as authService from './auth-service';
