@@ -1,6 +1,6 @@
 {
   "name": "asrp-desktop",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "ASRP — AI Scientific Research Platform",
   "main": "dist/main/index.js",
   "author": {
