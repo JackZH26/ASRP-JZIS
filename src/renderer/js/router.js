@@ -14,7 +14,7 @@ const Router = (() => {
     '/files':       { file: 'pages/files.html',        title: 'Files',       sidebar: true,  section: 'files' },
     '/papers':      { file: 'pages/papers.html',       title: 'Papers',      sidebar: true,  section: 'papers' },
     '/researches':  { file: 'pages/researches.html',   title: 'Researches', sidebar: true,  section: 'researches' },
-    '/audit':       { file: 'pages/audit.html',        title: 'Audit Log',   sidebar: true,  section: 'audit' },
+    '/audit':       { file: 'pages/audit.html',        title: 'Log',         sidebar: true,  section: 'audit' },
     '/settings':    { file: 'pages/settings.html',     title: 'Settings',    sidebar: true,  section: 'settings' },
   };
 

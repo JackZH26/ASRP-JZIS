@@ -1,10 +1,10 @@
 <!-- Gateway status banner — dynamically updated -->
-<div id="demo-banner" style="background:#e8f4fd;border:1px solid #b8daff;border-radius:10px;padding:14px 20px;margin-bottom:18px;font-size:14px;color:#004085;display:flex;align-items:center;gap:12px;justify-content:space-between">
+<div id="demo-banner" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin-bottom:18px;font-size:14px;color:var(--text-secondary);display:flex;align-items:center;gap:12px;justify-content:space-between">
   <div style="display:flex;align-items:center;gap:10px">
-    <span id="gw-banner-icon" style="font-size:20px">ℹ️</span>
+    <span id="gw-banner-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>
     <span id="gw-banner-text"><strong>Checking gateway status...</strong></span>
   </div>
-  <button class="btn btn-primary" id="gw-start-btn" style="display:none;font-size:15px;font-weight:700;padding:10px 28px;border-radius:10px;letter-spacing:0.3px;white-space:nowrap" onclick="startGateway()">▶ Start Agents</button>
+  <button class="btn btn-primary" id="gw-start-btn" style="display:none;font-size:15px;font-weight:700;padding:10px 28px;border-radius:10px;letter-spacing:0.3px;white-space:nowrap" onclick="startGateway()">Start Agents</button>
 </div>
 
 <div class="page-header">
@@ -13,7 +13,7 @@
       <h1>Research Dashboard</h1>
       <p>Overview of your research activity and agent status</p>
     </div>
-    <button class="btn btn-outline btn-sm" onclick="Router.navigate('/researches')" style="margin-left:12px">🧪 New Research</button>
+    <button class="btn btn-outline btn-sm" onclick="Router.navigate('/researches')" style="margin-left:12px">+ New Research</button>
     <button class="btn btn-ghost btn-sm" onclick="refreshDashboard()">↻ Refresh</button>
   </div>
 </div>
@@ -50,14 +50,14 @@
 <!-- Agent Status + Recent Researches -->
 <div class="grid-2 mb-3">
   <div class="panel">
-    <h3>🤖 Agent Status <span class="badge badge-accent" id="agent-count-badge">— agents</span></h3>
+    <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>Agent Status <span class="badge badge-accent" id="agent-count-badge">— agents</span></h3>
     <div id="agent-status-list">
       <div class="loading"><div class="spinner"></div> Loading agents...</div>
     </div>
   </div>
 
   <div class="panel">
-    <h3>🧪 Recent Researches <span class="badge badge-accent">last 5</span></h3>
+    <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M12 5V2"/><circle cx="12" cy="8" r="3"/><path d="M12 11v3"/><path d="M7 19h10"/><path d="M9 22h6"/><path d="M12 14v5"/></svg>Recent Researches <span class="badge badge-accent">last 5</span></h3>
     <div id="recent-experiments-list">
       <div class="loading"><div class="spinner"></div> Loading researches...</div>
     </div>
@@ -67,18 +67,18 @@
 <!-- Audit Log + Token Budget -->
 <div class="grid-2 mb-3">
   <div class="panel">
-    <h3>📝 Audit Trail <span class="badge badge-accent" id="audit-live-badge">live</span></h3>
+    <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>Log <span class="badge badge-accent" id="audit-live-badge">live</span></h3>
     <div id="audit-trail-list">
       <div class="loading"><div class="spinner"></div> Loading audit log...</div>
     </div>
     <div style="margin-top:12px">
-      <button class="btn btn-ghost btn-sm" onclick="Router.navigate('/audit')">View full audit log →</button>
+      <button class="btn btn-ghost btn-sm" onclick="Router.navigate('/audit')">View full log →</button>
     </div>
   </div>
 
   <!-- T-029: Token Budget Panel with visual bars -->
   <div class="panel">
-    <h3>💰 Token Budget <span id="budget-pct-badge" class="badge badge-accent">—%</span></h3>
+    <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Token Budget <span id="budget-pct-badge" class="badge badge-accent">—%</span></h3>
     <div id="token-budget-bars">
       <div class="loading"><div class="spinner"></div></div>
     </div>
@@ -89,7 +89,7 @@
 <!-- T-031: Research Progress Bars -->
 <div class="grid-2 mb-3">
   <div class="panel">
-    <h3>📊 Research Progress</h3>
+    <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Research Progress</h3>
     <div id="research-progress">
       <div class="loading"><div class="spinner"></div></div>
     </div>
@@ -97,9 +97,9 @@
 
   <!-- System Health -->
   <div class="panel">
-    <h3>🏥 System Health</h3>
+    <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>System Health</h3>
     <div class="grid-2" id="health-grid">
-      <div class="health-item"><span class="icon">⏳</span> Loading...</div>
+      <div class="health-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg> Loading...</div>
     </div>
   </div>
 </div>
@@ -201,14 +201,13 @@
       if (badge) badge.textContent = agents.length + ' agents';
 
       const agentList = document.getElementById('agent-status-list');
-      const roleEmoji = { Theorist: '🧠', Engineer: '⚙️', Assistant: '🤖' };
       if (agents.length === 0) {
         agentList.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-tertiary);font-size:13px">No agents connected yet.<br>Connect to OpenClaw to see live agent status.</div>';
       } else {
         agentList.innerHTML = agents.map(a => `
           <div class="agent-row">
             <span class="dot ${a.status === 'running' ? 'online' : a.status === 'stopped' ? 'offline' : 'idle'}"></span>
-            <span class="name">${escHtml(roleEmoji[a.role] || '🤖')} ${escHtml(a.name)}</span>
+            <span class="name">${escHtml(a.name)}</span>
             <span class="role">${escHtml(a.role)}</span>
             <span class="model">${escHtml(shortModel(a.model))}</span>
           </div>
@@ -314,10 +313,10 @@
       ]);
       const auditTotal = auditData.total != null ? auditData.total : '—';
       document.getElementById('health-grid').innerHTML = `
-        <div class="health-item"><span class="icon">✅</span> System: ${escHtml(health.status)}</div>
-        <div class="health-item"><span class="icon">⏱️</span> Uptime: ${escHtml(String(Math.floor(health.uptime / 60)))}m</div>
-        <div class="health-item"><span class="icon">✅</span> Audit: ${escHtml(String(auditTotal))} entries</div>
-        <div class="health-item"><span class="icon">✅</span> Last backup: —</div>
+        <div class="health-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a8c6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg> System: ${escHtml(health.status)}</div>
+        <div class="health-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg> Uptime: ${escHtml(String(Math.floor(health.uptime / 60)))}m</div>
+        <div class="health-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a8c6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg> Log: ${escHtml(String(auditTotal))} entries</div>
+        <div class="health-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a8c6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg> Last backup: —</div>
       `;
     } catch (e) { console.error('health load error', e); }
   }
@@ -344,11 +343,10 @@
       if (badge) badge.textContent = agents.length + ' agents';
       const agentList = document.getElementById('agent-status-list');
       if (!agentList || !document.body.contains(agentList)) return;
-      const roleEmoji = { Theorist: '🧠', Engineer: '⚙️', Assistant: '🤖' };
       agentList.innerHTML = agents.map(function(a) {
         return '<div class="agent-row">' +
           '<span class="dot ' + (a.status === 'running' ? 'online' : a.status === 'stopped' ? 'offline' : 'idle') + '"></span>' +
-          '<span class="name">' + escHtml(roleEmoji[a.role] || '🤖') + ' ' + escHtml(a.name) + '</span>' +
+          '<span class="name">' + escHtml(a.name) + '</span>' +
           '<span class="role">' + escHtml(a.role) + '</span>' +
           '<span class="model">' + escHtml(shortModel(a.model)) + '</span>' +
           '</div>';
@@ -389,43 +387,49 @@
       var btn = document.getElementById('gw-start-btn');
       if (!banner) return;
 
+      // SVG status icons (flat, muted)
+      var svgCheck = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4a8c6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="1.4"/><polyline points="8 12 11 15 16 9"/></svg>';
+      var svgWarn = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b8860b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="1.4"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+      var svgPause = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="1.4"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="14" y1="9" x2="14" y2="15"/></svg>';
+      var svgInfo = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="1.4"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+
       if (!status.installed) {
-        banner.style.background = '#fff3cd';
-        banner.style.borderColor = '#ffc107';
+        banner.style.background = 'rgba(184,134,11,0.06)';
+        banner.style.borderColor = 'rgba(184,134,11,0.3)';
         banner.style.color = '#856404';
-        if (icon) icon.textContent = '⚠️';
+        if (icon) icon.innerHTML = svgWarn;
         if (text) text.innerHTML = '<strong>OpenClaw not installed</strong> — Run <code>npm install -g openclaw</code> to enable agents.';
         if (btn) btn.style.display = 'none';
       } else if (status.agents && status.agents.length > 0) {
         var running = status.agents.filter(function(a) { return a.running; }).length;
         var total = status.agents.length;
         if (running === total) {
-          banner.style.background = 'rgba(74,140,106,0.08)';
-          banner.style.borderColor = '#4a8c6a';
+          banner.style.background = 'rgba(74,140,106,0.06)';
+          banner.style.borderColor = 'rgba(74,140,106,0.3)';
           banner.style.color = '#2d5a3d';
-          if (icon) icon.textContent = '🟢';
+          if (icon) icon.innerHTML = svgCheck;
           if (text) text.innerHTML = '<strong>' + running + '/' + total + ' agents online</strong> — All gateways running';
           if (btn) btn.style.display = 'none';
         } else if (running > 0) {
-          banner.style.background = '#fff3cd';
-          banner.style.borderColor = '#ffc107';
+          banner.style.background = 'rgba(184,134,11,0.06)';
+          banner.style.borderColor = 'rgba(184,134,11,0.3)';
           banner.style.color = '#856404';
-          if (icon) icon.textContent = '🟡';
+          if (icon) icon.innerHTML = svgWarn;
           if (text) text.innerHTML = '<strong>' + running + '/' + total + ' agents online</strong> — Some agents failed to start';
           if (btn) btn.style.display = '';
         } else {
-          banner.style.background = '#e8f4fd';
-          banner.style.borderColor = '#b8daff';
-          banner.style.color = '#004085';
-          if (icon) icon.textContent = '⏸️';
+          banner.style.background = 'var(--bg-secondary)';
+          banner.style.borderColor = 'var(--border)';
+          banner.style.color = 'var(--text-secondary)';
+          if (icon) icon.innerHTML = svgPause;
           if (text) text.innerHTML = '<strong>All agents stopped</strong> — Click Start to bring agents online.';
           if (btn) btn.style.display = '';
         }
       } else {
-        banner.style.background = '#e8f4fd';
-        banner.style.borderColor = '#b8daff';
-        banner.style.color = '#004085';
-        if (icon) icon.textContent = 'ℹ️';
+        banner.style.background = 'var(--bg-secondary)';
+        banner.style.borderColor = 'var(--border)';
+        banner.style.color = 'var(--text-secondary)';
+        if (icon) icon.innerHTML = svgInfo;
         if (text) text.innerHTML = '<strong>Standalone Mode</strong> — Complete setup to connect agents.';
         if (btn) btn.style.display = 'none';
       }
@@ -445,7 +449,7 @@
     var btn = document.getElementById('gw-start-btn');
     var text = document.getElementById('gw-banner-text');
     if (btn) btn.disabled = true;
-    if (btn) btn.textContent = '⏳ Starting...';
+    if (btn) btn.textContent = 'Starting...';
     if (text) text.innerHTML = '<strong>Starting agents...</strong>';
     try {
       var res = await window.asrp.gateway.start();
@@ -457,7 +461,7 @@
     } catch (e) {
       Toast.show('Error: ' + String(e), 'error');
     }
-    if (btn) { btn.disabled = false; btn.textContent = '▶ Start Agents'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Start Agents'; }
     checkGatewayStatus();
   };
 

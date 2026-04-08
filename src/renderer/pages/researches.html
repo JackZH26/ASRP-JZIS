@@ -1,9 +1,3 @@
-<!-- H4: Demo mode banner -->
-<div id="demo-banner" style="background:#e8f4fd;border:1px solid #b8daff;border-radius:8px;padding:8px 16px;margin-bottom:14px;font-size:13px;color:#004085;display:flex;align-items:center;gap:8px">
-  <span>ℹ️</span>
-  <span><strong>Standalone Mode</strong> — Connect to OpenClaw for live data.</span>
-</div>
-
 <div class="page-header">
   <div>
     <h1>Researches</h1>
@@ -52,7 +46,7 @@
 <div id="register-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
   <div class="panel" style="width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;padding:0">
     <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-      <h3 style="margin:0" id="modal-title">🧪 New Research</h3>
+      <h3 style="margin:0" id="modal-title">New Research</h3>
       <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button>
     </div>
     <div style="padding:20px">
@@ -212,30 +206,30 @@
   // Demo mock data
   const MOCK_EXPERIMENTS = [
     {
-      id: 'EXP-2026-04-02-003', title: 'Multi-well DD Correction', status: 'running', created: '2026-04-02', score: null, result: null,
+      id: 'EXP-2026-04-02-003', code: 'R003', title: 'Multi-well DD Correction', status: 'running', created: '2026-04-02', score: null, result: null,
       abstract: 'Investigate whether multi-well density-driven (DD) correction with exact Kohn-Sham gap at inter-well spacings d=5,6,7 Bohr can restore DFT binding accuracy to below 0.01%. Uses iDEA reverse-KS code with tight tolerance (1e-6) and chemical potential mu=3.0.',
       tags: ['DFT','simulation','theoretical','electron'],
     },
     {
-      id: 'EXP-2026-04-01-002', title: 'Prime-spaced DD Sign Flip', status: 'refuted', created: '2026-04-01', score: 0.1,
+      id: 'EXP-2026-04-01-002', code: 'R002', title: 'Prime-spaced DD Sign Flip', status: 'refuted', created: '2026-04-01', score: 0.1,
       result: 'All DD values remained positive (0.08-0.21 Hartree). Sign flip not observed.',
       abstract: 'Test whether prime-spaced wells (d=2,3,5,7,11 Bohr) produce a negative DD correction (sign flip) in the iDEA 1D model.',
       tags: ['DFT','theoretical','simulation'],
     },
     {
-      id: 'EXP-2026-04-01-001', title: 'LDA Overbinding Test', status: 'confirmed', created: '2026-04-01', score: 0.95,
+      id: 'EXP-2026-04-01-001', code: 'R001', title: 'LDA Overbinding Test', status: 'confirmed', created: '2026-04-01', score: 0.95,
       result: 'LDA binding energy = 2.907 Hartree, exact = 2.904 Hartree. Relative error = 0.103%.',
       abstract: 'Quantify the overbinding error of the Local Density Approximation (LDA) for a 2-electron atom by comparing LDA vs exact iDEA solver binding energies.',
       tags: ['DFT','electron','theoretical'],
     },
     {
-      id: 'EXP-2026-03-31-005', title: 'Electron Membrane Nodal Pattern', status: 'confirmed', created: '2026-03-31', score: 0.88,
+      id: 'EXP-2026-03-31-005', code: 'R005', title: 'Electron Membrane Nodal Pattern', status: 'confirmed', created: '2026-03-31', score: 0.88,
       result: 'RMSE = 3.2% across 4-ring dataset. Model consistent with observation.',
       abstract: 'Validate the electron membrane model by comparing predicted nodal ring patterns with Stodolna et al. (2013) hydrogen atom photoionization imaging data.',
       tags: ['membrane','electron','spectroscopy','experiment'],
     },
     {
-      id: 'EXP-2026-04-02-004', title: 'Fibonacci Lattice DFT Grid', status: 'registered', created: '2026-04-02', score: null, result: null,
+      id: 'EXP-2026-04-02-004', code: 'R004', title: 'Fibonacci Lattice DFT Grid', status: 'registered', created: '2026-04-02', score: null, result: null,
       abstract: 'Compare the condition number of DFT overlap matrices using Fibonacci lattice grids vs uniform grids for N>100 basis functions.',
       tags: ['DFT','optimization','materials','simulation'],
     },
@@ -257,7 +251,7 @@
       const tagsHtml = (e.tags||[]).slice(0,4).map(t => `<span class="research-tag">${escHtml(t)}</span>`).join('');
       return `<div class="card exp-card" style="cursor:pointer;border-left:3px solid ${statusColor(e.status)}${e.status==='archived'?';opacity:0.7':''}" onclick="openExpDetail('${e.id}')">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
-          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary)">${e.id}</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary)">${e.code ? '<strong style="color:var(--accent)">' + escHtml(e.code) + '</strong> · ' : ''}${e.id}</span>
           <span class="exp-status-badge ${e.status}">${capitalize(e.status)}</span>
         </div>
         <div style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:6px">${escHtml(e.title||e.id)}</div>
@@ -278,7 +272,7 @@
       if (activeStatusFilter === 'all' && e.status === 'archived') return false;
       if (activeStatusFilter !== 'all' && e.status !== activeStatusFilter) return false;
       if (search) {
-        const haystack = [e.title, e.abstract, e.id, ...(e.tags||[])].join(' ').toLowerCase();
+        const haystack = [e.title, e.abstract, e.id, e.code, ...(e.tags||[])].join(' ').toLowerCase();
         if (!haystack.includes(search)) return false;
       }
       return true;
@@ -321,7 +315,7 @@
       <div class="panel" style="margin-bottom:12px">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
           <div style="flex:1">
-            <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-tertiary);margin-bottom:4px">${e.id} · ${e.created}</div>
+            <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-tertiary);margin-bottom:4px">${e.code ? '<strong style="color:var(--accent)">' + escHtml(e.code) + '</strong> · ' : ''}${e.id} · ${e.created}</div>
             <h2 style="font-size:18px;font-weight:700;line-height:1.4;color:var(--text);margin-bottom:0">${escHtml(e.title||e.id)}</h2>
           </div>
           <span class="exp-status-badge ${e.status}" style="flex-shrink:0">${capitalize(e.status)}</span>
@@ -387,7 +381,7 @@
   window.showRegisterModal = function() {
     editingId = null;
     resetModal();
-    document.getElementById('modal-title').textContent = '🧪 New Research';
+    document.getElementById('modal-title').textContent = 'New Research';
     document.getElementById('modal-submit-btn').textContent = 'Register';
     document.getElementById('register-modal').style.display = 'flex';
     setTimeout(() => document.getElementById('reg-title').focus(), 50);
@@ -398,7 +392,7 @@
     if (!e) return;
     editingId = id;
     resetModal();
-    document.getElementById('modal-title').textContent = '✏️ Edit Research';
+    document.getElementById('modal-title').textContent = 'Edit Research';
     document.getElementById('modal-submit-btn').textContent = 'Save Changes';
     document.getElementById('reg-date-row').style.display = 'block';
     document.getElementById('reg-date').value = e.created;
@@ -452,7 +446,7 @@
         alertEl.textContent = 'Research registered!';
         alertEl.className = 'alert success show';
         allResearches.unshift({
-          id: result.id, title, abstract, tags,
+          id: result.id, code: result.code || '', title, abstract, tags,
           status: 'registered',
           created: new Date().toISOString().slice(0,10),
           score: null, result: null,

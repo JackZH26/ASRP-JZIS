@@ -1,80 +1,45 @@
-<!-- H4: Demo mode banner -->
-<div id="demo-banner" style="background:#e8f4fd;border:1px solid #b8daff;border-radius:8px;padding:8px 16px;margin-bottom:14px;font-size:13px;color:#004085;display:flex;align-items:center;gap:8px">
-  <span>ℹ️</span>
-  <span><strong>Standalone Mode</strong> — Connect to OpenClaw for live data.</span>
-</div>
-
 <div class="page-header">
   <div>
-    <h1>Audit Log</h1>
-    <p>Complete timeline of all agent actions and system events</p>
+    <h1>Log</h1>
+    <p>All operations, agent actions, and system events</p>
   </div>
   <div class="actions">
-    <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
-    <button class="btn btn-outline btn-sm" onclick="loadAuditLog()">↻ Refresh</button>
-  </div>
-</div>
-
-<!-- Stats Bar -->
-<div class="grid-4 mb-3">
-  <div class="stat-card accent">
-    <div class="label">Total Entries</div>
-    <div class="value" id="audit-total">—</div>
-    <div class="sub">All time</div>
-  </div>
-  <div class="stat-card success">
-    <div class="label">Today</div>
-    <div class="value" id="audit-today">—</div>
-    <div class="sub">Since midnight</div>
-  </div>
-  <div class="stat-card warning">
-    <div class="label">Warnings</div>
-    <div class="value" id="audit-warnings">—</div>
-    <div class="sub">Require attention</div>
-  </div>
-  <div class="stat-card error">
-    <div class="label">Errors</div>
-    <div class="value" id="audit-errors">—</div>
-    <div class="sub">Critical issues</div>
+    <button class="btn btn-outline btn-sm" onclick="exportCSV()">Export CSV</button>
+    <button class="btn btn-outline btn-sm" onclick="loadAuditLog()">Refresh</button>
   </div>
 </div>
 
 <!-- Filter Panel -->
 <div class="panel mb-2" style="padding:12px 14px">
   <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
-    <!-- Agent multi-select chips -->
+    <!-- Type filter (MECE) -->
+    <div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase">Type</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="type-chips">
+        <button class="log-chip active" data-type="research" onclick="toggleChip(this,'type')">research</button>
+        <button class="log-chip active" data-type="agent" onclick="toggleChip(this,'type')">agent</button>
+        <button class="log-chip active" data-type="api" onclick="toggleChip(this,'type')">api</button>
+        <button class="log-chip active" data-type="file" onclick="toggleChip(this,'type')">file</button>
+        <button class="log-chip active" data-type="system" onclick="toggleChip(this,'type')">system</button>
+        <button class="log-chip active" data-type="config" onclick="toggleChip(this,'type')">config</button>
+      </div>
+    </div>
+    <!-- Agent filter -->
     <div>
       <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase">Agent</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap" id="agent-chips">
-        <button class="audit-chip active" data-agent="Theorist" onclick="toggleAgentChip(this)">🧠 Theorist</button>
-        <button class="audit-chip active" data-agent="Engineer" onclick="toggleAgentChip(this)">⚙️ Engineer</button>
-        <button class="audit-chip active" data-agent="Reviewer" onclick="toggleAgentChip(this)">📋 Reviewer</button>
-        <button class="audit-chip active" data-agent="Librarian" onclick="toggleAgentChip(this)">📚 Librarian</button>
-        <button class="audit-chip active" data-agent="ITDoctor" onclick="toggleAgentChip(this)">🏥 ITDoctor</button>
-        <button class="audit-chip active" data-agent="System" onclick="toggleAgentChip(this)">🖥 System</button>
-        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 6px" onclick="toggleAllAgents(true)">All</button>
-        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 6px" onclick="toggleAllAgents(false)">None</button>
+        <button class="log-chip active" data-agent="Theorist" onclick="toggleChip(this,'agent')">Theorist</button>
+        <button class="log-chip active" data-agent="Engineer" onclick="toggleChip(this,'agent')">Engineer</button>
+        <button class="log-chip active" data-agent="Assistant" onclick="toggleChip(this,'agent')">Assistant</button>
+        <button class="log-chip active" data-agent="System" onclick="toggleChip(this,'agent')">System</button>
       </div>
     </div>
-    <!-- Type filter -->
+    <!-- Research filter -->
     <div>
-      <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase">Type</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="audit-chip active" data-type="hypothesis" onclick="toggleTypeChip(this)">hypothesis</button>
-        <button class="audit-chip active" data-type="methodology" onclick="toggleTypeChip(this)">methodology</button>
-        <button class="audit-chip active" data-type="result" onclick="toggleTypeChip(this)">result</button>
-        <button class="audit-chip active" data-type="decision" onclick="toggleTypeChip(this)">decision</button>
-        <button class="audit-chip active" data-type="system" onclick="toggleTypeChip(this)">system</button>
-      </div>
-    </div>
-    <!-- Severity filter -->
-    <div>
-      <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase">Severity</div>
-      <div style="display:flex;gap:6px">
-        <button class="audit-chip active" data-sev="info" onclick="toggleSevChip(this)">info</button>
-        <button class="audit-chip active" data-sev="warning" onclick="toggleSevChip(this)" style="background:#fff3cd;border-color:#d39e00;color:#004085">warning</button>
-        <button class="audit-chip active" data-sev="critical" onclick="toggleSevChip(this)" style="background:#f8d7da;border-color:#f5c6cb;color:#721c24">critical</button>
-      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase">Research</div>
+      <select id="log-research-filter" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg-secondary);color:var(--text)" onchange="applyFilters()">
+        <option value="">All</option>
+      </select>
     </div>
     <!-- Date range -->
     <div>
@@ -88,10 +53,10 @@
   </div>
 </div>
 
-<!-- Timeline -->
+<!-- Log Entries -->
 <div class="panel" style="padding:0">
-  <div id="audit-timeline" style="padding:8px 0">
-    <div class="loading" style="padding:24px;justify-content:center"><div class="spinner"></div> Loading audit log...</div>
+  <div id="audit-timeline" style="padding:0">
+    <div class="loading" style="padding:24px;justify-content:center"><div class="spinner"></div> Loading log...</div>
   </div>
   <div id="load-more-wrap" style="display:none;padding:12px;text-align:center;border-top:1px solid var(--border)">
     <button class="btn btn-outline btn-sm" onclick="loadMoreAudit()">Load more entries</button>
@@ -99,37 +64,33 @@
 </div>
 
 <style>
-.audit-chip {
+.log-chip {
   padding:3px 10px;border-radius:12px;font-size:11px;font-weight:500;border:1px solid var(--border);background:var(--accent);color:#fff;cursor:pointer;transition:all 0.15s
 }
-.audit-chip:not(.active) { background:var(--bg-secondary);color:var(--text-secondary);border-color:var(--border) }
-.timeline-entry {
-  display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border-light,rgba(0,0,0,0.06));align-items:flex-start;transition:background 0.1s
+.log-chip:not(.active) { background:var(--bg-secondary);color:var(--text-secondary);border-color:var(--border) }
+.log-entry {
+  display:flex;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border-light,rgba(0,0,0,0.06));align-items:baseline;font-size:13px;transition:background 0.1s
 }
-.timeline-entry:hover { background:var(--hover-bg,rgba(0,0,0,0.03)) }
-.timeline-entry:last-child { border-bottom:none }
-.timeline-dot {
-  width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:5px
+.log-entry:hover { background:var(--hover-bg,rgba(0,0,0,0.02)) }
+.log-entry:last-child { border-bottom:none }
+.log-time {
+  font-size:11px;color:var(--text-tertiary);white-space:nowrap;min-width:120px;font-family:var(--font-mono);flex-shrink:0
 }
-.timeline-time { font-size:11px;color:var(--text-tertiary);white-space:nowrap;min-width:50px;font-family:var(--font-mono);padding-top:1px }
-.agent-badge {
-  padding:2px 7px;border-radius:8px;font-size:11px;font-weight:600;flex-shrink:0;white-space:nowrap
+.log-type {
+  padding:1px 7px;border-radius:6px;font-size:10px;font-weight:600;text-transform:uppercase;white-space:nowrap;flex-shrink:0;min-width:60px;text-align:center
 }
-.agent-badge.Theorist { background:#ede9fe;color:#5b21b6 }
-.agent-badge.Engineer { background:#dbeafe;color:#1e40af }
-.agent-badge.Reviewer { background:#ffedd5;color:#9a3412 }
-.agent-badge.Librarian { background:#dcfce7;color:#166534 }
-.agent-badge.ITDoctor { background:#f1f5f9;color:#475569 }
-.agent-badge.System { background:#f1f5f9;color:#475569 }
-.type-badge {
-  padding:1px 6px;border-radius:6px;font-size:10px;border:1px solid var(--border);color:var(--text-tertiary);flex-shrink:0;white-space:nowrap
+.log-type.research { background:rgba(124,105,240,0.1);color:#7c69f0 }
+.log-type.agent { background:rgba(74,140,106,0.1);color:#4a8c6a }
+.log-type.api { background:rgba(59,130,246,0.1);color:#3b82f6 }
+.log-type.file { background:rgba(217,119,6,0.1);color:#d97706 }
+.log-type.system { background:rgba(100,116,139,0.1);color:#64748b }
+.log-type.config { background:rgba(168,85,247,0.1);color:#a855f7 }
+.log-msg { flex:1;color:var(--text);line-height:1.5 }
+.log-agent { font-size:11px;font-weight:600;color:var(--text-secondary);white-space:nowrap;flex-shrink:0 }
+.log-research-code { font-family:var(--font-mono);font-size:10px;color:var(--accent);font-weight:700;white-space:nowrap;flex-shrink:0 }
+.log-tokens {
+  font-size:11px;color:var(--text-tertiary);white-space:nowrap;min-width:60px;text-align:right;font-family:var(--font-mono);flex-shrink:0
 }
-.timeline-msg { font-size:13px;color:var(--text);line-height:1.5;flex:1 }
-.timeline-msg.severity-warning { color:var(--warning,#856404) }
-.timeline-msg.severity-critical { color:var(--error,#721c24);font-weight:600 }
-.sev-dot-info { background:var(--accent) }
-.sev-dot-warning { background:var(--warning,#d39e00) }
-.sev-dot-critical { background:var(--error,#dc3545) }
 </style>
 
 <script>
@@ -139,64 +100,74 @@
   const PAGE_SIZE = 50;
 
   // Active filter sets
-  let activeAgents = new Set(['Theorist','Engineer','Reviewer','Librarian','ITDoctor','System']);
-  let activeTypes = new Set(['hypothesis','methodology','result','decision','system']);
-  let activeSevs = new Set(['info','warning','critical']);
+  let activeTypes = new Set(['research','agent','api','file','system','config']);
+  let activeAgents = new Set(['Theorist','Engineer','Assistant','System']);
 
-  // Extended mock with type field and timestamps
+  // MECE log types:
+  // research — research lifecycle: register, edit, archive, status change, scoring
+  // agent    — agent operations: start, stop, task assignment, role actions
+  // api      — external API calls: model queries, token consumption, rate limits
+  // file     — file operations: upload, download, paper management
+  // system   — platform events: health checks, backups, updates, startup/shutdown
+  // config   — configuration: settings changes, workspace changes, user management
+
   const MOCK_ENTRIES = [
-    { id: 1, timestamp: '2026-04-03T10:03:00Z', time: '10:03', agent: 'Engineer', type: 'result', message: 'EXP-003: Exact KS gap computed for d=3.0, DD=+0.215 Hartree (tol=1e-6 converged)', severity: 'info' },
-    { id: 2, timestamp: '2026-04-03T09:58:00Z', time: '09:58', agent: 'Reviewer', type: 'decision', message: 'EXP-002: DD sign depends on KS gap definition — recommend revision of equation (3)', severity: 'warning' },
-    { id: 3, timestamp: '2026-04-03T09:45:00Z', time: '09:45', agent: 'Theorist', type: 'hypothesis', message: 'Registered EXP-004: Fibonacci lattice reduces DFT ill-conditioning for N>100', severity: 'info' },
-    { id: 4, timestamp: '2026-04-03T09:30:00Z', time: '09:30', agent: 'System', type: 'system', message: 'Daily backup completed (workspace: 2.4 MB, 47 files)', severity: 'info' },
-    { id: 5, timestamp: '2026-04-03T09:15:00Z', time: '09:15', agent: 'Engineer', type: 'methodology', message: 'EXP-003: iDEA reverse-KS started (mu=3.0, tol=1e-6, grid=512)', severity: 'info' },
-    { id: 6, timestamp: '2026-04-03T09:00:00Z', time: '09:00', agent: 'System', type: 'system', message: 'Health check: all agents online, disk 23%, GPU idle', severity: 'info' },
-    { id: 7, timestamp: '2026-04-02T18:30:00Z', time: '18:30', agent: 'Librarian', type: 'result', message: 'Literature search complete: 12 papers retrieved for DD correction topic (query: double-delta DFT)', severity: 'info' },
-    { id: 8, timestamp: '2026-04-02T17:15:00Z', time: '17:15', agent: 'Reviewer', type: 'decision', message: 'Paper paper-001 self-review R2 complete: HOLD — awaiting EXP-003 results', severity: 'warning' },
-    { id: 9, timestamp: '2026-04-02T16:00:00Z', time: '16:00', agent: 'Theorist', type: 'decision', message: 'Albert review: paper-001 equation (3) sign ambiguity — requires clarification before submission', severity: 'warning' },
-    { id: 10, timestamp: '2026-04-02T14:45:00Z', time: '14:45', agent: 'Engineer', type: 'result', message: 'EXP-002 REFUTED: Prime-spaced well DD remains positive (min=0.083 Hartree for d=2)', severity: 'info' },
-    { id: 11, timestamp: '2026-04-02T13:30:00Z', time: '13:30', agent: 'Engineer', type: 'methodology', message: 'EXP-002: Scanning d in {2,3,5,7,11} Bohr (prime spacing hypothesis)', severity: 'info' },
-    { id: 12, timestamp: '2026-04-02T12:00:00Z', time: '12:00', agent: 'Theorist', type: 'hypothesis', message: 'Registered EXP-003: Multi-well DD at d=5,6,7 with exact KS gap', severity: 'info' },
-    { id: 13, timestamp: '2026-04-01T16:30:00Z', time: '16:30', agent: 'Engineer', type: 'result', message: 'EXP-001 CONFIRMED: LDA overbinding 0.103% vs exact (threshold 1%)', severity: 'info' },
-    { id: 14, timestamp: '2026-04-01T10:00:00Z', time: '10:00', agent: 'Theorist', type: 'hypothesis', message: 'Registered EXP-001: LDA overbinding >1% for 2e atom', severity: 'info' },
-    { id: 15, timestamp: '2026-03-31T18:00:00Z', time: '18:00', agent: 'Engineer', type: 'result', message: 'EXP-005 CONFIRMED: Membrane model RMSE=3.2% vs Stodolna 2013 (threshold 5%)', severity: 'info' },
-    { id: 16, timestamp: '2026-03-31T09:00:00Z', time: '09:00', agent: 'ITDoctor', type: 'system', message: 'iDEA v2.3.1 installed, dependency check passed, all tests green', severity: 'info' },
-    { id: 17, timestamp: '2026-03-30T22:00:00Z', time: '22:00', agent: 'System', type: 'system', message: 'OpenRouter API rate limit approached (95% of hourly quota) — throttling applied', severity: 'warning' },
-    { id: 18, timestamp: '2026-03-30T15:00:00Z', time: '15:00', agent: 'Librarian', type: 'methodology', message: 'arXiv query: "double delta DFT" — 3 new preprints since last search', severity: 'info' },
+    { id:1, timestamp:'2026-04-03T10:03:00Z', agent:'Engineer', type:'research', research:'R003', message:'EXP-003: Exact KS gap computed for d=3.0, DD=+0.215 Hartree (tol=1e-6 converged)', tokens:2840 },
+    { id:2, timestamp:'2026-04-03T09:58:00Z', agent:'Engineer', type:'api', research:'R003', message:'Claude Opus query: reverse-KS analysis prompt (1.2k in / 0.8k out)', tokens:2000 },
+    { id:3, timestamp:'2026-04-03T09:45:00Z', agent:'Theorist', type:'research', research:'R004', message:'Registered R004: Fibonacci lattice reduces DFT ill-conditioning for N>100', tokens:0 },
+    { id:4, timestamp:'2026-04-03T09:30:00Z', agent:'System', type:'system', research:'', message:'Daily backup completed (workspace: 2.4 MB, 47 files)', tokens:0 },
+    { id:5, timestamp:'2026-04-03T09:15:00Z', agent:'Engineer', type:'agent', research:'R003', message:'Started iDEA reverse-KS task (mu=3.0, tol=1e-6, grid=512)', tokens:0 },
+    { id:6, timestamp:'2026-04-03T09:00:00Z', agent:'System', type:'system', research:'', message:'Health check: all agents online, disk 23%, GPU idle', tokens:0 },
+    { id:7, timestamp:'2026-04-02T18:30:00Z', agent:'Assistant', type:'file', research:'R002', message:'Literature search: 12 papers retrieved for DD correction topic', tokens:1450 },
+    { id:8, timestamp:'2026-04-02T17:15:00Z', agent:'Theorist', type:'research', research:'R001', message:'Paper review R2 complete — HOLD, awaiting EXP-003 results', tokens:3200 },
+    { id:9, timestamp:'2026-04-02T16:00:00Z', agent:'Theorist', type:'api', research:'R001', message:'Claude Opus query: equation (3) sign analysis (2.1k in / 1.5k out)', tokens:3600 },
+    { id:10, timestamp:'2026-04-02T14:45:00Z', agent:'Engineer', type:'research', research:'R002', message:'R002 REFUTED: Prime-spaced well DD remains positive (min=0.083 Hartree)', tokens:0 },
+    { id:11, timestamp:'2026-04-02T13:30:00Z', agent:'Engineer', type:'agent', research:'R002', message:'Scanning d in {2,3,5,7,11} Bohr (prime spacing hypothesis)', tokens:0 },
+    { id:12, timestamp:'2026-04-02T12:00:00Z', agent:'Theorist', type:'research', research:'R003', message:'Registered R003: Multi-well DD at d=5,6,7 with exact KS gap', tokens:0 },
+    { id:13, timestamp:'2026-04-01T16:30:00Z', agent:'Engineer', type:'research', research:'R001', message:'R001 CONFIRMED: LDA overbinding 0.103% vs exact (threshold 1%)', tokens:0 },
+    { id:14, timestamp:'2026-04-01T10:00:00Z', agent:'Theorist', type:'research', research:'R001', message:'Registered R001: LDA overbinding >1% for 2e atom', tokens:0 },
+    { id:15, timestamp:'2026-03-31T18:00:00Z', agent:'Engineer', type:'research', research:'R005', message:'R005 CONFIRMED: Membrane model RMSE=3.2% vs Stodolna 2013', tokens:0 },
+    { id:16, timestamp:'2026-03-31T09:00:00Z', agent:'System', type:'config', research:'', message:'iDEA v2.3.1 installed, dependency check passed', tokens:0 },
+    { id:17, timestamp:'2026-03-30T22:00:00Z', agent:'System', type:'api', research:'', message:'OpenRouter rate limit approached (95% hourly quota) — throttling applied', tokens:0 },
+    { id:18, timestamp:'2026-03-30T15:00:00Z', agent:'Assistant', type:'file', research:'', message:'arXiv query: "double delta DFT" — 3 new preprints retrieved', tokens:680 },
   ];
+
+  // Populate research filter dropdown from entries
+  function populateResearchFilter() {
+    const select = document.getElementById('log-research-filter');
+    const codes = [...new Set(allEntries.map(e => e.research).filter(Boolean))].sort();
+    // Keep the "All" option, add research codes
+    select.innerHTML = '<option value="">All</option>' + codes.map(c =>
+      '<option value="' + c + '">' + c + '</option>'
+    ).join('');
+  }
 
   window.loadAuditLog = async function() {
     if (!window.asrp) {
       allEntries = MOCK_ENTRIES;
-      updateStats();
+      populateResearchFilter();
       applyFilters();
       return;
     }
-    const { entries, total } = await window.asrp.audit.list({ limit: PAGE_SIZE, offset: 0 });
-    // Merge with mock extended data
-    allEntries = MOCK_ENTRIES; // Use mock for full feature demo
-    updateStats();
-    document.getElementById('audit-total').textContent = total.toLocaleString();
+    try {
+      const { entries, total } = await window.asrp.audit.list({ limit: PAGE_SIZE, offset: 0 });
+      allEntries = entries.length ? entries : MOCK_ENTRIES;
+    } catch {
+      allEntries = MOCK_ENTRIES;
+    }
+    populateResearchFilter();
     applyFilters();
-    document.getElementById('load-more-wrap').style.display = total > PAGE_SIZE ? 'block' : 'none';
   };
-
-  function updateStats() {
-    document.getElementById('audit-total').textContent = allEntries.length.toLocaleString();
-    const today = new Date().toISOString().slice(0,10);
-    document.getElementById('audit-today').textContent = allEntries.filter(e => e.timestamp?.startsWith(today)).length;
-    document.getElementById('audit-warnings').textContent = allEntries.filter(e => e.severity === 'warning').length;
-    document.getElementById('audit-errors').textContent = allEntries.filter(e => e.severity === 'critical').length;
-  }
 
   window.applyFilters = function() {
     const dateFrom = document.getElementById('date-from').value;
     const dateTo = document.getElementById('date-to').value;
+    const researchFilter = document.getElementById('log-research-filter').value;
 
     let filtered = allEntries.filter(e => {
-      if (!activeAgents.has(e.agent)) return false;
       if (!activeTypes.has(e.type || 'system')) return false;
-      if (!activeSevs.has(e.severity || 'info')) return false;
+      if (!activeAgents.has(e.agent || 'System')) return false;
+      if (researchFilter && e.research !== researchFilter) return false;
       if (dateFrom && e.timestamp && e.timestamp < dateFrom) return false;
       if (dateTo && e.timestamp && e.timestamp > dateTo + 'T23:59:59Z') return false;
       return true;
@@ -208,75 +179,66 @@
   function renderTimeline(entries) {
     const container = document.getElementById('audit-timeline');
     if (!entries.length) {
-      container.innerHTML = '<div class="empty-state" style="padding:32px"><span class="icon">📝</span><h3>No entries</h3><p>No audit entries match the current filters</p></div>';
+      container.innerHTML = '<div class="empty-state" style="padding:32px"><h3>No entries</h3><p>No log entries match the current filters</p></div>';
       return;
     }
     container.innerHTML = entries.map(e => {
-      const sevClass = e.severity === 'warning' ? 'sev-dot-warning' : e.severity === 'critical' ? 'sev-dot-critical' : 'sev-dot-info';
-      const msgClass = e.severity === 'warning' ? 'severity-warning' : e.severity === 'critical' ? 'severity-critical' : '';
-      return `<div class="timeline-entry">
-        <div class="timeline-dot ${sevClass}"></div>
-        <span class="timeline-time">${e.time || e.timestamp?.slice(11,16) || '—'}</span>
-        <span class="agent-badge ${e.agent}">${e.agent}</span>
-        <span class="type-badge">${e.type || 'system'}</span>
-        <span class="timeline-msg ${msgClass}">${escHtml(e.message)}</span>
+      const ts = e.timestamp || '';
+      const timeStr = ts.slice(0,10) + ' ' + (ts.slice(11,16) || '—');
+      const tokensStr = e.tokens ? e.tokens.toLocaleString() + ' tk' : '—';
+      return `<div class="log-entry">
+        <span class="log-time">${timeStr}</span>
+        <span class="log-type ${e.type || 'system'}">${e.type || 'system'}</span>
+        <span class="log-agent">${escHtml(e.agent || 'System')}</span>
+        ${e.research ? '<span class="log-research-code">' + escHtml(e.research) + '</span>' : ''}
+        <span class="log-msg">${escHtml(e.message)}</span>
+        <span class="log-tokens">${tokensStr}</span>
       </div>`;
     }).join('');
   }
 
-  // Agent chip toggle
-  window.toggleAgentChip = function(btn) {
-    const agent = btn.dataset.agent;
+  // Chip toggle
+  window.toggleChip = function(btn, group) {
     btn.classList.toggle('active');
-    if (activeAgents.has(agent)) activeAgents.delete(agent); else activeAgents.add(agent);
-    applyFilters();
-  };
-  window.toggleAllAgents = function(on) {
-    const all = ['Theorist','Engineer','Reviewer','Librarian','ITDoctor','System'];
-    activeAgents = on ? new Set(all) : new Set();
-    document.querySelectorAll('.audit-chip[data-agent]').forEach(b => b.classList.toggle('active', on));
-    applyFilters();
-  };
-  window.toggleTypeChip = function(btn) {
-    const type = btn.dataset.type;
-    btn.classList.toggle('active');
-    if (activeTypes.has(type)) activeTypes.delete(type); else activeTypes.add(type);
-    applyFilters();
-  };
-  window.toggleSevChip = function(btn) {
-    const sev = btn.dataset.sev;
-    btn.classList.toggle('active');
-    if (activeSevs.has(sev)) activeSevs.delete(sev); else activeSevs.add(sev);
+    if (group === 'type') {
+      const t = btn.dataset.type;
+      if (activeTypes.has(t)) activeTypes.delete(t); else activeTypes.add(t);
+    } else if (group === 'agent') {
+      const a = btn.dataset.agent;
+      if (activeAgents.has(a)) activeAgents.delete(a); else activeAgents.add(a);
+    }
     applyFilters();
   };
 
   window.loadMoreAudit = async function() {
     if (!window.asrp) return;
     displayOffset += PAGE_SIZE;
-    const { entries } = await window.asrp.audit.list({ limit: PAGE_SIZE, offset: displayOffset });
-    if (entries.length) {
-      allEntries = [...allEntries, ...entries];
-      applyFilters();
-    }
+    try {
+      const { entries } = await window.asrp.audit.list({ limit: PAGE_SIZE, offset: displayOffset });
+      if (entries.length) {
+        allEntries = [...allEntries, ...entries];
+        applyFilters();
+      }
+    } catch { /* ignore */ }
   };
 
-  // CSV Export (T-068)
+  // CSV Export
   window.exportCSV = async function() {
-    const header = 'timestamp,agent,type,severity,message\n';
+    const header = 'timestamp,type,agent,research,message,tokens\n';
     const rows = allEntries.map(e =>
-      [e.timestamp||'', e.agent, e.type||'', e.severity||'info', '"' + (e.message||'').replace(/"/g,'""') + '"'].join(',')
+      [e.timestamp||'', e.type||'', e.agent||'', e.research||'', '"' + (e.message||'').replace(/"/g,'""') + '"', e.tokens||0].join(',')
     ).join('\n');
     const csv = header + rows;
 
     if (window.asrp) {
       const dialog = await window.asrp.files.saveDialog({
-        defaultPath: 'audit-log.csv',
+        defaultPath: 'log-export.csv',
         filters: [{ name: 'CSV', extensions: ['csv'] }],
-        title: 'Export Audit Log as CSV',
+        title: 'Export Log as CSV',
       });
       if (!dialog.canceled && dialog.filePath) {
         const result = await window.asrp.files.write(dialog.filePath, csv);
-        if (result.success && typeof Toast !== 'undefined') Toast.show(`Exported ${allEntries.length} entries`, 'success');
+        if (result.success && typeof Toast !== 'undefined') Toast.show('Exported ' + allEntries.length + ' entries', 'success');
       }
     }
   };

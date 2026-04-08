@@ -12,6 +12,7 @@ import { getWorkspaceBase } from './ipc-handlers';
 
 interface ResearchRecord {
   id: string;
+  code: string;         // Short code like R001, R002 for cross-referencing
   title: string;
   abstract: string;
   tags: string[];
@@ -29,21 +30,49 @@ function getResearchesFile(): string {
   return path.join(workspace, 'researches.json');
 }
 
+/** Generate the next short code (R001, R002, ...) based on existing records */
+function nextCode(records: Array<Record<string, unknown>>): string {
+  let max = 0;
+  for (const r of records) {
+    const c = String(r.code || '');
+    const m = c.match(/^R(\d+)$/);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return 'R' + String(max + 1).padStart(3, '0');
+}
+
 function loadResearches(): ResearchRecord[] {
   const filePath = getResearchesFile();
   try {
     if (fs.existsSync(filePath)) {
       const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Array<Record<string, unknown>>;
       // Migrate old format records (hypothesis/metadata) to new format (abstract/tags)
+      // Also backfill missing `code` field
       let migrated = false;
+      let codeCounter = 0;
+      // First pass: find highest existing code
+      for (const r of raw) {
+        const c = String(r.code || '');
+        const m = c.match(/^R(\d+)$/);
+        if (m) codeCounter = Math.max(codeCounter, parseInt(m[1], 10));
+      }
       const records: ResearchRecord[] = raw.map(r => {
+        let needsMigration = false;
         if (!r.abstract && (r.hypothesis || (r.metadata && typeof (r.metadata as Record<string,unknown>).title === 'string'))) {
+          needsMigration = true;
+        }
+        if (!r.code) {
+          needsMigration = true;
+        }
+        if (needsMigration) {
           migrated = true;
           const meta = (r.metadata || {}) as Record<string, unknown>;
+          const code = r.code ? String(r.code) : 'R' + String(++codeCounter).padStart(3, '0');
           return {
             id: String(r.id || ''),
-            title: String(meta.title || r.title || ''),
-            abstract: String(r.hypothesis || ''),
+            code,
+            title: String(r.title || meta.title || ''),
+            abstract: String(r.abstract || r.hypothesis || ''),
             tags: Array.isArray(r.tags) ? r.tags as string[] : [],
             status: String(r.status || 'registered'),
             created: String(r.created || ''),
@@ -117,9 +146,12 @@ export function registerExperimentHandlers(): void {
   });
 
   ipcMain.handle('experiments:register', async (_event, _hypothesis: string, metadata: Record<string, unknown>) => {
+    const records = loadResearches();
     const id = `EXP-${new Date().toISOString().slice(0, 10)}-${String(Math.floor(Math.random() * 900) + 100)}`;
+    const code = nextCode(records as unknown as Array<Record<string, unknown>>);
     const record: ResearchRecord = {
       id,
+      code,
       title: (typeof metadata.title === 'string') ? metadata.title.trim() : '',
       abstract: (typeof metadata.abstract === 'string') ? metadata.abstract.trim() : '',
       tags: Array.isArray(metadata.tags) ? metadata.tags.filter((t): t is string => typeof t === 'string') : [],
@@ -129,14 +161,13 @@ export function registerExperimentHandlers(): void {
       result: null,
     };
 
-    const records = loadResearches();
     records.unshift(record);
     saveResearches(records);
 
     // Create per-research directory structure
     ensureResearchDirs(id);
 
-    return { success: true, id, title: record.title };
+    return { success: true, id, code, title: record.title };
   });
 
   // Edit a research record (title, abstract, tags)
