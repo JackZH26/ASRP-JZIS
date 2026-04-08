@@ -8,7 +8,7 @@ All notable changes to ASRP Desktop are documented here.
 
 ### Summary
 First production release of ASRP Desktop — the desktop GUI for the
-Agent Science Research Platform (ASRP). Phases 0 through 9 complete (91/91 tasks).
+AI Scientific Research Platform (ASRP). Phases 0 through 9 complete (91/91 tasks).
 
 ---
 

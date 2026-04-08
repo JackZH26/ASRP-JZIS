@@ -3,7 +3,7 @@
   "version": "1.0",
   "agent": {
     "name": "ASRP Assistant",
-    "description": "Setup and onboarding assistant for the Agent Science Research Platform",
+    "description": "Setup and onboarding assistant for the AI Scientific Research Platform",
     "emoji": "🛠️"
   },
   "model": {

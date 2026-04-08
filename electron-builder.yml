@@ -68,7 +68,7 @@ linux:
       arch: [x64]
   icon: build/icon.png
   category: Science
-  description: Agent Science Research Platform Desktop Application
+  description: AI Scientific Research Platform Desktop Application
   maintainer: jackzhou.sci@gmail.com
 
 appImage:

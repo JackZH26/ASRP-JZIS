@@ -1,6 +1,6 @@
 # ASRP Desktop
 
-Desktop application for the [Agent Science Research Platform](https://asrp.jzis.org) — AI-powered collaborative scientific research.
+Desktop application for the [AI Scientific Research Platform](https://asrp.jzis.org) — AI-powered collaborative scientific research.
 
 ## What is ASRP?
 
