@@ -501,21 +501,31 @@
   if (window.Utils) window.Utils.onPageUnload(function() { clearInterval(_gwInterval); });
 
   // Check for OpenClaw updates on dashboard load
+  // Notification is delivered via the Assistant Agent panel (proactive)
   (async function checkOpenClawUpdate() {
     if (!window.asrp || !window.asrp.gateway || !window.asrp.gateway.checkUpdate) return;
     try {
       var result = await window.asrp.gateway.checkUpdate();
       if (result.updateAvailable && result.latestVersion) {
-        // Save to assistant chat history so user sees the notification
+        var msg = '📦 **OpenClaw Update Available**\n\n' +
+          'Current: `' + (result.currentVersion || 'unknown') + '`\n' +
+          'Latest: `' + result.latestVersion + '`\n\n' +
+          'Would you like me to help upgrade your agents? Just say **update openclaw** and I\'ll handle it for you.\n\n' +
+          'Or you can go to **Settings → Gateway** to update manually.';
+
+        // Persist to chat history so it survives page navigation
+        var _tk = localStorage.getItem('asrp_token') || '';
         if (window.asrp.assistant && window.asrp.assistant.saveMessage) {
-          var msg = '📦 **OpenClaw Update Available**\n\n' +
-            'Current: `' + (result.currentVersion || 'unknown') + '`\n' +
-            'Latest: `' + result.latestVersion + '`\n\n' +
-            'Go to **Settings → Gateway** and click "Update OpenClaw" to install the latest version, or I can do it for you — just say "update openclaw".';
-          var _tk = localStorage.getItem('asrp_token') || '';
           await window.asrp.assistant.saveMessage(_tk, 'assistant', msg);
         }
-        Toast.show('OpenClaw update available: ' + result.latestVersion, 'info');
+
+        // Proactively open the Assistant panel and show the notification
+        // Small delay to ensure assistant-chat.js has initialized
+        setTimeout(function () {
+          if (typeof window.assistantNotify === 'function') {
+            window.assistantNotify(msg);
+          }
+        }, 800);
       }
     } catch (e) { /* ignore */ }
   })();

@@ -637,6 +637,18 @@
 
     // Expose toggle globally
     window.toggleAssistant = toggle;
+
+    // Expose proactive notification API for other modules (e.g. OpenClaw update)
+    // Adds an assistant message, expands the panel, and scrolls to it.
+    window.assistantNotify = function (text) {
+      if (!text) return;
+      messages.push({ role: 'assistant', content: text });
+      // Expand panel so the user sees the notification
+      if (panelState === 'collapsed' || panelState === 'hidden') {
+        setState('expanded');
+      }
+      renderMessages();
+    };
   }
 
   // Helper: use global showToast if available
