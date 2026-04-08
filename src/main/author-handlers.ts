@@ -28,10 +28,11 @@ interface AuthorsData {
 
 function getAuthorsFile(): string {
   const workspace = getWorkspaceBase();
-  if (!fs.existsSync(workspace)) {
-    fs.mkdirSync(workspace, { recursive: true });
+  const systemDir = path.join(workspace, 'system');
+  if (!fs.existsSync(systemDir)) {
+    fs.mkdirSync(systemDir, { recursive: true });
   }
-  return path.join(workspace, 'authors.json');
+  return path.join(systemDir, 'authors.json');
 }
 
 function loadAuthorsData(): AuthorsData {

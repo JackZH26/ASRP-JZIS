@@ -24,10 +24,17 @@ interface ResearchRecord {
 
 function getResearchesFile(): string {
   const workspace = getWorkspaceBase();
-  if (!fs.existsSync(workspace)) {
-    fs.mkdirSync(workspace, { recursive: true });
+  const systemDir = path.join(workspace, 'system');
+  if (!fs.existsSync(systemDir)) {
+    fs.mkdirSync(systemDir, { recursive: true });
   }
-  return path.join(workspace, 'researches.json');
+  const newPath = path.join(systemDir, 'researches.json');
+  // Migrate: if old location exists and new doesn't, move it
+  const oldPath = path.join(workspace, 'researches.json');
+  if (!fs.existsSync(newPath) && fs.existsSync(oldPath)) {
+    fs.renameSync(oldPath, newPath);
+  }
+  return newPath;
 }
 
 /** Generate the next short code (R001, R002, ...) based on existing records */
@@ -100,23 +107,41 @@ function saveResearches(records: ResearchRecord[]): void {
  * Create the directory structure for a research:
  *   {workspace}/researches/{id}/papers/
  *   {workspace}/researches/{id}/files/
- * Also ensures the general folder exists:
- *   {workspace}/general/papers/
- *   {workspace}/general/files/
+ *   {workspace}/code/{id}/
+ * Also ensures standard folders exist:
+ *   {workspace}/general/papers/  + files/
+ *   {workspace}/code/general/
+ *   {workspace}/system/
  */
 function ensureResearchDirs(researchId: string): void {
   const workspace = getWorkspaceBase();
   const dirs = [
     path.join(workspace, 'researches', researchId, 'papers'),
     path.join(workspace, 'researches', researchId, 'files'),
+    path.join(workspace, 'code', researchId),
     path.join(workspace, 'general', 'papers'),
     path.join(workspace, 'general', 'files'),
+    path.join(workspace, 'code', 'general'),
+    path.join(workspace, 'system'),
   ];
   for (const d of dirs) {
     if (!fs.existsSync(d)) {
       fs.mkdirSync(d, { recursive: true });
     }
   }
+  // Migrate: move agent-* dirs into system/ if they exist at workspace root
+  try {
+    const entries = fs.readdirSync(workspace);
+    for (const entry of entries) {
+      if (entry.startsWith('agent-')) {
+        const src = path.join(workspace, entry);
+        const dest = path.join(workspace, 'system', entry);
+        if (fs.statSync(src).isDirectory() && !fs.existsSync(dest)) {
+          fs.renameSync(src, dest);
+        }
+      }
+    }
+  } catch { /* ignore migration errors */ }
 }
 
 export function registerExperimentHandlers(): void {
