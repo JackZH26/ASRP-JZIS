@@ -1,6 +1,6 @@
 {
   "name": "asrp-desktop",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "ASRP Desktop — Agent Science Research Platform",
   "main": "dist/main/index.js",
   "author": {
