@@ -46,12 +46,12 @@
 
   // ---- Logout (single source of truth) ----
   function logout() {
-    var token = localStorage.getItem('token');
+    var token = localStorage.getItem('asrp_token');
     if (token && window.asrp && window.asrp.auth) {
       window.asrp.auth.logout(token).catch(function () {});
     }
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem('asrp_token');
+    localStorage.removeItem('asrp_user');
     if (window.Router && window.Router.clearCache) window.Router.clearCache();
     window.location.hash = '#/login';
   }

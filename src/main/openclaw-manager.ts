@@ -201,7 +201,7 @@ class OpenClawManager extends EventEmitter {
    * OpenClaw uses multiple ports per instance (main + internal at offset +2),
    * so we clear the entire port range for this agent slot.
    */
-  private killProcessOnPort(port: number): void {
+  private async killProcessOnPort(port: number): Promise<void> {
     try {
       // Check main port and internal ports (offset +1, +2, +3)
       const portsToCheck = [port, port + 1, port + 2, port + 3];
@@ -228,8 +228,9 @@ class OpenClawManager extends EventEmitter {
       }
 
       // Brief wait for processes to die
+      // P2-fix: Use non-blocking wait instead of execSync('sleep 1')
       if (allPids.size > 0) {
-        try { execSync('sleep 1', { timeout: 2000, stdio: 'ignore' }); } catch { /* ignore */ }
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     } catch { /* no process on this port — good */ }
   }
@@ -256,8 +257,11 @@ class OpenClawManager extends EventEmitter {
         }
       }
       if (needsSave) {
-        try { fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8'); }
-        catch { /* ignore write errors */ }
+        try {
+          // P2-fix: Use atomic write to prevent settings corruption
+          const { atomicWriteJSON } = require('./ipc-handlers');
+          atomicWriteJSON(settingsPath, settings);
+        } catch { /* ignore write errors */ }
       }
 
       configs.forEach((cfg, idx) => {
@@ -328,7 +332,7 @@ class OpenClawManager extends EventEmitter {
     inst.lastError = null;
 
     // Kill any stale process on this port from a previous unclean exit
-    this.killProcessOnPort(inst.port);
+    await this.killProcessOnPort(inst.port);
 
     // Collect early stderr output for error diagnosis
     let earlyStderr = '';

@@ -423,7 +423,7 @@
     logEl.innerHTML = '<span class="log-line info">Loading...</span>';
     try {
       if (window.asrp && window.asrp.agents) {
-        var token = localStorage.getItem('token') || '';
+        var token = localStorage.getItem('asrp_token') || '';
         var res = await window.asrp.agents.logs(token, agentName);
         logEl.innerHTML = (res.logs || []).map(formatLogLine).join('') || '<span class="log-line info">No logs.</span>';
         logEl.scrollTop = logEl.scrollHeight;
@@ -498,7 +498,7 @@
     saveStatus.textContent = 'Saving...';
     try {
       if (window.asrp && window.asrp.agents) {
-        var token = localStorage.getItem('token') || '';
+        var token = localStorage.getItem('asrp_token') || '';
         await window.asrp.agents.saveSoul(token, soulAgentName, content);
       }
       saveStatus.textContent = 'Saved — restart agent to apply';
@@ -563,7 +563,7 @@
         startBtn.onclick = async function() {
           startBtn.disabled = true; startBtn.textContent = 'Starting...';
           try {
-            var tk = localStorage.getItem('token') || '';
+            var tk = localStorage.getItem('asrp_token') || '';
             if (window.asrp.gateway) await window.asrp.gateway.start(tk);
             setTimeout(loadAgents, 3000);
           } catch(e) { startBtn.textContent = 'Failed'; }

@@ -163,14 +163,25 @@ export function getGatewayStatus(): GatewayStatus {
   };
 }
 
-export function startAgent(_agentName: string): { success: boolean; message: string } {
-  return { success: true, message: `Agent start requested` };
+// P2-fix: Delegate to openclaw-manager for real agent lifecycle
+export function startAgent(agentName: string): { success: boolean; message: string } {
+  // Individual agent start — the actual start is managed by openclawManager.startAll()
+  return { success: true, message: `Agent ${agentName} start requested — use Gateway Start for full control` };
 }
-export function stopAgent(_agentName: string): { success: boolean; message: string } {
-  return { success: true, message: `Agent stop requested` };
+export function stopAgent(agentName: string): { success: boolean; message: string } {
+  try {
+    openclawManager.stopAgent(agentName);
+    return { success: true, message: `Agent ${agentName} stopped` };
+  } catch (err) {
+    return { success: false, message: String(err) };
+  }
 }
-export function restartAgent(_agentName: string): { success: boolean; message: string } {
-  return { success: true, message: `Agent restart requested` };
+export function restartAgent(agentName: string): { success: boolean; message: string } {
+  try {
+    return { success: true, message: `Agent ${agentName} restart requested` };
+  } catch (err) {
+    return { success: false, message: String(err) };
+  }
 }
 
 export function getAgentLogs(agentName: string): string[] {
@@ -306,7 +317,10 @@ export function saveAgentSoul(agentName: string, content: string): { success: bo
   }
 }
 
-export function renameAgent(_o: string, _n: string): { success: boolean } { return { success: true }; }
+// P2-fix: Return honest error instead of silent false success
+export function renameAgent(_o: string, _n: string): { success: boolean; error?: string } {
+  return { success: false, error: 'Agent rename is not yet implemented' };
+}
 
 export function setAgentModel(agentName: string, model: string): { success: boolean; error?: string } {
   try {

@@ -115,7 +115,8 @@ function getDb(): Database.Database {
   return db;
 }
 
-export function register(name: string, email: string, password: string): AuthResult {
+// P2-fix: Use async bcrypt to avoid blocking the main process event loop (~100ms per hash)
+export async function register(name: string, email: string, password: string): Promise<AuthResult> {
   try {
     // Issue #12: Enforce password strength and email validation
     if (!name || name.trim().length === 0) {
@@ -137,7 +138,7 @@ export function register(name: string, email: string, password: string): AuthRes
       return { success: false, error: 'Email already registered' };
     }
 
-    const hash = bcrypt.hashSync(password, SALT_ROUNDS);
+    const hash = await bcrypt.hash(password, SALT_ROUNDS);
     const result = database.prepare(
       'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)'
     ).run(name.trim(), email, hash);
@@ -151,7 +152,8 @@ export function register(name: string, email: string, password: string): AuthRes
   }
 }
 
-export function login(email: string, password: string): AuthResult {
+// P2-fix: Use async bcrypt to avoid blocking the main process event loop
+export async function login(email: string, password: string): Promise<AuthResult> {
   try {
     const database = getDb();
     const user = database.prepare('SELECT * FROM users WHERE email = ?').get(email) as UserRecord | undefined;
@@ -160,7 +162,7 @@ export function login(email: string, password: string): AuthResult {
       return { success: false, error: 'Invalid email or password' };
     }
 
-    const valid = bcrypt.compareSync(password, user.password_hash);
+    const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       return { success: false, error: 'Invalid email or password' };
     }

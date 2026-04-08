@@ -251,13 +251,15 @@
   };
 
   // T-083: Updater functions
+  // P2-fix: Store unsubscribe to prevent listener accumulation on page navigation
   async function loadUpdaterStatus() {
     if (!window.asrp || !window.asrp.updater) return;
     const status = await window.asrp.updater.status().catch(() => null);
     if (!status) return;
     updateUpdaterUI(status);
 
-    window.asrp.updater.onStatus(function(s) { updateUpdaterUI(s); });
+    var _unsubUpdater = window.asrp.updater.onStatus(function(s) { updateUpdaterUI(s); });
+    if (window.Utils) window.Utils.onPageUnload(function() { if (_unsubUpdater) _unsubUpdater(); });
   }
 
   function updateUpdaterUI(status) {
@@ -382,18 +384,12 @@
     }
   };
 
-  // Logout: revoke token + clear localStorage + redirect to login
-  window.handleLogout = async function() {
+  // P2-fix: Delegate to global Utils.logout (single source of truth)
+  window.handleLogout = function() {
     if (!confirm('Are you sure you want to logout?')) return;
-    var token = localStorage.getItem('asrp_token');
-    if (window.asrp && window.asrp.auth && token) {
-      try { await window.asrp.auth.logout(token); } catch(e) { /* ignore */ }
+    if (window.Utils && window.Utils.logout) {
+      window.Utils.logout();
     }
-    localStorage.removeItem('asrp_token');
-    localStorage.removeItem('asrp_user');
-    Router.clearCache();
-    Toast.show('Logged out', 'info');
-    setTimeout(function() { Router.navigate('/login'); }, 300);
   };
 
   // Re-run setup: reset setup_complete flag then navigate

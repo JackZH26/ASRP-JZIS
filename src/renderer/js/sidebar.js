@@ -320,18 +320,13 @@ const Sidebar = (() => {
     });
   }
 
-  async function handleLogout() {
+  // P2-fix: Delegate to global Utils.logout (single source of truth)
+  function handleLogout() {
     if (!confirm('Are you sure you want to logout?')) return;
     closeAccountMenu();
-    var token = localStorage.getItem('asrp_token');
-    if (window.asrp && window.asrp.auth && token) {
-      try { await window.asrp.auth.logout(token); } catch(e) { /* ignore */ }
+    if (window.Utils && window.Utils.logout) {
+      window.Utils.logout();
     }
-    localStorage.removeItem('asrp_token');
-    localStorage.removeItem('asrp_user');
-    if (Router.clearCache) Router.clearCache();
-    if (typeof Toast !== 'undefined') Toast.show('Logged out', 'info');
-    setTimeout(function() { Router.navigate('/login'); }, 300);
   }
 
   return {

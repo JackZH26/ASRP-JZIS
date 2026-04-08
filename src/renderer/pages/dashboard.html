@@ -454,7 +454,7 @@
     if (btn) btn.textContent = 'Starting...';
     if (text) text.innerHTML = '<strong>Starting agents...</strong>';
     try {
-      var token = localStorage.getItem('token') || '';
+      var token = localStorage.getItem('asrp_token') || '';
       var res = await window.asrp.gateway.start(token);
       if (res.success) {
         Toast.show('Gateway started!', 'success');
