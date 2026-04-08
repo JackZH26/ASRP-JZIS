@@ -198,10 +198,19 @@
 
     var sorted = files.slice().sort(function(a, b) {
       if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+      if (a.isDirectory && b.isDirectory) {
+        // system always last, code second-to-last
+        var aPriority = a.name === 'system' ? 2 : a.name === 'code' ? 1 : 0;
+        var bPriority = b.name === 'system' ? 2 : b.name === 'code' ? 1 : 0;
+        if (aPriority !== bPriority) return aPriority - bPriority;
+      }
       return a.name.localeCompare(b.name);
     });
 
     var visible = sorted.filter(function(f) { return f.isDirectory || filterMatch(f.name); });
+    if (depth === 0) {
+      visible = visible.filter(function(f) { return !(f.isDirectory && f.name.startsWith('agent-')); });
+    }
     if (!visible.length) { container.innerHTML = '<div style="padding:8px 16px;font-size:12px;color:var(--text-tertiary)">Empty</div>'; return; }
 
     container.innerHTML = '';

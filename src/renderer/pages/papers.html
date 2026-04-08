@@ -370,7 +370,7 @@
     else { projectDefaults.push({ researchId: researchId, authorIds: ids }); }
 
     if (window.asrp && window.asrp.authors) {
-      await window.asrp.authors.setProjectDefaults(researchId, ids);
+      await window.asrp.authors.setProjectDefaults(localStorage.getItem('asrp_token'), researchId, ids);
     }
   };
 
@@ -412,7 +412,7 @@
       email: document.getElementById('author-email').value.trim(),
     };
     if (window.asrp && window.asrp.authors) {
-      var res = await window.asrp.authors.save(data);
+      var res = await window.asrp.authors.save(localStorage.getItem('asrp_token'), data);
       if (res.success) {
         if (typeof Toast !== 'undefined') Toast.show('Author saved', 'success');
         closeAuthorForm();
@@ -424,7 +424,7 @@
   window.deleteAuthor = async function(id) {
     if (!confirm('Delete this author?')) return;
     if (window.asrp && window.asrp.authors) {
-      await window.asrp.authors.delete(id);
+      await window.asrp.authors.delete(localStorage.getItem('asrp_token'), id);
       loadAuthors();
     }
   };

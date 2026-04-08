@@ -364,9 +364,26 @@
   }
 
   window.toggleCard = function(name) {
-    if (expandedCards.has(name)) expandedCards.delete(name);
-    else expandedCards.add(name);
-    renderCards(currentAgents);
+    var detailEl = document.getElementById('detail-' + escHtml(name));
+    var cardEl = document.getElementById('card-' + escHtml(name));
+    var isExpanding = !expandedCards.has(name);
+
+    if (isExpanding) expandedCards.add(name);
+    else expandedCards.delete(name);
+
+    if (detailEl) {
+      if (isExpanding) detailEl.classList.add('open');
+      else detailEl.classList.remove('open');
+    }
+
+    // Update only this card's toggle button
+    if (cardEl) {
+      var allBtns = cardEl.querySelectorAll('.agent-actions button');
+      var toggleBtn = allBtns[allBtns.length - 1]; // last button is toggle
+      if (toggleBtn) {
+        toggleBtn.innerHTML = isExpanding ? (IC.collapse + ' Collapse') : (IC.expand + ' Details');
+      }
+    }
   };
 
   window.renameAgent = async function(oldName, inputEl) {

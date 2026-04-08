@@ -111,24 +111,6 @@
     </div>
   </div>
 
-  <!-- T-088: Deployment Mode -->
-  <div class="panel">
-    <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Deployment Mode</h3>
-    <div id="deployment-mode-info" style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
-      Detecting environment...
-    </div>
-  </div>
-
-  <!-- T-086/T-087: Self-Test -->
-  <div class="panel">
-    <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M9 2h6v6l4 10H5L9 8z"/><line x1="9" y1="2" x2="15" y2="2"/><line x1="5" y1="18" x2="19" y2="18"/><line x1="7" y1="22" x2="17" y2="22"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/></svg>Self-Test</h3>
-    <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">
-      Run a comprehensive programmatic test of all major app flows (auth, files, agents, settings, Ollama).
-    </div>
-    <button class="btn btn-outline btn-sm" id="btn-run-self-test" onclick="runSelfTest()">Run Self-Test</button>
-    <div id="self-test-summary" style="margin-top:10px;font-size:12px;display:none"></div>
-  </div>
-
   <!-- About -->
   <div class="panel">
     <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>About ASRP</h3>
@@ -143,18 +125,6 @@
     </div>
   </div>
 
-</div>
-
-<!-- Self-Test Results Modal -->
-<div id="self-test-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
-  <div style="background:var(--card);border-radius:16px;padding:28px;max-width:560px;width:90%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <h3 style="margin:0">Self-Test Results</h3>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('self-test-modal').style.display='none'">✕</button>
-    </div>
-    <div id="self-test-result-header" style="margin-bottom:16px;padding:12px;border-radius:8px;background:var(--surface)"></div>
-    <div id="self-test-result-list" style="flex:1;overflow-y:auto;font-size:12px;font-family:monospace;line-height:1.8"></div>
-  </div>
 </div>
 
 <script>
@@ -310,87 +280,6 @@
     window.asrp.updater.install(token);
   };
 
-  // T-088: Deployment mode detection
-  async function loadDeploymentMode() {
-    if (!window.asrp || !window.asrp.system.isHeadless) return;
-    const el = document.getElementById('deployment-mode-info');
-    try {
-      const res = await window.asrp.system.isHeadless();
-      if (!el) return;
-      if (res.headless) {
-        el.innerHTML = [
-          '<span style="font-weight:600;color:var(--warning)">Headless / VPS Mode</span>',
-          '<div style="margin-top:6px;line-height:1.6">No display detected (DISPLAY=' + esc(res.display || 'unset') + ').',
-          'Running in CLI/headless mode. GUI features are unavailable.',
-          'Use the OpenClaw CLI for agent management.</div>',
-        ].join('');
-      } else {
-        el.innerHTML = '<span style="color:var(--success)">Desktop Mode</span> — GUI display active (' + esc(res.platform) + ')';
-      }
-    } catch (err) {
-      if (el) el.textContent = 'Unable to detect deployment mode.';
-    }
-  }
-
-  // T-086/T-087: Self-test runner
-  window.runSelfTest = async function() {
-    if (!window.asrp || !window.asrp.system.selfTest) {
-      Toast.show('Self-test not available', 'error');
-      return;
-    }
-    var btn = document.getElementById('btn-run-self-test');
-    var summary = document.getElementById('self-test-summary');
-    if (btn) { btn.disabled = true; btn.textContent = 'Running…'; }
-    if (summary) summary.style.display = 'none';
-
-    try {
-      var res = await window.asrp.system.selfTest();
-      if (!res.success || !res.result) {
-        Toast.show('Self-test failed to run: ' + (res.error || 'unknown'), 'error');
-        return;
-      }
-      var r = res.result;
-      var allPass = r.failed === 0;
-
-      // Show inline summary
-      if (summary) {
-        var esc3 = window.escHtml || function(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-        summary.style.display = 'block';
-        summary.innerHTML = (allPass
-          ? '<span style="color:var(--success)">✅ All ' + esc3(r.passed) + ' tests passed</span>'
-          : '<span style="color:var(--error)">❌ ' + esc3(r.failed) + ' failed / ' + esc3(r.passed) + ' passed</span>')
-          + ' <span style="color:var(--text-tertiary)">(' + esc3(r.durationMs) + 'ms)</span>';
-      }
-
-      // Show modal with details
-      var modal = document.getElementById('self-test-modal');
-      var header = document.getElementById('self-test-result-header');
-      var list = document.getElementById('self-test-result-list');
-      if (header) {
-        var esc4 = window.escHtml || function(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-        header.style.background = allPass ? 'rgba(74,140,106,0.1)' : 'rgba(200,92,92,0.1)';
-        header.innerHTML = '<strong>' + (allPass ? '✅ All tests passed' : '❌ ' + esc4(r.failed) + ' test(s) failed') + '</strong>'
-          + ' &nbsp;|&nbsp; ' + esc4(r.passed) + ' passed · ' + esc4(r.failed) + ' failed · ' + esc4(r.durationMs) + 'ms';
-      }
-      if (list) {
-        list.innerHTML = r.details.map(function(d) {
-          // P0-fix: Escape d.name and d.error to prevent XSS
-          var esc2 = window.escHtml || function(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-          var icon = d.status === 'pass' ? '<span style="color:var(--success)">✓</span>' : '<span style="color:var(--error)">✗</span>';
-          var err = d.error ? ' <span style="color:var(--error);font-size:11px">— ' + esc2(d.error) + '</span>' : '';
-          return '<div style="padding:2px 0">' + icon + ' ' + esc2(d.name) + err + '</div>';
-        }).join('');
-      }
-      if (modal) modal.style.display = 'flex';
-
-      Toast.show(allPass ? 'Self-test passed (' + r.passed + ' tests)' : 'Self-test: ' + r.failed + ' failed', allPass ? 'success' : 'error');
-    } catch (err) {
-      Toast.show('Self-test error: ' + err, 'error');
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Run Self-Test'; }
-    }
-  };
-
   // P2-fix: Delegate to global Utils.logout (single source of truth)
   window.handleLogout = function() {
     if (!confirm('Are you sure you want to logout?')) return;
@@ -412,6 +301,5 @@
 
   loadSettings();
   loadUpdaterStatus();
-  loadDeploymentMode();
 })();
 </script>

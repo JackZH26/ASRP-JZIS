@@ -98,8 +98,11 @@
   <!-- System Health -->
   <div class="panel">
     <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>System Health</h3>
-    <div class="grid-2" id="health-grid">
-      <div class="health-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg> Loading...</div>
+    <div id="health-grid">
+      <div class="health-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <span>Loading...</span>
+      </div>
     </div>
   </div>
 </div>
@@ -138,6 +141,17 @@
 }
 .db-budget-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
 .db-budget-val { font-size: 12px; color: var(--text-secondary); min-width: 40px; text-align: right; }
+.health-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 8px 0;
+}
+.health-item strong {
+  color: var(--text-primary);
+}
 </style>
 
 <script>
@@ -313,10 +327,22 @@
       ]);
       const auditTotal = auditData.total != null ? auditData.total : '—';
       document.getElementById('health-grid').innerHTML = `
-        <div class="health-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a8c6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg> System: ${escHtml(health.status)}</div>
-        <div class="health-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg> Uptime: ${escHtml(String(Math.floor(health.uptime / 60)))}m</div>
-        <div class="health-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a8c6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg> Log: ${escHtml(String(auditTotal))} entries</div>
-        <div class="health-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a8c6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg> Last backup: —</div>
+        <div class="health-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${health.status === 'ok' ? '#4a8c6a' : 'var(--error)'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span>System: <strong>${escHtml(health.status)}</strong></span>
+        </div>
+        <div class="health-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Uptime: <strong>${escHtml(String(Math.floor(health.uptime / 60)))}m</strong></span>
+        </div>
+        <div class="health-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>Log: <strong>${escHtml(String(auditTotal))}</strong> entries</span>
+        </div>
+        <div class="health-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Last backup: <strong>&mdash;</strong></span>
+        </div>
       `;
     } catch (e) { console.error('health load error', e); }
   }
