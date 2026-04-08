@@ -69,6 +69,10 @@
     <div style="padding:20px">
       <div class="alert" id="reg-alert"></div>
       <div class="form-group">
+        <label>Research Title <span style="color:var(--error)">*</span></label>
+        <input type="text" id="reg-title" placeholder="Short name for the research, e.g.: 300K超导研究, Multi-well DD correction">
+      </div>
+      <div class="form-group">
         <label>Hypothesis <span style="color:var(--error)">*</span></label>
         <textarea id="reg-hypothesis" rows="3" placeholder="State a falsifiable hypothesis. e.g.: Multi-well DD correction with exact KS gap restores binding accuracy to <0.01% for d=5,6,7" style="resize:vertical"></textarea>
       </div>
@@ -141,6 +145,7 @@
   const MOCK_EXPERIMENTS = [
     {
       id: 'EXP-2026-04-02-003',
+      title: 'Multi-well DD Correction',
       hypothesis: 'Multi-well DD with exact KS gap at d=5,6,7 restores binding accuracy to <0.01%',
       method: 'iDEA reverse-KS code, tol=1e-6, mu=3.0',
       expected: 'DD positive, ~0.2 Hartree per well',
@@ -162,6 +167,7 @@
     },
     {
       id: 'EXP-2026-04-01-002',
+      title: 'Prime-spaced DD Sign Flip',
       hypothesis: 'Prime-spaced wells produce negative DD correction (sign flip)',
       method: 'iDEA 1D model with d = 2,3,5,7,11 Bohr',
       expected: 'DD < 0',
@@ -183,6 +189,7 @@
     },
     {
       id: 'EXP-2026-04-01-001',
+      title: 'LDA Overbinding Test',
       hypothesis: 'LDA overestimates 2-electron atom binding energy by >1% vs exact result',
       method: 'iDEA exact solver + LDA calculation, 2e atom',
       expected: 'LDA binding > exact binding by >1%',
@@ -204,6 +211,7 @@
     },
     {
       id: 'EXP-2026-03-31-005',
+      title: 'Electron Membrane Nodal Pattern',
       hypothesis: 'Electron membrane model predicts nodal pattern consistent with Stodolna 2013 imaging',
       method: 'Analytic membrane model + comparison with published data',
       expected: 'Nodal ring spacing matches within 5%',
@@ -225,6 +233,7 @@
     },
     {
       id: 'EXP-2026-04-02-004',
+      title: 'Fibonacci Lattice DFT Grid',
       hypothesis: 'Fibonacci lattice grid reduces DFT ill-conditioning vs uniform grid for N>100 basis functions',
       method: 'Condition number comparison, random matrix research',
       expected: 'κ(A_Fibonacci) < κ(A_uniform)',
@@ -259,14 +268,16 @@
     container.innerHTML = list.map(e => {
       const scoreBar = e.score !== null ? `<div style="margin-top:8px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);margin-bottom:3px"><span>Score</span><span>${(e.score * 100).toFixed(0)}%</span></div><div class="exp-score-bar"><div class="exp-score-fill" style="width:${(e.score*100).toFixed(0)}%;background:${e.score>0.5?'var(--success)':'var(--error)'}"></div></div></div>` : '';
       const hyp = e.hypothesis.length > 100 ? e.hypothesis.slice(0,100) + '…' : e.hypothesis;
+      const titleHtml = e.title ? `<div style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:4px">${escHtml(e.title)}</div>` : '';
       return `<div class="card exp-card" style="cursor:pointer;border-left:3px solid ${statusColor(e.status)}" onclick="openExpDetail('${e.id}')">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
           <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary)">${e.id}</span>
           <span class="exp-status-badge ${e.status}">${capitalize(e.status)}</span>
         </div>
-        <p style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px">${escHtml(hyp)}</p>
+        ${titleHtml}
+        <p style="font-size:13px;color:var(--text-secondary);line-height:1.5;margin-bottom:8px">${escHtml(hyp)}</p>
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text-secondary)">
-          <span>📐 ${e.researchLine}</span>
+          <span>📐 ${e.researchLine || 'RH'}</span>
           <span>📅 ${e.created}</span>
           ${e.computeTime ? `<span>⏱ ${e.computeTime}</span>` : ''}
         </div>
@@ -283,7 +294,7 @@
     let filtered = allResearches.filter(e => {
       if (activeStatusFilter !== 'all' && e.status !== activeStatusFilter) return false;
       if (rl && e.researchLine !== rl) return false;
-      if (search && !e.hypothesis.toLowerCase().includes(search) && !e.id.toLowerCase().includes(search)) return false;
+      if (search && !e.hypothesis.toLowerCase().includes(search) && !e.id.toLowerCase().includes(search) && !(e.title && e.title.toLowerCase().includes(search))) return false;
       return true;
     });
 
@@ -329,7 +340,8 @@
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px">
           <div>
             <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-tertiary);margin-bottom:4px">${e.id}</div>
-            <h2 style="font-size:16px;font-weight:700;line-height:1.4;color:var(--text)">${escHtml(e.hypothesis)}</h2>
+            ${e.title ? `<h2 style="font-size:18px;font-weight:700;line-height:1.4;color:var(--text);margin-bottom:6px">${escHtml(e.title)}</h2>` : ''}
+            <p style="font-size:14px;line-height:1.5;color:${e.title ? 'var(--text-secondary)' : 'var(--text)'};${e.title ? '' : 'font-weight:700;font-size:16px'}">${escHtml(e.hypothesis)}</p>
           </div>
           <span class="exp-status-badge ${e.status}" style="flex-shrink:0">${capitalize(e.status)}</span>
         </div>
@@ -393,11 +405,14 @@
     document.getElementById('reg-alert').className = 'alert';
   };
   window.submitRegistration = async function() {
+    const title = document.getElementById('reg-title').value.trim();
     const hyp = document.getElementById('reg-hypothesis').value.trim();
     const alertEl = document.getElementById('reg-alert');
+    if (!title) { alertEl.textContent = 'Research title is required'; alertEl.className = 'alert error show'; return; }
     if (!hyp) { alertEl.textContent = 'Hypothesis is required'; alertEl.className = 'alert error show'; return; }
 
     const metadata = {
+      title: title,
       method: document.getElementById('reg-method').value,
       expected: document.getElementById('reg-expected').value,
       researchLine: document.getElementById('reg-rl').value,
@@ -409,10 +424,11 @@
     if (window.asrp) {
       const result = await window.asrp.experiments.register(hyp, metadata);
       if (result.success) {
-        // Auto-create a Discord channel named after the research ID
+        // Auto-create a Discord channel named after the research TITLE (not ID)
         try {
           if (window.asrp.discord && window.asrp.discord.createChannel) {
-            const chResult = await window.asrp.discord.createChannel(result.id);
+            const channelName = title + ' ' + result.id;
+            const chResult = await window.asrp.discord.createChannel(channelName);
             if (chResult.success) {
               console.log('Discord channel created:', chResult.channelName);
             } else {
@@ -422,11 +438,11 @@
         } catch (chErr) {
           console.warn('Discord channel creation error:', chErr);
         }
-        alertEl.textContent = `Registered: ${result.id}`;
+        alertEl.textContent = `Registered: ${result.id} — ${title}`;
         alertEl.className = 'alert success show';
         // Add to local list
         allResearches.unshift({
-          id: result.id, hypothesis: hyp, status: 'registered',
+          id: result.id, title: title, hypothesis: hyp, status: 'registered',
           created: new Date().toISOString().slice(0,10),
           score: null, result: null,
           researchLine: metadata.researchLine,
@@ -453,13 +469,32 @@
 
   async function init() {
     if (!window.asrp) { allResearches = MOCK_EXPERIMENTS; applyFilters(); return; }
-    const { experiments } = await window.asrp.experiments.list();
-    // Merge IPC data with extended mock (use mock for extended fields when IPC lacks them)
-    allResearches = experiments.map(e => {
-      const mock = MOCK_EXPERIMENTS.find(m => m.id === e.id);
-      return mock ? { ...mock, ...e } : { ...e, researchLine: 'RH', score: null, result: null, method: '', expected: '', successCriteria: '', failureCriteria: '', computeTime: '', validations: [] };
-    });
-    if (allResearches.length === 0) allResearches = MOCK_EXPERIMENTS;
+    try {
+      const { experiments } = await window.asrp.experiments.list();
+      // Merge IPC data with mock data (mock provides extended fields for demo records)
+      allResearches = experiments.map(e => {
+        const mock = MOCK_EXPERIMENTS.find(m => m.id === e.id);
+        const base = mock ? { ...mock, ...e } : e;
+        // Ensure all records have required display fields
+        return {
+          title: '', researchLine: 'RH', score: null, result: null,
+          method: '', expected: '', successCriteria: '', failureCriteria: '',
+          computeTime: '',
+          validations: [
+            { label: 'Hypothesis falsifiable', checked: true },
+            { label: 'Method reproducible', checked: !!base.method },
+            { label: 'Success criteria quantitative', checked: !!base.successCriteria },
+            { label: 'Result recorded in registry', checked: false },
+            { label: 'Linked to paper draft', checked: false },
+          ],
+          ...base,
+        };
+      });
+      if (allResearches.length === 0) allResearches = MOCK_EXPERIMENTS;
+    } catch (err) {
+      console.warn('Failed to load researches from backend:', err);
+      allResearches = MOCK_EXPERIMENTS;
+    }
     applyFilters();
   }
 

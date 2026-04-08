@@ -1,32 +1,119 @@
 import { ipcMain } from 'electron';
+import * as fs from 'fs';
+import * as path from 'path';
+import { getWorkspaceBase } from './ipc-handlers';
 
 // ============================================================
-// RESEARCH HANDLERS (channel: 'experiments:*') — [STUB]
+// RESEARCH HANDLERS (channel: 'experiments:*')
+// Persists researches to {workspace}/researches.json
 // ============================================================
+
+interface ResearchRecord {
+  id: string;
+  title: string;
+  hypothesis: string;
+  status: string;
+  created: string;
+  score: number | null;
+  result: string | null;
+  metadata: Record<string, unknown>;
+}
+
+function getResearchesFile(): string {
+  const workspace = getWorkspaceBase();
+  if (!fs.existsSync(workspace)) {
+    fs.mkdirSync(workspace, { recursive: true });
+  }
+  return path.join(workspace, 'researches.json');
+}
+
+function loadResearches(): ResearchRecord[] {
+  const filePath = getResearchesFile();
+  try {
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as ResearchRecord[];
+    }
+  } catch { /* corrupted file — start fresh */ }
+  return [];
+}
+
+function saveResearches(records: ResearchRecord[]): void {
+  const filePath = getResearchesFile();
+  fs.writeFileSync(filePath, JSON.stringify(records, null, 2), 'utf-8');
+}
 
 export function registerExperimentHandlers(): void {
-  // Issue #36: Use relative dates instead of hardcoded domain-specific dates
-  const relDate = (daysAgo: number): string => {
-    const d = new Date();
-    d.setDate(d.getDate() - daysAgo);
-    return d.toISOString().slice(0, 10);
-  };
 
   ipcMain.handle('experiments:list', async () => {
-    // Empty initial state — real data from workspace in Phase 7.5
-    return { experiments: [] };
+    const records = loadResearches();
+    return {
+      experiments: records.map(r => ({
+        id: r.id,
+        title: r.title || '',
+        hypothesis: r.hypothesis,
+        status: r.status,
+        created: r.created,
+        score: r.score,
+        result: r.result,
+        ...r.metadata,
+      })),
+    };
   });
 
   ipcMain.handle('experiments:get', async (_event, expId: string) => {
-    return { success: true, experiment: { id: expId, data: {} } };
+    const records = loadResearches();
+    const record = records.find(r => r.id === expId);
+    if (!record) {
+      return { success: false, error: 'Research not found' };
+    }
+    return {
+      success: true,
+      experiment: {
+        id: record.id,
+        title: record.title,
+        hypothesis: record.hypothesis,
+        status: record.status,
+        created: record.created,
+        score: record.score,
+        result: record.result,
+        ...record.metadata,
+      },
+    };
   });
 
   ipcMain.handle('experiments:register', async (_event, hypothesis: string, metadata: Record<string, unknown>) => {
     const id = `EXP-${new Date().toISOString().slice(0, 10)}-${String(Math.floor(Math.random() * 900) + 100)}`;
-    return { success: true, id, hypothesis, metadata };
+    const title = (typeof metadata.title === 'string' && metadata.title.trim()) ? metadata.title.trim() : '';
+    const record: ResearchRecord = {
+      id,
+      title,
+      hypothesis,
+      status: 'registered',
+      created: new Date().toISOString().slice(0, 10),
+      score: null,
+      result: null,
+      metadata,
+    };
+
+    const records = loadResearches();
+    records.unshift(record);
+    saveResearches(records);
+
+    return { success: true, id, title, hypothesis, metadata };
   });
 
-  ipcMain.handle('experiments:update-status', async (_event, expId: string, status: string) => {
+  ipcMain.handle('experiments:update-status', async (_event, expId: string, status: string, extra?: Record<string, unknown>) => {
+    const records = loadResearches();
+    const record = records.find(r => r.id === expId);
+    if (!record) {
+      return { success: false, error: 'Research not found' };
+    }
+    record.status = status;
+    if (extra) {
+      if (typeof extra.score === 'number') record.score = extra.score;
+      if (typeof extra.result === 'string') record.result = extra.result;
+    }
+    saveResearches(records);
     return { success: true, expId, status };
   });
 }
