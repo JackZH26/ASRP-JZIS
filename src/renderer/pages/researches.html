@@ -27,6 +27,10 @@
     <span style="font-size:12px">🔍</span>
     <input type="text" id="exp-search" placeholder="Search..." style="border:none;outline:none;background:transparent;font-size:12px;color:var(--text);width:160px" oninput="applyFilters()">
   </div>
+  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text-secondary)">
+    <input type="checkbox" id="show-samples-toggle" checked onchange="toggleSamples()">
+    Show Examples
+  </label>
 </div>
 
 <!-- Researches List View -->
@@ -124,6 +128,7 @@
   let activeStatusFilter = 'all';
   let currentRegTags = [];
   let editingId = null; // null = register mode, string = edit mode
+  let showSamples = localStorage.getItem('asrp_show_samples') !== 'false'; // default true
 
   // ---- Tag auto-generation from abstract ----
   const TAG_KEYWORDS = {
@@ -249,10 +254,16 @@
       const scoreBar = e.score !== null ? `<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);margin-bottom:3px"><span>Score</span><span>${escHtml((e.score * 100).toFixed(0))}%</span></div><div class="exp-score-bar"><div class="exp-score-fill" style="width:${escHtml((e.score*100).toFixed(0))}%;background:${e.score>0.5?'var(--success)':'var(--error)'}"></div></div></div>` : '';
       const abs = (e.abstract||'').length > 120 ? (e.abstract||'').slice(0,120) + '...' : (e.abstract||'');
       const tagsHtml = (e.tags||[]).slice(0,4).map(t => `<span class="research-tag">${escHtml(t)}</span>`).join('');
-      return `<div class="card exp-card" style="cursor:pointer;border-left:3px solid ${statusColor(e.status)}${escHtml(e.status)==='archived'?';opacity:0.7':''}" onclick="openExpDetail('${escAttr(e.id)}')">
+      const isSample = e.isSample === true;
+      const borderColor = isSample ? '#3b82f6' : statusColor(e.status);
+      const sampleBadge = isSample ? '<span style="font-size:10px;background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:600">SAMPLE</span>' : '';
+      return `<div class="card exp-card" style="cursor:pointer;border-left:3px solid ${borderColor}${escHtml(e.status)==='archived'?';opacity:0.7':''}" onclick="openExpDetail('${escAttr(e.id)}')">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
           <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary)">${e.code ? '<strong style="color:var(--accent)">' + escHtml(e.code) + '</strong> · ' : ''}${escHtml(e.id)}</span>
-          <span class="exp-status-badge ${escHtml(e.status)}">${capitalize(escHtml(e.status))}</span>
+          <div style="display:flex;gap:4px;align-items:center">
+            ${sampleBadge}
+            <span class="exp-status-badge ${escHtml(e.status)}">${capitalize(escHtml(e.status))}</span>
+          </div>
         </div>
         <div style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:6px">${escHtml(e.title||e.id)}</div>
         <p style="font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:8px">${escHtml(abs)}</p>
@@ -263,6 +274,13 @@
     }).join('');
   }
 
+  window.toggleSamples = function() {
+    const toggle = document.getElementById('show-samples-toggle');
+    showSamples = toggle ? toggle.checked : true;
+    localStorage.setItem('asrp_show_samples', String(showSamples));
+    applyFilters();
+  };
+
   window.applyFilters = function() {
     const sort = document.getElementById('sort-select').value;
     const search = document.getElementById('exp-search').value.toLowerCase();
@@ -271,6 +289,8 @@
       // "all" filter hides archived; only show archived when explicitly filtering
       if (activeStatusFilter === 'all' && e.status === 'archived') return false;
       if (activeStatusFilter !== 'all' && e.status !== activeStatusFilter) return false;
+      // Filter out samples if toggle is off
+      if (!showSamples && e.isSample === true) return false;
       if (search) {
         const haystack = [e.title, e.abstract, e.id, e.code, ...(e.tags||[])].join(' ').toLowerCase();
         if (!haystack.includes(search)) return false;
@@ -547,6 +567,10 @@
   function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
 
   async function init() {
+    // Set toggle state from localStorage
+    const toggle = document.getElementById('show-samples-toggle');
+    if (toggle) toggle.checked = showSamples;
+
     if (!window.asrp) { allResearches = MOCK_EXPERIMENTS; applyFilters(); return; }
     try {
       const { experiments } = await window.asrp.experiments.list();

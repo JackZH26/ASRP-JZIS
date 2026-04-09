@@ -21,6 +21,8 @@ interface ResearchRecord {
   created: string;
   score: number | null;
   result: string | null;
+  isSample?: boolean;   // Whether this is a bundled sample research
+  sampleVersion?: number; // Version of sample data for sync updates
 }
 
 function getResearchesFile(): string {
@@ -157,88 +159,113 @@ function ensureResearchDirs(researchId: string): void {
 }
 
 /**
- * Seed sample researches from bundled resources on first launch.
- * Copies sample-researches data into workspace/researches/ if workspace is empty.
+ * Sync sample researches from bundled resources.
+ * Called on every experiments:list to ensure samples are up-to-date.
+ * - Adds missing sample researches
+ * - Updates outdated sample researches (based on sampleVersion)
+ * - Syncs discoveries.json and papers.json
  */
-function seedSampleResearches(): void {
+function syncSampleResearches(): void {
   const workspace = getWorkspaceBase();
-  const researchesFile = getResearchesFile();
-  
-  // Only seed if no researches.json exists or it's empty
-  if (fs.existsSync(researchesFile)) {
-    try {
-      const existing = JSON.parse(fs.readFileSync(researchesFile, 'utf-8')) as unknown[];
-      if (existing.length > 0) return; // Already has data
-    } catch { /* corrupted file, will reseed */ }
-  }
-
-  // Find sample-researches directory (in bundled resources or dev mode)
   const appRoot = path.join(__dirname, '../..');
   const sampleDir = path.join(appRoot, 'resources', 'sample-researches');
   
   if (!fs.existsSync(sampleDir)) {
-    console.log('No sample-researches directory found, skipping seed');
-    return;
+    return; // No samples to sync
   }
 
   try {
+    const records = loadResearches();
+    let modified = false;
+
     const sampleProjects = fs.readdirSync(sampleDir).filter(name => 
       fs.statSync(path.join(sampleDir, name)).isDirectory()
     );
 
-    const records: ResearchRecord[] = [];
-
     for (const projectDir of sampleProjects) {
       const projectPath = path.join(sampleDir, projectDir);
       const researchJsonPath = path.join(projectPath, 'research.json');
-      const discoveriesJsonPath = path.join(projectPath, 'discoveries.json');
-      const papersJsonPath = path.join(projectPath, 'papers.json');
-
+      
       if (!fs.existsSync(researchJsonPath)) continue;
 
-      // Read research metadata
-      const researchData = JSON.parse(fs.readFileSync(researchJsonPath, 'utf-8')) as Record<string, unknown>;
-      
-      // Generate a proper EXP ID for consistency
-      const id = `EXP-${researchData.created}-${crypto.randomBytes(3).toString('hex')}`;
-      
-      const record: ResearchRecord = {
-        id,
-        code: String(researchData.code || researchData.id || ''),
-        title: String(researchData.title || ''),
-        abstract: String(researchData.abstract || ''),
-        tags: Array.isArray(researchData.tags) ? researchData.tags.filter((t): t is string => typeof t === 'string') : [],
-        status: String(researchData.status || 'registered'),
-        created: String(researchData.created || new Date().toISOString().slice(0, 10)),
-        score: null,
-        result: null,
-      };
+      // Read bundled sample metadata
+      const sampleData = JSON.parse(fs.readFileSync(researchJsonPath, 'utf-8')) as Record<string, unknown>;
+      const sampleId = String(sampleData.id || '');
+      const sampleVersion = typeof sampleData.sampleVersion === 'number' ? sampleData.sampleVersion : 1;
 
-      records.push(record);
+      // Check if this sample exists in workspace
+      const existingIdx = records.findIndex(r => r.id === sampleId);
 
-      // Create research directory structure
-      const researchDir = path.join(workspace, 'researches', id);
-      fs.mkdirSync(path.join(researchDir, 'papers'), { recursive: true });
-      fs.mkdirSync(path.join(researchDir, 'files'), { recursive: true });
+      if (existingIdx === -1) {
+        // Sample doesn't exist → add it
+        const newRecord: ResearchRecord = {
+          id: sampleId,
+          code: String(sampleData.code || ''),
+          title: String(sampleData.title || ''),
+          abstract: String(sampleData.abstract || ''),
+          tags: Array.isArray(sampleData.tags) ? sampleData.tags.filter((t): t is string => typeof t === 'string') : [],
+          status: String(sampleData.status || 'registered'),
+          created: String(sampleData.created || new Date().toISOString().slice(0, 10)),
+          score: null,
+          result: null,
+          isSample: true,
+          sampleVersion,
+        };
+        records.push(newRecord);
+        modified = true;
+        console.log(`Added sample research: ${newRecord.code} - ${newRecord.title}`);
 
-      // Copy discoveries.json and papers.json if they exist
-      if (fs.existsSync(discoveriesJsonPath)) {
-        fs.copyFileSync(discoveriesJsonPath, path.join(researchDir, 'discoveries.json'));
+        // Create directory structure and sync files
+        const researchDir = path.join(workspace, 'researches', sampleId);
+        fs.mkdirSync(path.join(researchDir, 'papers'), { recursive: true });
+        fs.mkdirSync(path.join(researchDir, 'files'), { recursive: true });
+        syncSampleFiles(projectPath, researchDir);
+      } else {
+        // Sample exists → check if update needed
+        const existing = records[existingIdx];
+        const existingVersion = typeof existing.sampleVersion === 'number' ? existing.sampleVersion : 0;
+
+        if (existingVersion < sampleVersion) {
+          // Update outdated sample
+          records[existingIdx] = {
+            ...existing,
+            code: String(sampleData.code || existing.code),
+            title: String(sampleData.title || existing.title),
+            abstract: String(sampleData.abstract || existing.abstract),
+            tags: Array.isArray(sampleData.tags) ? sampleData.tags.filter((t): t is string => typeof t === 'string') : existing.tags,
+            status: String(sampleData.status || existing.status),
+            isSample: true,
+            sampleVersion,
+          };
+          modified = true;
+          console.log(`Updated sample research: ${existing.code} (v${existingVersion} → v${sampleVersion})`);
+
+          // Sync files
+          const researchDir = path.join(workspace, 'researches', sampleId);
+          syncSampleFiles(projectPath, researchDir);
+        }
       }
-      if (fs.existsSync(papersJsonPath)) {
-        fs.copyFileSync(papersJsonPath, path.join(researchDir, 'papers.json'));
-      }
-
-      console.log(`Seeded sample research: ${record.code} - ${record.title}`);
     }
 
-    // Save all seeded records
-    if (records.length > 0) {
+    if (modified) {
       saveResearches(records);
-      console.log(`Successfully seeded ${records.length} sample researches`);
     }
   } catch (err) {
-    console.error('Failed to seed sample researches:', err);
+    console.error('Failed to sync sample researches:', err);
+  }
+}
+
+/**
+ * Helper: Sync discoveries.json and papers.json from sample to workspace
+ */
+function syncSampleFiles(samplePath: string, workspacePath: string): void {
+  const filesToSync = ['discoveries.json', 'papers.json'];
+  for (const file of filesToSync) {
+    const src = path.join(samplePath, file);
+    const dest = path.join(workspacePath, file);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, dest);
+    }
   }
 }
 
@@ -247,14 +274,10 @@ export function registerExperimentHandlers(): void {
   // Cache: track research IDs whose dirs have already been ensured this session
   const _ensuredDirIds = new Set<string>();
   let _generalDirsEnsured = false;
-  let _sampleDataSeeded = false;
 
   ipcMain.handle('experiments:list', async () => {
-    // Seed sample data on first call if workspace is empty
-    if (!_sampleDataSeeded) {
-      seedSampleResearches();
-      _sampleDataSeeded = true;
-    }
+    // Sync sample researches on every list call (fast JSON comparison)
+    syncSampleResearches();
 
     const records = loadResearches();
     // Ensure directory structure exists only for new/unchecked records
