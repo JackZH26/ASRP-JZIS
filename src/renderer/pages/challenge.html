@@ -1,0 +1,471 @@
+<div class="page-header">
+  <div>
+    <h1 data-i18n="challenge.title">Challenge</h1>
+    <p data-i18n="challenge.subtitle">99 unsolved problems per discipline. Pick a target and start researching.</p>
+  </div>
+</div>
+
+<!-- Discipline Tabs -->
+<div class="ch-tabs" id="ch-tabs">
+  <button class="ch-tab active" data-discipline="mathematics" onclick="switchDiscipline('mathematics')">
+    <span data-i18n="challenge.tab_mathematics">Mathematics</span>
+    <span class="ch-count-badge" id="ch-count-mathematics">—</span>
+  </button>
+  <button class="ch-tab" data-discipline="physics" onclick="switchDiscipline('physics')">
+    <span data-i18n="challenge.tab_physics">Physics</span>
+    <span class="ch-count-badge" id="ch-count-physics">—</span>
+  </button>
+  <button class="ch-tab" data-discipline="chemistry" onclick="switchDiscipline('chemistry')">
+    <span data-i18n="challenge.tab_chemistry">Chemistry</span>
+    <span class="ch-count-badge" id="ch-count-chemistry">—</span>
+  </button>
+  <button class="ch-tab" data-discipline="life-sciences" onclick="switchDiscipline('life-sciences')">
+    <span data-i18n="challenge.tab_life_sciences">Life Sciences</span>
+    <span class="ch-count-badge" id="ch-count-life-sciences">—</span>
+  </button>
+</div>
+
+<!-- Filter Bar -->
+<div class="ch-filter-bar">
+  <div class="ch-filter-group">
+    <label class="ch-filter-label" data-i18n="challenge.filter_difficulty">Difficulty</label>
+    <select id="ch-difficulty" class="ch-select" onchange="renderProblems()">
+      <option value="all" data-i18n="challenge.difficulty_all">All</option>
+      <option value="1" data-i18n="challenge.difficulty_1">⭐ Attack path clear</option>
+      <option value="2" data-i18n="challenge.difficulty_2">⭐⭐ Partial progress</option>
+      <option value="3" data-i18n="challenge.difficulty_3">⭐⭐⭐ Major tools needed</option>
+      <option value="4" data-i18n="challenge.difficulty_4">⭐⭐⭐⭐ Century-level</option>
+      <option value="5" data-i18n="challenge.difficulty_5">⭐⭐⭐⭐⭐ Framework missing</option>
+    </select>
+  </div>
+  <div class="ch-filter-group ch-filter-search">
+    <input type="text" id="ch-search" class="ch-input" data-i18n-placeholder="challenge.search_placeholder"
+      placeholder="Search by title, field, or tag..." oninput="renderProblems()">
+  </div>
+  <label class="ch-filter-checkbox">
+    <input type="checkbox" id="ch-asrp-only" onchange="renderProblems()">
+    <span data-i18n="challenge.asrp_only">ASRP-related only</span>
+  </label>
+</div>
+
+<!-- Problem list -->
+<div id="ch-list" class="ch-list">
+  <div class="loading" style="text-align:center;padding:40px"><div class="spinner"></div>
+    <span data-i18n="challenge.loading">Loading problems...</span></div>
+</div>
+
+<style>
+.ch-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+.ch-tab {
+  padding: 10px 18px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.ch-tab:hover { color: var(--text); }
+.ch-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.ch-count-badge {
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--bg-tertiary, #f0f0f0);
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+}
+.ch-tab.active .ch-count-badge {
+  background: var(--accent);
+  color: #fff;
+}
+.ch-filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ch-filter-group { display: flex; align-items: center; gap: 6px; }
+.ch-filter-search { flex: 1; min-width: 200px; }
+.ch-filter-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ch-select, .ch-input {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--bg-secondary);
+  color: var(--text);
+  outline: none;
+}
+.ch-input { width: 100%; }
+.ch-select:focus, .ch-input:focus { border-color: var(--accent); }
+.ch-filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+.ch-filter-checkbox input { margin: 0; }
+.ch-list { display: flex; flex-direction: column; gap: 6px; }
+.ch-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.ch-item:hover { border-color: var(--accent); }
+.ch-item.expanded { border-color: var(--accent); }
+.ch-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.ch-arrow {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  transition: transform 0.2s;
+  width: 12px;
+  text-align: center;
+}
+.ch-item.expanded .ch-arrow { transform: rotate(90deg); }
+.ch-num {
+  flex-shrink: 0;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  width: 28px;
+}
+.ch-title-line {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ch-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ch-tagline {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ch-badges {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: center;
+}
+.ch-difficulty-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: var(--bg-tertiary, #f0f0f0);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.ch-difficulty-badge.d1 { background: #d1fae5; color: #065f46; }
+.ch-difficulty-badge.d2 { background: #dbeafe; color: #1e40af; }
+.ch-difficulty-badge.d3 { background: #fef3c7; color: #92400e; }
+.ch-difficulty-badge.d4 { background: #fed7aa; color: #9a3412; }
+.ch-difficulty-badge.d5 { background: #fee2e2; color: #991b1b; }
+.ch-asrp-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.ch-body {
+  display: none;
+  padding: 0 14px 14px 54px;
+  border-top: 1px solid var(--border);
+}
+.ch-item.expanded .ch-body { display: block; }
+.ch-section {
+  margin-top: 12px;
+}
+.ch-section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.ch-section-text {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+.ch-meta-row {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 10px;
+}
+.ch-meta-row strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.ch-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.ch-tag {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--bg-tertiary, #f0f0f0);
+  color: var(--text-secondary);
+}
+.ch-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+}
+.ch-empty {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+</style>
+
+<script>
+(function() {
+  var currentDiscipline = 'mathematics';
+  var problemsCache = {};  // discipline -> array
+  var expandedIds = new Set();
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  async function loadDiscipline(disc) {
+    if (problemsCache[disc] !== undefined) return problemsCache[disc];
+    try {
+      var res = await fetch('data/challenges/' + disc + '.json');
+      if (!res.ok) {
+        problemsCache[disc] = null;
+        return null;
+      }
+      var data = await res.json();
+      problemsCache[disc] = data.problems || [];
+      return problemsCache[disc];
+    } catch (e) {
+      console.warn('[challenge] failed to load ' + disc, e);
+      problemsCache[disc] = null;
+      return null;
+    }
+  }
+
+  async function updateCountBadge(disc) {
+    var arr = await loadDiscipline(disc);
+    var el = document.getElementById('ch-count-' + disc);
+    if (!el) return;
+    if (arr === null) {
+      el.textContent = '—';
+    } else {
+      el.textContent = arr.length;
+    }
+  }
+
+  window.switchDiscipline = function(disc) {
+    currentDiscipline = disc;
+    expandedIds.clear();
+    var tabs = document.querySelectorAll('.ch-tab');
+    tabs.forEach(function(t) {
+      t.classList.toggle('active', t.getAttribute('data-discipline') === disc);
+    });
+    renderProblems();
+  };
+
+  window.renderProblems = async function() {
+    var listEl = document.getElementById('ch-list');
+    if (!listEl) return;
+
+    var problems = await loadDiscipline(currentDiscipline);
+    if (problems === null) {
+      listEl.innerHTML = '<div class="ch-empty">' + escHtml(t('challenge.coming_soon')) + '</div>';
+      return;
+    }
+    if (!problems.length) {
+      listEl.innerHTML = '<div class="ch-empty">' + escHtml(t('challenge.load_failed')) + '</div>';
+      return;
+    }
+
+    var diff = document.getElementById('ch-difficulty').value;
+    var search = (document.getElementById('ch-search').value || '').trim().toLowerCase();
+    var asrpOnly = document.getElementById('ch-asrp-only').checked;
+
+    var filtered = problems.filter(function(p) {
+      if (diff !== 'all' && String(p.difficulty) !== diff) return false;
+      if (asrpOnly && !p.asrp_related) return false;
+      if (search) {
+        var hay = (p.title + ' ' + (p.field || '') + ' ' + (p.tagline || '') + ' ' +
+          (p.summary || '') + ' ' + ((p.tags || []).join(' '))).toLowerCase();
+        if (hay.indexOf(search) === -1) return false;
+      }
+      return true;
+    });
+
+    if (!filtered.length) {
+      listEl.innerHTML = '<div class="ch-empty">' + escHtml(t('challenge.no_results')) + '</div>';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < filtered.length; i++) {
+      var p = filtered[i];
+      var isExpanded = expandedIds.has(p.id);
+      var stars = '';
+      for (var s = 0; s < p.difficulty; s++) stars += '⭐';
+      var difficultyClass = 'd' + p.difficulty;
+
+      html += '<div class="ch-item ' + (isExpanded ? 'expanded' : '') + '" data-id="' + p.id + '">';
+      html += '  <div class="ch-header" onclick="toggleProblem(' + p.id + ')">';
+      html += '    <span class="ch-arrow">▶</span>';
+      html += '    <span class="ch-num">#' + p.id + '</span>';
+      html += '    <div class="ch-title-line">';
+      html += '      <div class="ch-title">' + escHtml(p.title) + '</div>';
+      html += '      <div class="ch-tagline">' + escHtml(p.tagline || p.summary || '') + '</div>';
+      html += '    </div>';
+      html += '    <div class="ch-badges">';
+      if (p.asrp_related) html += '<span class="ch-asrp-badge">ASRP</span>';
+      html += '      <span class="ch-difficulty-badge ' + difficultyClass + '">' + stars + '</span>';
+      html += '    </div>';
+      html += '  </div>';
+
+      if (isExpanded) {
+        html += '  <div class="ch-body">';
+        html += '    <div class="ch-meta-row">';
+        html += '      <div><strong>' + escHtml(t('challenge.field')) + ':</strong> ' + escHtml(p.field || '') + '</div>';
+        html += '      <div><strong>' + escHtml(t('challenge.difficulty')) + ':</strong> ' + stars + '</div>';
+        html += '    </div>';
+        html += '    <div class="ch-section">';
+        html += '      <div class="ch-section-label">' + escHtml(t('challenge.description')) + '</div>';
+        html += '      <div class="ch-section-text">' + escHtml(p.description || '') + '</div>';
+        html += '    </div>';
+        html += '    <div class="ch-section">';
+        html += '      <div class="ch-section-label">' + escHtml(t('challenge.suggested_abstract')) + '</div>';
+        html += '      <div class="ch-section-text">' + escHtml(p.abstract || '') + '</div>';
+        html += '    </div>';
+        if (p.tags && p.tags.length) {
+          html += '    <div class="ch-section">';
+          html += '      <div class="ch-section-label">' + escHtml(t('challenge.suggested_tags')) + '</div>';
+          html += '      <div class="ch-tag-list">';
+          for (var ti = 0; ti < p.tags.length; ti++) {
+            html += '<span class="ch-tag">' + escHtml(p.tags[ti]) + '</span>';
+          }
+          html += '      </div>';
+          html += '    </div>';
+        }
+        html += '    <div class="ch-actions">';
+        html += '      <button class="btn btn-primary btn-sm" onclick="startResearch(' + p.id + ')">' +
+          escHtml(t('challenge.start_research')) + '</button>';
+        html += '    </div>';
+        html += '  </div>';
+      }
+
+      html += '</div>';
+    }
+    listEl.innerHTML = html;
+  };
+
+  window.toggleProblem = function(id) {
+    if (expandedIds.has(id)) expandedIds.delete(id);
+    else expandedIds.add(id);
+    renderProblems();
+  };
+
+  window.startResearch = function(id) {
+    var arr = problemsCache[currentDiscipline];
+    if (!arr) return;
+    var p = null;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].id === id) { p = arr[i]; break; }
+    }
+    if (!p) return;
+
+    var prefill = {
+      title: p.title,
+      abstract: p.abstract || p.description || '',
+      tags: Array.isArray(p.tags) ? p.tags.slice(0) : [],
+      source: {
+        discipline: currentDiscipline,
+        problemId: p.id,
+        slug: p.slug || ''
+      }
+    };
+    try {
+      sessionStorage.setItem('asrp_prefill_research', JSON.stringify(prefill));
+    } catch (e) { /* ignore */ }
+    Router.navigate('/researches');
+  };
+
+  async function init() {
+    // Populate badges
+    var disciplines = ['mathematics', 'physics', 'chemistry', 'life-sciences'];
+    for (var i = 0; i < disciplines.length; i++) {
+      updateCountBadge(disciplines[i]);
+    }
+    renderProblems();
+  }
+
+  // Re-render on language change
+  function _chOnLang() {
+    if (typeof translatePage === 'function') translatePage();
+    renderProblems();
+  }
+  window.addEventListener('language-changed', _chOnLang);
+  if (window.Utils) window.Utils.onPageUnload(function() {
+    window.removeEventListener('language-changed', _chOnLang);
+  });
+
+  init();
+})();
+</script>

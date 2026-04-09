@@ -636,12 +636,39 @@ input:checked + .toggle-track::after { transform:translateX(16px); }
   function escAttr(s) { return escHtml(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;'); }
   function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
 
+  function applyPrefillFromChallenge() {
+    try {
+      var raw = sessionStorage.getItem('asrp_prefill_research');
+      if (!raw) return;
+      sessionStorage.removeItem('asrp_prefill_research');
+      var data = JSON.parse(raw);
+      if (!data || !data.title) return;
+      // Open the register modal and populate
+      if (typeof window.showRegisterModal === 'function') {
+        window.showRegisterModal();
+      }
+      var titleEl = document.getElementById('reg-title');
+      var absEl = document.getElementById('reg-abstract');
+      if (titleEl) titleEl.value = data.title || '';
+      if (absEl) absEl.value = data.abstract || '';
+      currentRegTags = Array.isArray(data.tags) ? data.tags.slice(0) : [];
+      if (typeof renderRegTags === 'function') renderRegTags();
+    } catch (e) {
+      console.warn('[researches] prefill from challenge failed:', e);
+    }
+  }
+
   async function init() {
     // Set toggle state from localStorage
     const toggle = document.getElementById('show-samples-toggle');
     if (toggle) toggle.checked = showSamples;
 
-    if (!window.asrp) { allResearches = MOCK_EXPERIMENTS; applyFilters(); return; }
+    if (!window.asrp) {
+      allResearches = MOCK_EXPERIMENTS;
+      applyFilters();
+      applyPrefillFromChallenge();
+      return;
+    }
     try {
       const { experiments } = await window.asrp.experiments.list();
       allResearches = experiments.map(e => {
@@ -658,6 +685,7 @@ input:checked + .toggle-track::after { transform:translateX(16px); }
       allResearches = MOCK_EXPERIMENTS;
     }
     applyFilters();
+    applyPrefillFromChallenge();
   }
 
   // Re-render on language change

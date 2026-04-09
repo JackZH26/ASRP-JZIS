@@ -14,6 +14,7 @@ const Router = (() => {
     '/files':       { file: 'pages/files.html',        title: 'Files',       titleKey: 'nav.files',       sidebar: true,  section: 'files' },
     '/papers':      { file: 'pages/papers.html',       title: 'Papers',      titleKey: 'nav.papers',      sidebar: true,  section: 'papers' },
     '/researches':  { file: 'pages/researches.html',   title: 'Researches',  titleKey: 'nav.researches',  sidebar: true,  section: 'researches' },
+    '/challenge':   { file: 'pages/challenge.html',    title: 'Challenge',   titleKey: 'nav.challenge',   sidebar: true,  section: 'challenge' },
     '/audit':       { file: 'pages/audit.html',        title: 'Log',         titleKey: 'nav.log',         sidebar: true,  section: 'audit' },
     '/settings':    { file: 'pages/settings.html',     title: 'Settings',    titleKey: 'nav.settings',    sidebar: true,  section: 'settings' },
   };
@@ -53,7 +54,8 @@ const Router = (() => {
   const PRELOAD_MAP = {
     '/dashboard':   ['/agents', '/papers'],
     '/agents':      ['/dashboard', '/researches'],
-    '/researches': ['/agents', '/audit'],
+    '/researches': ['/agents', '/challenge'],
+    '/challenge':  ['/researches'],
     '/papers':      ['/researches', '/files'],
     '/files':       ['/papers', '/audit'],
     '/audit':       ['/dashboard', '/researches'],
