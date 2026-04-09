@@ -1,0 +1,11 @@
+{
+  "id": "R002",
+  "code": "SC-2026-001",
+  "title": "Mathematical Structure of BCS Theory and Room-Temperature Superconductivity",
+  "abstract": "Exploring the deep mathematical structure underlying BCS superconductivity theory, including zeta function connections, quantum metric diagnostics, and arithmetic-geometric correspondence in pairing symmetries. This research aims to develop a comprehensive theoretical framework for understanding and predicting room-temperature superconductivity through number-theoretic and geometric approaches.",
+  "tags": ["superconductivity", "bcs-theory", "quantum-metric", "room-temperature", "zeta-function"],
+  "status": "running",
+  "created": "2026-03-20",
+  "author": "Jian Zhou",
+  "institution": "JZ Institute of Science"
+}

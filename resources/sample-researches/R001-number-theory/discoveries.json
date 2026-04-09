@@ -1,0 +1,90 @@
+[
+  {
+    "date": "2026-04-04",
+    "type": "discovery",
+    "title": "ζ_K(-3) Connection to A₅ and E₈",
+    "description": "Established remarkable connection: ζ_K(-3) = 1/60 = 1/|A₅| = 1/C₂(E₈), linking the zeta function of ℚ(√5) to the alternating group A₅ and the E₈ Lie algebra.",
+    "significance": "high",
+    "linkedPaper": null
+  },
+  {
+    "date": "2026-04-04",
+    "type": "discovery",
+    "title": "BE-FD Duality with Golden Ratio Fixed Points",
+    "description": "Discovered that the Bose-Einstein distribution has fixed point at φ while the Fermi-Dirac distribution has fixed point at 1/φ, revealing a fundamental duality.",
+    "significance": "high",
+    "linkedPaper": null
+  },
+  {
+    "date": "2026-03-28",
+    "type": "submission",
+    "title": "Strong Log-Concavity of Riemann-Jacobi Kernel",
+    "description": "Proved strong log-concavity property of the Riemann-Jacobi kernel. Submitted to Experimental Mathematics for peer review.",
+    "significance": "high",
+    "linkedPaper": "Zhou_Strong-Log-Concavity-Riemann-Jacobi-Kernel_2026-03-28.pdf"
+  },
+  {
+    "date": "2026-03-22",
+    "type": "insight",
+    "title": "RH for ℚ(√5) Implies RH (Theorem)",
+    "description": "Established rigorous theorem: if the Riemann Hypothesis holds for the number field ℚ(√5), then it holds for the classical Riemann zeta function.",
+    "significance": "high",
+    "linkedPaper": null
+  },
+  {
+    "date": "2026-03-22",
+    "type": "insight",
+    "title": "The Golden Chain",
+    "description": "Fundamental insight connecting the chain: φ → ℚ(√5) → ζ_K → ζ → primes → everything. This chain reveals how the golden ratio connects to the deepest structures in number theory.",
+    "significance": "high",
+    "linkedPaper": null
+  },
+  {
+    "date": "2026-03-20",
+    "type": "discovery",
+    "title": "Seven Perspectives Supporting RH",
+    "description": "Verified seven independent numerical perspectives supporting the Riemann Hypothesis to 10,000 zeros, providing comprehensive computational evidence.",
+    "significance": "high",
+    "linkedPaper": "Zhou_Seven-Perspectives-Riemann-Hypothesis_2026-03-20.pdf"
+  },
+  {
+    "date": "2026-03-18",
+    "type": "discovery",
+    "title": "Mahler Measures Connection to Special ζ Values",
+    "description": "Connected Mahler measures of the Bertin-Touafek polynomial family to special values of the Riemann zeta function, revealing deep arithmetic structure.",
+    "significance": "medium",
+    "linkedPaper": "Zhou_Mahler-Measures-Bertin-Touafek-Family_2026-03-18.pdf"
+  },
+  {
+    "date": "2026-03-18",
+    "type": "discovery",
+    "title": "Lattice Green Functions in d≥4",
+    "description": "Proved Domb number decomposition for lattice Green functions in dimensions four and higher, establishing exact expressions.",
+    "significance": "medium",
+    "linkedPaper": "Zhou_Lattice-Green-Functions-Higher-Dimensions_2026-03-18.pdf"
+  },
+  {
+    "date": "2026-03-17",
+    "type": "discovery",
+    "title": "Exact Stokes Multipliers for Anharmonic Oscillators",
+    "description": "Computed exact Stokes multipliers for x²ᴹ anharmonic oscillators with M ranging from 2 to 11, providing precise analytical tools for quantum mechanical systems.",
+    "significance": "medium",
+    "linkedPaper": "Zhou_Stokes-Multipliers-Anharmonic-Oscillators_2026-03-17.pdf"
+  },
+  {
+    "date": "2026-03-17",
+    "type": "discovery",
+    "title": "Prime Structure of Electromagnetic Constants",
+    "description": "Identified prime number structure in electromagnetic constants using the PSLQ algorithm, revealing hidden arithmetic patterns.",
+    "significance": "medium",
+    "linkedPaper": "Zhou_Prime-Structure-Electromagnetic-Constants_2026-03-17.pdf"
+  },
+  {
+    "date": "2026-03-16",
+    "type": "discovery",
+    "title": "Zeta Reformulation of Wyler's Formula",
+    "description": "Reformulated Wyler's geometric formula for the fine-structure constant via the zeta function: α⁻¹ = 360/φ² = 3/(ζ(−3)·φ²), connecting geometry to number theory.",
+    "significance": "high",
+    "linkedPaper": "Zhou_Zeta-Reformulation-Wylers-Formula_2026-03-16.pdf"
+  }
+]

@@ -1,0 +1,74 @@
+[
+  {
+    "date": "2026-03-31",
+    "type": "discovery",
+    "title": "Recalculated McMillan Limit",
+    "description": "Corrected calculation of the McMillan limit yields ~72K for conventional mechanisms and ~295K for optimistic scenarios, significantly higher than the traditional ~40K estimate.",
+    "significance": "high",
+    "linkedPaper": null
+  },
+  {
+    "date": "2026-03-31",
+    "type": "discovery",
+    "title": "Allen-Dynes Formula Systematic Error",
+    "description": "Discovered systematic -97% underestimation error in the asymptotic behavior of the Allen-Dynes formula for strong-coupling superconductors.",
+    "significance": "high",
+    "linkedPaper": null
+  },
+  {
+    "date": "2026-03-28",
+    "type": "submission",
+    "title": "Zeta Spectrum of BCS Theory Submitted to PRB",
+    "description": "Finalized version 5.8 of the Zeta Spectrum paper demonstrating universal ratios as digamma/ζ truncations. Submitted to Physical Review B for peer review.",
+    "significance": "high",
+    "linkedPaper": "Zhou_Zeta-Spectrum-BCS-Theory_2026-03-24.pdf"
+  },
+  {
+    "date": "2026-03-24",
+    "type": "discovery",
+    "title": "Arithmetic-Geometric Pairing Correspondence",
+    "description": "Established correspondence between number fields, lattice structures, and pairing symmetries via Bost-Connes algebra, providing a unified framework for understanding superconducting pairing mechanisms.",
+    "significance": "high",
+    "linkedPaper": "Zhou_Arithmetic-Geometric-Correspondence-Pairing_2026-03-24.pdf"
+  },
+  {
+    "date": "2026-03-24",
+    "type": "discovery",
+    "title": "Polygamma Identity for ζ Functions",
+    "description": "Proved exact identity: ψ⁽ⁿ⁾(1/2) = (-1)^(n+1) n!(2^(n+1)-1)ζ(n+1), connecting polygamma functions to Riemann zeta values.",
+    "significance": "medium",
+    "linkedPaper": null
+  },
+  {
+    "date": "2026-03-24",
+    "type": "discovery",
+    "title": "BCS Universal Ratios as Digamma/ζ Truncations",
+    "description": "Proved that all BCS universal ratios are successive truncations of a single digamma/ζ Taylor series expansion, revealing deep mathematical unity in superconductivity theory.",
+    "significance": "high",
+    "linkedPaper": "Zhou_Zeta-Spectrum-BCS-Theory_2026-03-24.pdf"
+  },
+  {
+    "date": "2026-03-23",
+    "type": "discovery",
+    "title": "Quantum Metric as Universal Superconductor Diagnostic",
+    "description": "Validated quantum metric as a universal diagnostic tool across all major superconductor families, analyzing 50 different materials from cuprates to iron-based to heavy fermion systems.",
+    "significance": "high",
+    "linkedPaper": "Zhou_Quantum-Metric-Universal-Diagnostic_2026-03-23.pdf"
+  },
+  {
+    "date": "2026-03-20",
+    "type": "submission",
+    "title": "MATBG Superfluid Weight Decomposition",
+    "description": "Completed band-basis decomposition of superfluid weight in magic-angle twisted bilayer graphene. Submitted to Physical Review B.",
+    "significance": "medium",
+    "linkedPaper": "Zhou_MATBG-Superfluid-Weight-Decomposition_2026-03-20.pdf"
+  },
+  {
+    "date": "2026-03-20",
+    "type": "discovery",
+    "title": "Planckian Duality Number Proposed",
+    "description": "Introduced the Planckian Duality Number as a new classification metric for superconductors, connecting Planckian dissipation to superconducting coherence.",
+    "significance": "high",
+    "linkedPaper": "Zhou_Planckian-Duality-Number_2026-03-20.pdf"
+  }
+]

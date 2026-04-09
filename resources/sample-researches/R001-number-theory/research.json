@@ -1,0 +1,11 @@
+{
+  "id": "R001",
+  "code": "NT-2026-001",
+  "title": "Number Theory & the Riemann Hypothesis",
+  "abstract": "Investigating deep connections between the Riemann zeta function, the golden ratio φ, number fields ℚ(√5), and the Bost-Connes system. This research explores multiple perspectives on the Riemann Hypothesis through computational verification and analytical frameworks, including reformulations of Wyler's formula and strong log-concavity properties of the Riemann-Jacobi kernel.",
+  "tags": ["number-theory", "riemann-hypothesis", "zeta-function", "golden-ratio", "bost-connes"],
+  "status": "running",
+  "created": "2026-03-16",
+  "author": "Jian Zhou",
+  "institution": "JZ Institute of Science"
+}

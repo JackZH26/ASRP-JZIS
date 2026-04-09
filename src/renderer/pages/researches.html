@@ -295,7 +295,7 @@
   };
 
   // ---- Detail View ----
-  window.openExpDetail = function(id) {
+  window.openExpDetail = async function(id) {
     const e = allResearches.find(x => x.id === id);
     if (!e) return;
     document.getElementById('exp-list-view').style.display = 'none';
@@ -311,6 +311,39 @@
 
     const isArchived = e.status === 'archived';
 
+    // Load discoveries for this research
+    let discoveriesHtml = '';
+    try {
+      const discoveries = await loadDiscoveries(e.id);
+      if (discoveries && discoveries.length > 0) {
+        const discoveriesItems = discoveries.map(d => {
+          const typeIcon = { discovery: '🔬', paper: '📄', insight: '💡', submission: '📬' }[d.type] || '🔬';
+          const sigColor = { high: '#dc2626', medium: '#d97706', low: '#64748b' }[d.significance] || '#888';
+          return `
+            <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light,#f0f0f0)">
+              <div style="flex-shrink:0;width:80px;font-size:11px;color:var(--text-tertiary);font-family:var(--font-mono)">${escHtml(d.date)}</div>
+              <div style="flex-shrink:0;font-size:18px;line-height:1">${typeIcon}</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                  <div style="width:6px;height:6px;border-radius:50%;background:${sigColor};flex-shrink:0"></div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text)">${escHtml(d.title)}</div>
+                </div>
+                <div style="font-size:12px;line-height:1.5;color:var(--text-secondary)">${escHtml(d.description)}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        discoveriesHtml = `
+          <div class="panel" style="margin-bottom:12px">
+            <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;margin-bottom:12px">Key Discoveries Timeline</div>
+            <div>${discoveriesItems}</div>
+          </div>
+        `;
+      }
+    } catch (err) {
+      console.warn('Failed to load discoveries:', err);
+    }
+
     document.getElementById('exp-detail-content').innerHTML = `
       <div class="panel" style="margin-bottom:12px">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
@@ -325,6 +358,7 @@
         <div style="font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap">${escHtml(e.abstract||'No abstract provided.')}</div>
         ${scoreDisplay}
       </div>
+      ${discoveriesHtml}
       ${e.result ? `<div class="panel" style="margin-bottom:12px">
         <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;margin-bottom:8px">Result</div>
         <div style="font-size:13px;line-height:1.6;color:var(--text)">${escHtml(e.result)}</div>
@@ -485,6 +519,26 @@
           openExpDetail(editingId);
         }, 600);
       }
+    }
+  }
+
+  /**
+   * Load discoveries.json for a research from workspace
+   */
+  async function loadDiscoveries(expId) {
+    if (!window.asrp || !window.asrp.fs) return null;
+    try {
+      const workspace = await window.asrp.fs.getWorkspace();
+      const discoveriesPath = `${workspace}/researches/${expId}/discoveries.json`;
+      const exists = await window.asrp.fs.exists(discoveriesPath);
+      if (!exists) return null;
+      const content = await window.asrp.fs.readFile(discoveriesPath, 'utf-8');
+      const discoveries = JSON.parse(content);
+      // Sort by date descending (newest first)
+      return discoveries.sort((a, b) => b.date.localeCompare(a.date));
+    } catch (err) {
+      console.error('Failed to load discoveries:', err);
+      return null;
     }
   }
 

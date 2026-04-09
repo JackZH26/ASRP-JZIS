@@ -1,0 +1,74 @@
+[
+  {
+    "date": "2026-03-30",
+    "type": "discovery",
+    "title": "α⁻¹ Bare Value from Pure Number Theory",
+    "description": "Derived α⁻¹_bare = 360/φ² = 137.508 from pure number theory without any physics input, using only the Bost-Connes system and number field properties.",
+    "significance": "high",
+    "linkedPaper": "Zhou_Four-Layer-Arithmetic-Structure-Alpha_2026-03-30.pdf"
+  },
+  {
+    "date": "2026-03-30",
+    "type": "discovery",
+    "title": "Four-Layer Arithmetic Structure of α",
+    "description": "Revealed four-layer arithmetic structure: 360 = (d_K+1)/ζ_K(-3), connecting the geometric factor 360 to the discriminant and zeta function of ℚ(√5).",
+    "significance": "high",
+    "linkedPaper": "Zhou_Four-Layer-Arithmetic-Structure-Alpha_2026-03-30.pdf"
+  },
+  {
+    "date": "2026-03-29",
+    "type": "discovery",
+    "title": "Charm Quark Blind Prediction Success",
+    "description": "Blind prediction of charm quark mass using the quark-lepton formula deviated by only 0.74% from experimental value, providing strong validation.",
+    "significance": "high",
+    "linkedPaper": null
+  },
+  {
+    "date": "2026-03-29",
+    "type": "discovery",
+    "title": "φ as Bose-Einstein Fixed Point",
+    "description": "Discovered that the golden ratio φ emerges as the fixed point of the Bose-Einstein distribution: n_BE(ln x) = x → x²-x-1=0 → x=φ, while 1/φ is the Fermi-Dirac fixed point.",
+    "significance": "high",
+    "linkedPaper": null
+  },
+  {
+    "date": "2026-03-29",
+    "type": "discovery",
+    "title": "Quark-Lepton Mass Formula from Primes",
+    "description": "Established quark-lepton mass formula m ∝ p^a · (log p)^b where the six quarks map to the first six primes {2,3,5,7,11,13}, revealing deep arithmetic structure in particle masses.",
+    "significance": "high",
+    "linkedPaper": null
+  },
+  {
+    "date": "2026-03-28",
+    "type": "paper",
+    "title": "Photon Membrane Model",
+    "description": "Developed model of the photon as an expanding spherical membrane S²(t) with radius R(t)=ct, explaining photon propagation and wave-particle duality geometrically.",
+    "significance": "high",
+    "linkedPaper": "Zhou_Photon-Membrane-Model_2026-03-28.pdf"
+  },
+  {
+    "date": "2026-03-27",
+    "type": "discovery",
+    "title": "Three-Layer Structure of α Revealed",
+    "description": "Decomposed the fine-structure constant into three multiplicative layers: geometric (volume ratios) × arithmetic (number theory) × gauge (coupling structure).",
+    "significance": "high",
+    "linkedPaper": "Zhou_Three-Layer-Structure-Alpha_2026-03-27.pdf"
+  },
+  {
+    "date": "2026-03-26",
+    "type": "paper",
+    "title": "Electron Membrane Model",
+    "description": "Proposed model of the electron as a spherical membrane wrapping the nucleus, with vibration modes corresponding to spherical harmonics Y_l^m, explaining atomic orbitals geometrically.",
+    "significance": "high",
+    "linkedPaper": "Zhou_Electron-Membrane-Model_2026-03-26.pdf"
+  },
+  {
+    "date": "2026-03-16",
+    "type": "discovery",
+    "title": "Arithmetic of Light",
+    "description": "Discovered geometric origin of the fine-structure constant α from volume ratios of fundamental geometric objects, connecting physics to pure geometry.",
+    "significance": "high",
+    "linkedPaper": "Zhou_Arithmetic-of-Light_2026-03-16.pdf"
+  }
+]

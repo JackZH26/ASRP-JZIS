@@ -156,13 +156,106 @@ function ensureResearchDirs(researchId: string): void {
   } catch { /* ignore migration errors */ }
 }
 
+/**
+ * Seed sample researches from bundled resources on first launch.
+ * Copies sample-researches data into workspace/researches/ if workspace is empty.
+ */
+function seedSampleResearches(): void {
+  const workspace = getWorkspaceBase();
+  const researchesFile = getResearchesFile();
+  
+  // Only seed if no researches.json exists or it's empty
+  if (fs.existsSync(researchesFile)) {
+    try {
+      const existing = JSON.parse(fs.readFileSync(researchesFile, 'utf-8')) as unknown[];
+      if (existing.length > 0) return; // Already has data
+    } catch { /* corrupted file, will reseed */ }
+  }
+
+  // Find sample-researches directory (in bundled resources or dev mode)
+  const appRoot = path.join(__dirname, '../..');
+  const sampleDir = path.join(appRoot, 'resources', 'sample-researches');
+  
+  if (!fs.existsSync(sampleDir)) {
+    console.log('No sample-researches directory found, skipping seed');
+    return;
+  }
+
+  try {
+    const sampleProjects = fs.readdirSync(sampleDir).filter(name => 
+      fs.statSync(path.join(sampleDir, name)).isDirectory()
+    );
+
+    const records: ResearchRecord[] = [];
+
+    for (const projectDir of sampleProjects) {
+      const projectPath = path.join(sampleDir, projectDir);
+      const researchJsonPath = path.join(projectPath, 'research.json');
+      const discoveriesJsonPath = path.join(projectPath, 'discoveries.json');
+      const papersJsonPath = path.join(projectPath, 'papers.json');
+
+      if (!fs.existsSync(researchJsonPath)) continue;
+
+      // Read research metadata
+      const researchData = JSON.parse(fs.readFileSync(researchJsonPath, 'utf-8')) as Record<string, unknown>;
+      
+      // Generate a proper EXP ID for consistency
+      const id = `EXP-${researchData.created}-${crypto.randomBytes(3).toString('hex')}`;
+      
+      const record: ResearchRecord = {
+        id,
+        code: String(researchData.code || researchData.id || ''),
+        title: String(researchData.title || ''),
+        abstract: String(researchData.abstract || ''),
+        tags: Array.isArray(researchData.tags) ? researchData.tags.filter((t): t is string => typeof t === 'string') : [],
+        status: String(researchData.status || 'registered'),
+        created: String(researchData.created || new Date().toISOString().slice(0, 10)),
+        score: null,
+        result: null,
+      };
+
+      records.push(record);
+
+      // Create research directory structure
+      const researchDir = path.join(workspace, 'researches', id);
+      fs.mkdirSync(path.join(researchDir, 'papers'), { recursive: true });
+      fs.mkdirSync(path.join(researchDir, 'files'), { recursive: true });
+
+      // Copy discoveries.json and papers.json if they exist
+      if (fs.existsSync(discoveriesJsonPath)) {
+        fs.copyFileSync(discoveriesJsonPath, path.join(researchDir, 'discoveries.json'));
+      }
+      if (fs.existsSync(papersJsonPath)) {
+        fs.copyFileSync(papersJsonPath, path.join(researchDir, 'papers.json'));
+      }
+
+      console.log(`Seeded sample research: ${record.code} - ${record.title}`);
+    }
+
+    // Save all seeded records
+    if (records.length > 0) {
+      saveResearches(records);
+      console.log(`Successfully seeded ${records.length} sample researches`);
+    }
+  } catch (err) {
+    console.error('Failed to seed sample researches:', err);
+  }
+}
+
 export function registerExperimentHandlers(): void {
 
   // Cache: track research IDs whose dirs have already been ensured this session
   const _ensuredDirIds = new Set<string>();
   let _generalDirsEnsured = false;
+  let _sampleDataSeeded = false;
 
   ipcMain.handle('experiments:list', async () => {
+    // Seed sample data on first call if workspace is empty
+    if (!_sampleDataSeeded) {
+      seedSampleResearches();
+      _sampleDataSeeded = true;
+    }
+
     const records = loadResearches();
     // Ensure directory structure exists only for new/unchecked records
     for (const r of records) {
