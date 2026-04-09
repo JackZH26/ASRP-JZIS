@@ -98,6 +98,19 @@
     </div>
   </div>
 
+  <!-- OpenClaw Gateway -->
+  <div class="panel">
+    <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>OpenClaw Gateway</h3>
+    <div id="openclaw-status" style="font-size:13px;color:var(--text-secondary);line-height:1.8;margin-bottom:12px">
+      Checking OpenClaw status...
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" id="btn-oc-check" onclick="checkOpenClawUpdate()">Check for Updates</button>
+      <button class="btn btn-primary btn-sm" id="btn-oc-install" onclick="installOpenClaw()" style="display:none">Install OpenClaw</button>
+      <button class="btn btn-primary btn-sm" id="btn-oc-update" onclick="installOpenClaw()" style="display:none">Update OpenClaw</button>
+    </div>
+  </div>
+
   <!-- T-083: Updates -->
   <div class="panel">
     <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>Updates</h3>
@@ -299,7 +312,127 @@
     setTimeout(function() { Router.navigate('/setup'); }, 300);
   };
 
+  // ---- OpenClaw Gateway Management ----
+  var _ocCurrentVersion = null;
+  var _ocLatestVersion = null;
+
+  async function loadOpenClawStatus() {
+    if (!window.asrp || !window.asrp.gateway) return;
+    var el = document.getElementById('openclaw-status');
+    var btnInstall = document.getElementById('btn-oc-install');
+    var btnUpdate = document.getElementById('btn-oc-update');
+    if (!el) return;
+
+    try {
+      var status = await window.asrp.gateway.status();
+      if (!status.installed) {
+        el.innerHTML = '<div style="color:var(--warning)">OpenClaw is not installed</div>' +
+          '<div style="font-size:12px;color:var(--text-tertiary);margin-top:2px">Install OpenClaw to enable AI agent gateway</div>';
+        if (btnInstall) btnInstall.style.display = '';
+        if (btnUpdate) btnUpdate.style.display = 'none';
+        return;
+      }
+
+      _ocCurrentVersion = status.version || 'unknown';
+      var agentCount = (status.agents && status.agents.length) || 0;
+      var running = status.running ? '<span style="color:var(--success)">● Running</span>' : '<span style="color:var(--text-tertiary)">○ Stopped</span>';
+
+      el.innerHTML =
+        '<div>Version: <strong>' + esc(_ocCurrentVersion) + '</strong> &nbsp;' + running + '</div>' +
+        '<div style="font-size:12px;color:var(--text-tertiary)">Agents registered: ' + agentCount + '</div>';
+
+      // Auto-check for updates after showing status
+      checkOpenClawUpdateSilent();
+    } catch (e) {
+      el.innerHTML = '<div style="color:var(--error)">Failed to load OpenClaw status</div>';
+    }
+  }
+
+  async function checkOpenClawUpdateSilent() {
+    if (!window.asrp || !window.asrp.gateway || !window.asrp.gateway.checkUpdate) return;
+    var el = document.getElementById('openclaw-status');
+    var btnUpdate = document.getElementById('btn-oc-update');
+    try {
+      var result = await window.asrp.gateway.checkUpdate();
+      if (result.updateAvailable && result.latestVersion) {
+        _ocLatestVersion = result.latestVersion;
+        // Append update info to existing status
+        var updateLine = document.createElement('div');
+        updateLine.style.cssText = 'margin-top:4px;color:var(--accent);font-size:12px;font-weight:500';
+        updateLine.textContent = '📦 Update available: v' + result.latestVersion;
+        if (el) el.appendChild(updateLine);
+        if (btnUpdate) btnUpdate.style.display = '';
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  window.checkOpenClawUpdate = async function() {
+    if (!window.asrp || !window.asrp.gateway) return;
+    var el = document.getElementById('openclaw-status');
+    var btnCheck = document.getElementById('btn-oc-check');
+    var btnUpdate = document.getElementById('btn-oc-update');
+    if (btnCheck) { btnCheck.disabled = true; btnCheck.textContent = 'Checking...'; }
+
+    try {
+      var result = await window.asrp.gateway.checkUpdate();
+      if (result.updateAvailable && result.latestVersion) {
+        _ocLatestVersion = result.latestVersion;
+        Toast.show('OpenClaw update available: v' + result.latestVersion, 'info');
+        if (btnUpdate) btnUpdate.style.display = '';
+        // Refresh full status display
+        await loadOpenClawStatus();
+      } else {
+        Toast.show('OpenClaw is up to date', 'success');
+      }
+    } catch (e) {
+      Toast.show('Failed to check for updates', 'error');
+    }
+
+    if (btnCheck) { btnCheck.disabled = false; btnCheck.textContent = 'Check for Updates'; }
+  };
+
+  window.installOpenClaw = async function() {
+    if (!window.asrp || !window.asrp.gateway) return;
+    var btnInstall = document.getElementById('btn-oc-install');
+    var btnUpdate = document.getElementById('btn-oc-update');
+    var el = document.getElementById('openclaw-status');
+    var isUpdate = btnUpdate && btnUpdate.style.display !== 'none';
+    var label = isUpdate ? 'Updating' : 'Installing';
+
+    if (btnInstall) { btnInstall.disabled = true; btnInstall.textContent = label + '...'; }
+    if (btnUpdate) { btnUpdate.disabled = true; btnUpdate.textContent = label + '...'; }
+    if (el) {
+      var progressLine = document.createElement('div');
+      progressLine.id = 'oc-progress';
+      progressLine.style.cssText = 'margin-top:6px;font-size:12px;color:var(--accent)';
+      progressLine.textContent = label + ' OpenClaw, this may take a minute...';
+      el.appendChild(progressLine);
+    }
+
+    try {
+      var token = localStorage.getItem('asrp_token');
+      var result = await window.asrp.gateway.install(token);
+      if (result.success) {
+        Toast.show('OpenClaw ' + (isUpdate ? 'updated' : 'installed') + ' successfully!', 'success');
+        // Refresh status to show new version
+        await loadOpenClawStatus();
+        if (btnInstall) btnInstall.style.display = 'none';
+        if (btnUpdate) btnUpdate.style.display = 'none';
+      } else {
+        Toast.show('Failed: ' + (result.error || 'Unknown error'), 'error');
+      }
+    } catch (e) {
+      Toast.show('Installation failed: ' + String(e), 'error');
+    }
+
+    if (btnInstall) { btnInstall.disabled = false; btnInstall.textContent = 'Install OpenClaw'; }
+    if (btnUpdate) { btnUpdate.disabled = false; btnUpdate.textContent = 'Update OpenClaw'; }
+    var prog = document.getElementById('oc-progress');
+    if (prog) prog.remove();
+  };
+
   loadSettings();
   loadUpdaterStatus();
+  loadOpenClawStatus();
 })();
 </script>
