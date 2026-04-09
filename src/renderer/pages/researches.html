@@ -18,19 +18,18 @@
     <button class="exp-filter" data-filter="refuted" onclick="setFilter('refuted')">Refuted</button>
     <button class="exp-filter" data-filter="archived" onclick="setFilter('archived')">Archived</button>
   </div>
-  <select id="sort-select" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg-secondary);color:var(--text);margin-left:auto" onchange="applyFilters()">
-    <option value="date-desc">Newest first</option>
-    <option value="date-asc">Oldest first</option>
-    <option value="status">Status</option>
-  </select>
-  <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:6px;padding:4px 8px;background:var(--bg-secondary)">
-    <span style="font-size:12px">🔍</span>
-    <input type="text" id="exp-search" placeholder="Search..." style="border:none;outline:none;background:transparent;font-size:12px;color:var(--text);width:160px" oninput="applyFilters()">
+  <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+    <select id="sort-select" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg-secondary);color:var(--text)" onchange="applyFilters()">
+      <option value="date-desc">Newest first</option>
+      <option value="date-asc">Oldest first</option>
+      <option value="status">Status</option>
+    </select>
+    <label class="toggle-switch-label" style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;color:var(--text-secondary);white-space:nowrap;user-select:none">
+      <span>Examples</span>
+      <input type="checkbox" id="show-samples-toggle" checked onchange="toggleSamples()" style="display:none">
+      <span class="toggle-track"></span>
+    </label>
   </div>
-  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text-secondary)">
-    <input type="checkbox" id="show-samples-toggle" checked onchange="toggleSamples()">
-    Show Examples
-  </label>
 </div>
 
 <!-- Researches List View -->
@@ -120,6 +119,18 @@
 .detail-action-btn:hover { background:var(--bg-tertiary,#e8e8e8); }
 .detail-action-btn.archive { color:#7c3aed;border-color:#d8b4fe; }
 .detail-action-btn.archive:hover { background:#f3e8ff; }
+/* Claude-style toggle switch */
+.toggle-track {
+  position:relative;display:inline-block;width:36px;height:20px;
+  background:#d1d5db;border-radius:10px;transition:background 0.2s;flex-shrink:0;
+}
+.toggle-track::after {
+  content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;
+  background:#fff;border-radius:50%;transition:transform 0.2s;
+  box-shadow:0 1px 3px rgba(0,0,0,0.15);
+}
+input:checked + .toggle-track { background:var(--accent,#4a8c6a); }
+input:checked + .toggle-track::after { transform:translateX(16px); }
 </style>
 
 <script>
@@ -283,7 +294,8 @@
 
   window.applyFilters = function() {
     const sort = document.getElementById('sort-select').value;
-    const search = document.getElementById('exp-search').value.toLowerCase();
+    const searchEl = document.getElementById('exp-search');
+    const search = searchEl ? searchEl.value.toLowerCase() : '';
 
     let filtered = allResearches.filter(e => {
       // "all" filter hides archived; only show archived when explicitly filtering
@@ -331,10 +343,16 @@
 
     const isArchived = e.status === 'archived';
 
-    // Load discoveries for this research
+    // Load discoveries and papers concurrently
     let discoveriesHtml = '';
+    let papersHtml = '';
     try {
-      const discoveries = await loadDiscoveries(e.id);
+      const [discoveries, papers] = await Promise.all([
+        loadDiscoveries(e.id),
+        loadPapers(e.id),
+      ]);
+
+      // ---- Discoveries timeline ----
       if (discoveries && discoveries.length > 0) {
         const discoveriesItems = discoveries.map(d => {
           const typeIcon = { discovery: '🔬', paper: '📄', insight: '💡', submission: '📬' }[d.type] || '🔬';
@@ -360,8 +378,38 @@
           </div>
         `;
       }
+
+      // ---- Papers list ----
+      if (papers && papers.length > 0) {
+        const statusIcon = { draft: '📝', preprint: '📤', submitted: '📬', 'under review': '🔍', published: '✅', archived: '📦' };
+        const papersItems = papers.map(p => {
+          const icon = statusIcon[p.status] || '📄';
+          const venue = (p.venue || p.journal) ? ' · <span style="color:var(--accent)">' + escHtml(p.venue || p.journal) + '</span>' : '';
+          const figshareOrDoi = p.doi || p.figshare;
+          const doiLink = figshareOrDoi ? ' · <a href="https://doi.org/' + escAttr(figshareOrDoi) + '" target="_blank" style="color:var(--accent);text-decoration:none;font-size:11px">DOI ↗</a>' : '';
+          return `
+            <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-light,#f0f0f0)">
+              <div style="flex-shrink:0;font-size:16px;line-height:1;padding-top:2px">${icon}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px">${escHtml(p.title)}</div>
+                <div style="font-size:11px;color:var(--text-tertiary)">
+                  ${escHtml(p.date || '')}${venue}${doiLink}
+                  <span style="margin-left:6px;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;background:${p.status === 'published' ? '#d1fae5' : p.status === 'submitted' ? '#fef3c7' : '#f1f5f9'};color:${p.status === 'published' ? '#065f46' : p.status === 'submitted' ? '#92400e' : '#64748b'}">${capitalize(escHtml(p.status || 'draft'))}</span>
+                </div>
+                ${p.authors ? '<div style="font-size:11px;color:var(--text-secondary);margin-top:2px">' + escHtml(p.authors) + '</div>' : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+        papersHtml = `
+          <div class="panel" style="margin-bottom:12px">
+            <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;margin-bottom:12px">Papers (${papers.length})</div>
+            <div>${papersItems}</div>
+          </div>
+        `;
+      }
     } catch (err) {
-      console.warn('Failed to load discoveries:', err);
+      console.warn('Failed to load research files:', err);
     }
 
     document.getElementById('exp-detail-content').innerHTML = `
@@ -379,6 +427,7 @@
         ${scoreDisplay}
       </div>
       ${discoveriesHtml}
+      ${papersHtml}
       ${e.result ? `<div class="panel" style="margin-bottom:12px">
         <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;margin-bottom:8px">Result</div>
         <div style="font-size:13px;line-height:1.6;color:var(--text)">${escHtml(e.result)}</div>
@@ -543,23 +592,42 @@
   }
 
   /**
-   * Load discoveries.json for a research from workspace
+   * Load a JSON file from the research workspace directory.
+   * Uses the correct preload APIs: system.workspace() + files.read()
    */
-  async function loadDiscoveries(expId) {
-    if (!window.asrp || !window.asrp.fs) return null;
+  async function loadResearchFile(expId, fileName) {
+    if (!window.asrp || !window.asrp.system || !window.asrp.files) return null;
     try {
-      const workspace = await window.asrp.fs.getWorkspace();
-      const discoveriesPath = `${workspace}/researches/${expId}/discoveries.json`;
-      const exists = await window.asrp.fs.exists(discoveriesPath);
-      if (!exists) return null;
-      const content = await window.asrp.fs.readFile(discoveriesPath, 'utf-8');
-      const discoveries = JSON.parse(content);
-      // Sort by date descending (newest first)
-      return discoveries.sort((a, b) => b.date.localeCompare(a.date));
+      const wsResult = await window.asrp.system.workspace();
+      if (!wsResult || !wsResult.path) return null;
+      var filePath = wsResult.path + '/researches/' + expId + '/' + fileName;
+      var result = await window.asrp.files.read(filePath);
+      if (!result || !result.success || !result.content) return null;
+      return JSON.parse(result.content);
     } catch (err) {
-      console.error('Failed to load discoveries:', err);
+      console.warn('Failed to load ' + fileName + ' for ' + expId + ':', err);
       return null;
     }
+  }
+
+  /**
+   * Load discoveries.json for a research
+   */
+  async function loadDiscoveries(expId) {
+    var data = await loadResearchFile(expId, 'discoveries.json');
+    if (!Array.isArray(data)) return null;
+    // Sort by date descending (newest first)
+    return data.sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
+  }
+
+  /**
+   * Load papers.json for a research
+   */
+  async function loadPapers(expId) {
+    var data = await loadResearchFile(expId, 'papers.json');
+    if (!Array.isArray(data)) return null;
+    // Sort by date descending (newest first)
+    return data.sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
   }
 
   function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

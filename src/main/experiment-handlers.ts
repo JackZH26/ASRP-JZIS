@@ -167,10 +167,16 @@ function ensureResearchDirs(researchId: string): void {
  */
 function syncSampleResearches(): void {
   const workspace = getWorkspaceBase();
-  const appRoot = path.join(__dirname, '../..');
-  const sampleDir = path.join(appRoot, 'resources', 'sample-researches');
-  
-  if (!fs.existsSync(sampleDir)) {
+
+  // Resolve sample-researches dir: try extraResources first (packaged), then dev fallback
+  const candidates = [
+    path.join(process.resourcesPath, 'resources', 'sample-researches'), // packaged (extraResources)
+    path.join(__dirname, '..', '..', 'resources', 'sample-researches'), // dev (project root)
+  ];
+  const sampleDir = candidates.find(p => fs.existsSync(p));
+
+  if (!sampleDir) {
+    console.log('[samples] No sample-researches directory found, tried:', candidates);
     return; // No samples to sync
   }
 
