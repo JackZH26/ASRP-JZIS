@@ -267,6 +267,8 @@ window.__i18n_zh = {
     title: '论文',
     subtitle: '按研究课题浏览智能体撰写的论文',
     refresh: '刷新',
+    examples: '示例',
+    sample: '示例',
     tab_papers: '论文',
     tab_authors: '作者',
     projects: '项目',

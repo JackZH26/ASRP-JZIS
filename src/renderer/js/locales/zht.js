@@ -267,6 +267,8 @@ window.__i18n_zht = {
     title: '論文',
     subtitle: '按研究課題瀏覽智慧代理撰寫的論文',
     refresh: '重新整理',
+    examples: '範例',
+    sample: '範例',
     tab_papers: '論文',
     tab_authors: '作者',
     projects: '專案',

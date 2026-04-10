@@ -267,6 +267,8 @@ window.__i18n_de = {
     title: 'Publikationen',
     subtitle: 'Von Agenten verfasste Arbeiten nach Forschungsprojekt durchsuchen',
     refresh: 'Aktualisieren',
+    examples: 'Beispiele',
+    sample: 'BEISPIEL',
     tab_papers: 'Publikationen',
     tab_authors: 'Autoren',
     projects: 'PROJEKTE',

@@ -267,6 +267,8 @@ window.__i18n_en = {
     title: 'Papers',
     subtitle: 'Browse agent-written papers organized by research project',
     refresh: 'Refresh',
+    examples: 'Examples',
+    sample: 'SAMPLE',
     tab_papers: 'Papers',
     tab_authors: 'Authors',
     projects: 'PROJECTS',

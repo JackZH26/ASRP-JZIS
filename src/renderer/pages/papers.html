@@ -4,7 +4,12 @@
     <h1 data-i18n="papers.title">Papers</h1>
     <p data-i18n="papers.subtitle">Browse agent-written papers organized by research project</p>
   </div>
-  <div class="actions">
+  <div class="actions" style="display:flex;align-items:center;gap:14px">
+    <label class="toggle-switch-label" id="papers-examples-toggle-label" style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;color:var(--text-secondary);white-space:nowrap;user-select:none">
+      <span data-i18n="papers.examples">Examples</span>
+      <input type="checkbox" id="papers-show-samples-toggle" checked onchange="togglePaperSamples()" style="display:none">
+      <span class="toggle-track"></span>
+    </label>
     <button class="btn btn-outline btn-sm" onclick="refreshPapers()" data-i18n="papers.refresh">Refresh</button>
   </div>
 </div>
@@ -142,6 +147,31 @@
 .project-author-row { display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border-light,rgba(0,0,0,0.04)); }
 .project-author-row:last-child { border-bottom:none; }
 .project-label { font-size:13px;font-weight:600;color:var(--text);min-width:140px; }
+.paper-tree-item.sample-dir { }
+.paper-tree-item.sample-dir .sample-badge {
+  font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:4px;font-weight:600;margin-left:4px;
+}
+.paper-link-row {
+  display:flex;align-items:center;gap:8px;padding:4px 0;font-size:11px;color:var(--text-tertiary);
+}
+.paper-link-row a { color:var(--accent);text-decoration:none; }
+.paper-link-row a:hover { text-decoration:underline; }
+.paper-status-badge {
+  font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;
+  background:#e0e7ff;color:#3730a3;
+}
+/* Claude-style toggle switch (shared with researches page) */
+.toggle-track {
+  position:relative;display:inline-block;width:36px;height:20px;
+  background:#d1d5db;border-radius:10px;transition:background 0.2s;flex-shrink:0;
+}
+.toggle-track::after {
+  content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;
+  background:#fff;border-radius:50%;transition:transform 0.2s;
+  box-shadow:0 1px 3px rgba(0,0,0,0.15);
+}
+input:checked + .toggle-track { background:var(--accent,#4a8c6a); }
+input:checked + .toggle-track::after { transform:translateX(16px); }
 </style>
 
 <script>
@@ -156,10 +186,75 @@
   };
 
   let paperDirs = [];
+  let realPaperDirs = [];
   let allAuthors = [];
   let projectDefaults = [];
   let allResearches = [];
   let selectedDir = null;
+  let showPaperSamples = localStorage.getItem('asrp_show_paper_samples') !== 'false'; // default true
+
+  // Sample paper directories — mirror sample-researches projects
+  const SAMPLE_PAPER_DIRS = [
+    {
+      researchId: 'sample-R001-number-theory',
+      researchLabel: 'R001 — Number Theory & the Riemann Hypothesis',
+      isSample: true,
+      papers: [
+        { name: 'Zhou_Strong-Log-Concavity-Riemann-Jacobi-Kernel_2026-03-28.pdf', date: '2026-03-28', figshare: '10.6084/m9.figshare.31879441', version: 'v1' },
+        { name: 'Zhou_Seven-Perspectives-Riemann-Hypothesis_2026-03-20.pdf', date: '2026-03-20', figshare: '10.6084/m9.figshare.31817662', version: 'v2' },
+        { name: 'Zhou_Lattice-Green-Functions-Higher-Dimensions_2026-03-18.pdf', date: '2026-03-18', figshare: '10.6084/m9.figshare.31802359', version: 'v1' },
+        { name: 'Zhou_Mahler-Measures-Bertin-Touafek-Family_2026-03-18.pdf', date: '2026-03-18', figshare: '10.6084/m9.figshare.31811689', version: 'v1' },
+        { name: 'Zhou_Stokes-Multipliers-Anharmonic-Oscillators_2026-03-17.pdf', date: '2026-03-17', figshare: '10.6084/m9.figshare.31796332', arxiv: '2603.27613', version: 'v1' },
+        { name: 'Zhou_Prime-Structure-Electromagnetic-Constants_2026-03-17.pdf', date: '2026-03-17', figshare: '10.6084/m9.figshare.31758985', version: 'v1' },
+        { name: 'Zhou_Zeta-Reformulation-Wylers-Formula_2026-03-16.pdf', date: '2026-03-16', figshare: '10.6084/m9.figshare.31771282', version: 'v1' },
+      ],
+    },
+    {
+      researchId: 'sample-R002-superconductivity',
+      researchLabel: 'R002 — Mathematical Structure of BCS & Room-Temp Superconductivity',
+      isSample: true,
+      papers: [
+        { name: 'Zhou_Two-Channel-Allen-Dynes-Framework_2026-03-24.pdf', date: '2026-03-31', figshare: '10.6084/m9.figshare.31889344', arxiv: '2604.04719', version: 'v5.8' },
+        { name: 'Zhou_Quantum-Metric-Universal-Diagnostic_2026-03-23.pdf', date: '2026-03-23', figshare: '10.6084/m9.figshare.31833382', version: 'v3.4' },
+        { name: 'Zhou_MATBG-Superfluid-Weight-Decomposition_2026-03-20.pdf', date: '2026-03-20', figshare: '10.6084/m9.figshare.31820038', arxiv: '2604.05994', version: 'v2' },
+      ],
+    },
+    {
+      researchId: 'sample-R003-fundamental-physics',
+      researchLabel: 'R003 — Fundamental Physics: Fine-Structure Constant & Membrane Models',
+      isSample: true,
+      papers: [
+        { name: 'Zhou_Four-Layer-Arithmetic-Structure-Alpha_2026-03-30.pdf', date: '2026-03-30', figshare: '10.6084/m9.figshare.31891384', version: 'v1' },
+        { name: 'Zhou_Photon-Membrane-Model_2026-03-28.pdf', date: '2026-03-28', figshare: '10.6084/m9.figshare.31899475', version: 'v2' },
+        { name: 'Zhou_Three-Layer-Structure-Alpha_2026-03-27.pdf', date: '2026-03-27', figshare: '10.6084/m9.figshare.31866163', version: 'v1' },
+        { name: 'Zhou_Electron-Membrane-Model_2026-03-26.pdf', date: '2026-03-26', figshare: '10.6084/m9.figshare.31898347', version: 'v4' },
+        { name: 'Zhou_Mahler-Measures-Bertin-Touafek-Family_2026-03-18.pdf', date: '2026-03-18', figshare: '10.6084/m9.figshare.31811689', version: 'v1' },
+        { name: 'Zhou_Arithmetic-of-Light_2026-03-16.pdf', date: '2026-03-16', figshare: '10.6084/m9.figshare.31744981', version: 'v1' },
+      ],
+    },
+  ];
+
+  function buildSamplePapers() {
+    return SAMPLE_PAPER_DIRS.map(function(d) {
+      return {
+        researchId: d.researchId,
+        researchLabel: d.researchLabel,
+        isSample: true,
+        papers: d.papers.map(function(p) {
+          return {
+            name: p.name,
+            path: '',
+            size: 0,
+            modified: p.date,
+            isSample: true,
+            figshare: p.figshare || null,
+            arxiv: p.arxiv || null,
+            version: p.version || null,
+          };
+        }),
+      };
+    });
+  }
 
   function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function formatSize(bytes) {
@@ -179,8 +274,13 @@
 
   // ===== Papers tab =====
   async function loadPaperTree() {
-    if (!window.asrp) return;
     var tree = document.getElementById('paper-tree');
+    if (!window.asrp) {
+      realPaperDirs = [];
+      composePaperDirs();
+      renderPaperTree();
+      return;
+    }
     tree.innerHTML = '<div class="loading" style="padding:20px;justify-content:center"><div class="spinner"></div></div>';
 
     try {
@@ -190,17 +290,17 @@
 
       // Scan paper directories
       var res = await window.asrp.papers.scan();
-      paperDirs = res.directories || [];
+      realPaperDirs = res.directories || [];
 
       // If scan returned empty, show all research dirs + General as placeholders
-      if (paperDirs.length === 0) {
-        paperDirs = allResearches.filter(function(r) { return r.status !== 'archived'; }).map(function(r) {
+      if (realPaperDirs.length === 0) {
+        realPaperDirs = allResearches.filter(function(r) { return r.status !== 'archived'; }).map(function(r) {
           return { researchId: r.id, researchLabel: (r.code || r.id) + ' — ' + (r.title || 'Untitled'), papers: [] };
         });
-        paperDirs.push({ researchId: 'general', researchLabel: 'General', papers: [] });
+        realPaperDirs.push({ researchId: 'general', researchLabel: 'General', papers: [] });
       } else {
         // Enhance labels with research title and code
-        paperDirs = paperDirs.map(function(d) {
+        realPaperDirs = realPaperDirs.map(function(d) {
           if (d.researchId === 'general') return d;
           var research = allResearches.find(function(r) { return r.id === d.researchId; });
           if (research) {
@@ -210,11 +310,42 @@
         });
       }
 
+      composePaperDirs();
       renderPaperTree();
     } catch (e) {
       tree.innerHTML = '<div style="padding:14px;font-size:12px;color:var(--error)">Error: ' + escHtml(e.message) + '</div>';
     }
   }
+
+  function composePaperDirs() {
+    paperDirs = (realPaperDirs || []).slice();
+    if (showPaperSamples) {
+      paperDirs = paperDirs.concat(buildSamplePapers());
+    }
+    // If selectedDir was a sample that's now hidden, clear it
+    if (selectedDir && selectedDir.isSample && !showPaperSamples) {
+      selectedDir = null;
+      var titleEl = document.getElementById('papers-dir-title');
+      var countEl = document.getElementById('papers-dir-count');
+      if (titleEl) titleEl.textContent = t('papers.select_project');
+      if (countEl) countEl.textContent = '';
+      var container = document.getElementById('papers-file-list');
+      if (container) {
+        container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-tertiary);padding:40px">' +
+          '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;opacity:0.4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>' +
+          '<p style="font-size:13px">' + t('papers.select_hint') + '</p>' +
+        '</div>';
+      }
+    }
+  }
+
+  window.togglePaperSamples = function() {
+    var toggle = document.getElementById('papers-show-samples-toggle');
+    showPaperSamples = toggle ? toggle.checked : true;
+    localStorage.setItem('asrp_show_paper_samples', String(showPaperSamples));
+    composePaperDirs();
+    renderPaperTree();
+  };
 
   function renderPaperTree() {
     var tree = document.getElementById('paper-tree');
@@ -224,10 +355,11 @@
     }
     tree.innerHTML = paperDirs.map(function(d) {
       var active = selectedDir && selectedDir.researchId === d.researchId;
-      var isGeneral = d.researchId === 'general';
-      return '<div class="paper-tree-item' + (active ? ' active' : '') + '" onclick="selectPaperDir(\'' + escHtml(d.researchId).replace(/'/g, "\\'") + '\')">' +
+      var sampleCls = d.isSample ? ' sample-dir' : '';
+      var sampleBadge = d.isSample ? '<span class="sample-badge">' + escHtml(t('papers.sample')) + '</span>' : '';
+      return '<div class="paper-tree-item' + (active ? ' active' : '') + sampleCls + '" onclick="selectPaperDir(\'' + escHtml(d.researchId).replace(/'/g, "\\'") + '\')">' +
         '<span class="paper-tree-icon">' + IC.folder + '</span>' +
-        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(d.researchLabel) + '</span>' +
+        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">' + escHtml(d.researchLabel) + sampleBadge + '</span>' +
         '<span class="paper-tree-count">' + d.papers.length + '</span>' +
       '</div>';
     }).join('');
@@ -259,17 +391,38 @@
 
     container.innerHTML = selectedDir.papers.map(function(p) {
       var ext = (p.name.split('.').pop() || '').toLowerCase();
-      return '<div class="paper-file-row" onclick="openPaperFile(\'' + escHtml(p.path).replace(/'/g, "\\'") + '\', \'' + escHtml(p.name).replace(/'/g, "\\'") + '\')">' +
+      var isSamplePaper = p.isSample === true;
+      var links = '';
+      if (isSamplePaper) {
+        var linkParts = [];
+        if (p.figshare) linkParts.push('<a href="https://doi.org/' + escHtml(p.figshare) + '" target="_blank" onclick="event.stopPropagation()">Figshare ↗</a>');
+        if (p.arxiv) linkParts.push('<a href="https://arxiv.org/abs/' + escHtml(p.arxiv) + '" target="_blank" onclick="event.stopPropagation()">arXiv ↗</a>');
+        if (p.version) linkParts.push('<span>' + escHtml(p.version) + '</span>');
+        if (linkParts.length) links = '<div class="paper-link-row">' + linkParts.join(' · ') + '</div>';
+      }
+      var meta = isSamplePaper
+        ? escHtml(p.modified) + ' · PDF <span class="paper-status-badge" style="margin-left:6px">' + escHtml(t('papers.sample')) + '</span>'
+        : escHtml(p.modified) + ' · ' + ext.toUpperCase();
+      var sizeOrEmpty = isSamplePaper ? '' : '<span class="paper-file-size">' + formatSize(p.size) + '</span>';
+      var openClick = isSamplePaper && p.figshare
+        ? 'openExternalUrl(\'https://doi.org/' + escHtml(p.figshare).replace(/'/g, "\\'") + '\')'
+        : 'openPaperFile(\'' + escHtml(p.path).replace(/'/g, "\\'") + '\', \'' + escHtml(p.name).replace(/'/g, "\\'") + '\')';
+      return '<div class="paper-file-row" onclick="' + openClick + '">' +
         '<span class="paper-file-icon">' + IC.file + '</span>' +
         '<div class="paper-file-info">' +
           '<div class="paper-file-name">' + escHtml(p.name) + '</div>' +
-          '<div class="paper-file-meta">' + escHtml(p.modified) + ' · ' + ext.toUpperCase() + '</div>' +
+          '<div class="paper-file-meta">' + meta + '</div>' +
+          links +
         '</div>' +
-        '<span class="paper-file-size">' + formatSize(p.size) + '</span>' +
-        '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openExternal(\'' + escHtml(p.path).replace(/'/g, "\\'") + '\')" title="' + t('papers.open_viewer') + '" style="padding:4px">' + IC.open + '</button>' +
+        sizeOrEmpty +
+        '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();' + openClick + '" title="' + t('papers.open_viewer') + '" style="padding:4px">' + IC.open + '</button>' +
       '</div>';
     }).join('');
   }
+
+  window.openExternalUrl = function(url) {
+    try { window.open(url, '_blank'); } catch (e) {}
+  };
 
   window.openPaperFile = async function(filePath, fileName) {
     // Open paper in Files page by navigating there
@@ -430,6 +583,8 @@
   };
 
   // ===== Init =====
+  var _samplesToggle = document.getElementById('papers-show-samples-toggle');
+  if (_samplesToggle) _samplesToggle.checked = showPaperSamples;
   loadPaperTree();
   if (typeof translatePage === 'function') translatePage();
   function _papersOnLang() {
