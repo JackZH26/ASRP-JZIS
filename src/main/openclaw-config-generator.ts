@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { openclawManager } from './openclaw-manager';
 import * as safeKeyStore from './safe-key-store';
+import { linkSharedDirsForAgent } from './workspace-shared-dirs';
 
 export interface AgentSetupConfig {
   name: string;
@@ -163,6 +164,12 @@ export function generateAllConfigs(
       const agentWorkspace = path.join(wsDir, 'system', `agent-${roleName}`);
       fs.mkdirSync(agentWorkspace, { recursive: true });
 
+      // SRW-v3.1: promote workflows/literature/messages to shared root and
+      // symlink them into this agent's workspace. Without this the agent
+      // writes SRW deliverables to its own silo and the other agents (and
+      // the desktop scheduler) cannot see them. See workspace-shared-dirs.ts.
+      linkSharedDirsForAgent(wsDir, agentWorkspace);
+
       const soulTemplate =
         SOUL_TEMPLATES[normalizedRole] ||
         SOUL_TEMPLATES[agent.role] ||
@@ -192,6 +199,14 @@ export function generateAllConfigs(
           discord: {
             enabled: true,
             token: agent.discordToken,
+            // SRW-v3.1: accept @mentions from other ASRP bots.
+            // OpenClaw discord runtime defaults to dropping ALL bot-author
+            // messages (message-handler allowBots=off), which silently broke
+            // Theorist→Engineer and Reviewer→Theorist dispatch. "mentions"
+            // mode still drops bot chatter that does NOT @mention us, and
+            // self-messages are always dropped at the botUserId layer, so
+            // there is no self-loop risk.
+            allowBots: 'mentions',
             groupPolicy: 'allowlist',
             guilds: {
               // Theorist always replies; other roles only reply when @mentioned

@@ -11,6 +11,7 @@ import * as os from 'os';
 import * as fs from 'fs';
 import { app } from 'electron';
 import { EventEmitter } from 'events';
+import { selfHealAgentWorkspaces } from './workspace-shared-dirs';
 
 const BASE_PORT = 18801;
 // OpenClaw gateway uses 2+ ports per instance (main port + internal ports at offset +2).
@@ -464,6 +465,16 @@ class OpenClawManager extends EventEmitter {
 
     if (this.instances.size === 0) {
       return { results: [{ name: 'all', success: false, error: 'No agents configured. Complete setup first.' }] };
+    }
+
+    // SRW-v3.1: migrate legacy per-agent workflows/literature/messages
+    // subdirs into the shared workspace root and replace them with symlinks
+    // so Theorist / Engineer / Reviewer all see the same SRW tree. Safe &
+    // idempotent — only does real work the first time after upgrade.
+    try {
+      selfHealAgentWorkspaces();
+    } catch (err) {
+      console.warn('[OpenClaw] workspace self-heal failed:', err);
     }
 
     const results: Array<{ name: string; success: boolean; error?: string }> = [];
