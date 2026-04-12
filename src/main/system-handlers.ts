@@ -7,6 +7,7 @@ import { runSelfTest } from './self-test';
 import * as safeKeyStore from './safe-key-store';
 import { openclawManager } from './openclaw-manager';
 import { generateAllConfigs, hasConfig } from './openclaw-config-generator';
+import { appendAudit } from './audit-store';
 import * as keyValidator from './key-validator';
 import {
   RESOURCES_PATH,
@@ -398,21 +399,49 @@ export function registerGatewayHandlers(): void {
         }
       } catch { /* ignore */ }
     }
-    return openclawManager.startAll();
+    const result = await openclawManager.startAll();
+    const okCount = (result.results || []).filter(r => r.success).length;
+    const failCount = (result.results || []).filter(r => !r.success).length;
+    appendAudit({
+      type: 'agent',
+      agent: 'System',
+      message: failCount > 0
+        ? `Gateway start: ${okCount} agent(s) up, ${failCount} failed`
+        : `Gateway started: ${okCount} agent(s) online`,
+      severity: failCount > 0 ? 'warn' : 'info',
+    });
+    return result;
   }));
 
   ipcMain.handle('gateway:stop', withAuth(async () => {
     openclawManager.stopAll();
+    appendAudit({
+      type: 'agent',
+      agent: 'System',
+      message: 'Gateway stopped: all agents shut down',
+    });
     return { success: true };
   }));
 
   ipcMain.handle('gateway:restart', withAuth(async (_userId: number, agentName?: string) => {
     if (agentName) {
-      return openclawManager.restartAgent(agentName);
+      const r = openclawManager.restartAgent(agentName);
+      appendAudit({
+        type: 'agent',
+        agent: agentName,
+        message: `Restarted agent ${agentName}`,
+      });
+      return r;
     }
     openclawManager.stopAll();
     await new Promise(resolve => setTimeout(resolve, 1000));
-    return openclawManager.startAll();
+    const result = await openclawManager.startAll();
+    appendAudit({
+      type: 'agent',
+      agent: 'System',
+      message: 'Gateway restarted: all agents cycled',
+    });
+    return result;
   }));
 
   ipcMain.handle('gateway:install', withAuth(async () => {

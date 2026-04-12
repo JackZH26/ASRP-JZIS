@@ -102,6 +102,9 @@
   // Active filter sets
   let activeTypes = new Set(['research','agent','api','file','system','config']);
   let activeAgents = new Set(['Theorist','Engineer','Assistant','System']);
+  // Agent names that have a dedicated chip — anything else (e.g. bot display
+  // names) is shown unconditionally so unknown actors aren't silently hidden.
+  const KNOWN_AGENT_CHIPS = new Set(['Theorist','Engineer','Assistant','System']);
 
   // MECE log types:
   // research — research lifecycle: register, edit, archive, status change, scoring
@@ -110,27 +113,6 @@
   // file     — file operations: upload, download, paper management
   // system   — platform events: health checks, backups, updates, startup/shutdown
   // config   — configuration: settings changes, workspace changes, user management
-
-  const MOCK_ENTRIES = [
-    { id:1, timestamp:'2026-04-03T10:03:00Z', agent:'Engineer', type:'research', research:'R003', message:'EXP-003: Exact KS gap computed for d=3.0, DD=+0.215 Hartree (tol=1e-6 converged)', tokens:2840 },
-    { id:2, timestamp:'2026-04-03T09:58:00Z', agent:'Engineer', type:'api', research:'R003', message:'Claude Opus query: reverse-KS analysis prompt (1.2k in / 0.8k out)', tokens:2000 },
-    { id:3, timestamp:'2026-04-03T09:45:00Z', agent:'Theorist', type:'research', research:'R004', message:'Registered R004: Fibonacci lattice reduces DFT ill-conditioning for N>100', tokens:0 },
-    { id:4, timestamp:'2026-04-03T09:30:00Z', agent:'System', type:'system', research:'', message:'Daily backup completed (workspace: 2.4 MB, 47 files)', tokens:0 },
-    { id:5, timestamp:'2026-04-03T09:15:00Z', agent:'Engineer', type:'agent', research:'R003', message:'Started iDEA reverse-KS task (mu=3.0, tol=1e-6, grid=512)', tokens:0 },
-    { id:6, timestamp:'2026-04-03T09:00:00Z', agent:'System', type:'system', research:'', message:'Health check: all agents online, disk 23%, GPU idle', tokens:0 },
-    { id:7, timestamp:'2026-04-02T18:30:00Z', agent:'Assistant', type:'file', research:'R002', message:'Literature search: 12 papers retrieved for DD correction topic', tokens:1450 },
-    { id:8, timestamp:'2026-04-02T17:15:00Z', agent:'Theorist', type:'research', research:'R001', message:'Paper review R2 complete — HOLD, awaiting EXP-003 results', tokens:3200 },
-    { id:9, timestamp:'2026-04-02T16:00:00Z', agent:'Theorist', type:'api', research:'R001', message:'Claude Opus query: equation (3) sign analysis (2.1k in / 1.5k out)', tokens:3600 },
-    { id:10, timestamp:'2026-04-02T14:45:00Z', agent:'Engineer', type:'research', research:'R002', message:'R002 REFUTED: Prime-spaced well DD remains positive (min=0.083 Hartree)', tokens:0 },
-    { id:11, timestamp:'2026-04-02T13:30:00Z', agent:'Engineer', type:'agent', research:'R002', message:'Scanning d in {2,3,5,7,11} Bohr (prime spacing hypothesis)', tokens:0 },
-    { id:12, timestamp:'2026-04-02T12:00:00Z', agent:'Theorist', type:'research', research:'R003', message:'Registered R003: Multi-well DD at d=5,6,7 with exact KS gap', tokens:0 },
-    { id:13, timestamp:'2026-04-01T16:30:00Z', agent:'Engineer', type:'research', research:'R001', message:'R001 CONFIRMED: LDA overbinding 0.103% vs exact (threshold 1%)', tokens:0 },
-    { id:14, timestamp:'2026-04-01T10:00:00Z', agent:'Theorist', type:'research', research:'R001', message:'Registered R001: LDA overbinding >1% for 2e atom', tokens:0 },
-    { id:15, timestamp:'2026-03-31T18:00:00Z', agent:'Engineer', type:'research', research:'R005', message:'R005 CONFIRMED: Membrane model RMSE=3.2% vs Stodolna 2013', tokens:0 },
-    { id:16, timestamp:'2026-03-31T09:00:00Z', agent:'System', type:'config', research:'', message:'iDEA v2.3.1 installed, dependency check passed', tokens:0 },
-    { id:17, timestamp:'2026-03-30T22:00:00Z', agent:'System', type:'api', research:'', message:'OpenRouter rate limit approached (95% hourly quota) — throttling applied', tokens:0 },
-    { id:18, timestamp:'2026-03-30T15:00:00Z', agent:'Assistant', type:'file', research:'', message:'arXiv query: "double delta DFT" — 3 new preprints retrieved', tokens:680 },
-  ];
 
   // Populate research filter dropdown from entries
   function populateResearchFilter() {
@@ -143,33 +125,51 @@
   }
 
   window.loadAuditLog = async function() {
+    displayOffset = 0;
     if (!window.asrp) {
-      allEntries = MOCK_ENTRIES;
+      allEntries = [];
       populateResearchFilter();
       applyFilters();
       return;
     }
     try {
-      const { entries, total } = await window.asrp.audit.list({ limit: PAGE_SIZE, offset: 0 });
-      allEntries = entries.length ? entries : MOCK_ENTRIES;
-    } catch {
-      allEntries = MOCK_ENTRIES;
+      // Pull a generous initial slice (up to 500 entries) so client-side filters
+      // have something to work with. Older entries are paginated via loadMoreAudit.
+      const { entries, total } = await window.asrp.audit.list({ limit: 500, offset: 0 });
+      allEntries = Array.isArray(entries) ? entries : [];
+      const totalCount = (typeof total === 'number') ? total : allEntries.length;
+      const moreWrap = document.getElementById('load-more-wrap');
+      if (moreWrap) moreWrap.style.display = totalCount > allEntries.length ? 'block' : 'none';
+    } catch (err) {
+      console.warn('[audit] list failed:', err);
+      allEntries = [];
     }
     populateResearchFilter();
     applyFilters();
   };
 
   window.applyFilters = function() {
-    const dateFrom = document.getElementById('date-from').value;
-    const dateTo = document.getElementById('date-to').value;
+    const dateFrom = document.getElementById('date-from').value;  // YYYY-MM-DD
+    const dateTo = document.getElementById('date-to').value;      // YYYY-MM-DD
     const researchFilter = document.getElementById('log-research-filter').value;
+
+    // Convert YYYY-MM-DD to Date for unambiguous comparison against ISO timestamps
+    const fromMs = dateFrom ? new Date(dateFrom + 'T00:00:00').getTime() : null;
+    const toMs = dateTo ? new Date(dateTo + 'T23:59:59.999').getTime() : null;
 
     let filtered = allEntries.filter(e => {
       if (!activeTypes.has(e.type || 'system')) return false;
-      if (!activeAgents.has(e.agent || 'System')) return false;
+      const agentName = e.agent || 'System';
+      // Known chip → respect chip state. Unknown agent (bot display name etc.) → always pass.
+      if (KNOWN_AGENT_CHIPS.has(agentName) && !activeAgents.has(agentName)) return false;
       if (researchFilter && e.research !== researchFilter) return false;
-      if (dateFrom && e.timestamp && e.timestamp < dateFrom) return false;
-      if (dateTo && e.timestamp && e.timestamp > dateTo + 'T23:59:59Z') return false;
+      if (e.timestamp) {
+        const ms = Date.parse(e.timestamp);
+        if (!isNaN(ms)) {
+          if (fromMs !== null && ms < fromMs) return false;
+          if (toMs !== null && ms > toMs) return false;
+        }
+      }
       return true;
     });
 
@@ -212,33 +212,58 @@
 
   window.loadMoreAudit = async function() {
     if (!window.asrp) return;
-    displayOffset += PAGE_SIZE;
+    const nextOffset = allEntries.length;
     try {
-      const { entries } = await window.asrp.audit.list({ limit: PAGE_SIZE, offset: displayOffset });
-      if (entries.length) {
+      const { entries, total } = await window.asrp.audit.list({ limit: 500, offset: nextOffset });
+      if (Array.isArray(entries) && entries.length) {
         allEntries = [...allEntries, ...entries];
+        populateResearchFilter();
         applyFilters();
       }
-    } catch { /* ignore */ }
+      const totalCount = (typeof total === 'number') ? total : allEntries.length;
+      const moreWrap = document.getElementById('load-more-wrap');
+      if (moreWrap) moreWrap.style.display = totalCount > allEntries.length ? 'block' : 'none';
+    } catch (err) {
+      console.warn('[audit] load more failed:', err);
+    }
   };
 
-  // CSV Export
+  // CSV Export — pulls the full audit log from the backend so the export
+  // isn't capped to the entries currently loaded in the UI.
   window.exportCSV = async function() {
-    const header = 'timestamp,type,agent,research,message,tokens\n';
-    const rows = allEntries.map(e =>
-      [e.timestamp||'', e.type||'', e.agent||'', e.research||'', '"' + (e.message||'').replace(/"/g,'""') + '"', e.tokens||0].join(',')
-    ).join('\n');
-    const csv = header + rows;
+    if (!window.asrp) return;
 
-    if (window.asrp) {
-      const dialog = await window.asrp.files.saveDialog({
-        defaultPath: t('audit.export_filename'),
-        filters: [{ name: t('audit.csv_label'), extensions: ['csv'] }],
-        title: t('audit.export_title'),
-      });
-      if (!dialog.canceled && dialog.filePath) {
-        const result = await window.asrp.files.write(dialog.filePath, csv);
-        if (result.success && typeof Toast !== 'undefined') Toast.show(t('audit.exported', { count: allEntries.length }), 'success');
+    let csv = '';
+    let exportedCount = allEntries.length;
+    try {
+      const result = await window.asrp.audit.export();
+      if (result && result.success && typeof result.csv === 'string') {
+        csv = result.csv;
+        // Count rows (excluding header) for the toast
+        exportedCount = Math.max(0, csv.split('\n').filter(Boolean).length - 1);
+      }
+    } catch (err) {
+      console.warn('[audit] export failed, falling back to in-memory entries:', err);
+    }
+
+    if (!csv) {
+      // Fallback: build from whatever the UI has loaded
+      const header = 'timestamp,type,agent,research,message,tokens\n';
+      const rows = allEntries.map(e =>
+        [e.timestamp||'', e.type||'', e.agent||'', e.research||'', '"' + (e.message||'').replace(/"/g,'""') + '"', e.tokens||0].join(',')
+      ).join('\n');
+      csv = header + rows + '\n';
+    }
+
+    const dialog = await window.asrp.files.saveDialog({
+      defaultPath: t('audit.export_filename'),
+      filters: [{ name: t('audit.csv_label'), extensions: ['csv'] }],
+      title: t('audit.export_title'),
+    });
+    if (!dialog.canceled && dialog.filePath) {
+      const writeRes = await window.asrp.files.write(dialog.filePath, csv);
+      if (writeRes.success && typeof Toast !== 'undefined') {
+        Toast.show(t('audit.exported', { count: exportedCount }), 'success');
       }
     }
   };

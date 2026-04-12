@@ -223,7 +223,16 @@ const workflows = {
 const audit = {
   list: (options?: { limit?: number; offset?: number }) =>
     invoke<{
-      entries: Array<{ time: string; agent: string; message: string; severity: string }>;
+      entries: Array<{
+        id: string;
+        timestamp: string;
+        type: string;
+        agent: string;
+        research?: string;
+        message: string;
+        tokens?: number;
+        severity?: string;
+      }>;
       total: number;
     }>('audit:list', options),
 
@@ -231,7 +240,7 @@ const audit = {
     invoke<{ success: boolean; error?: string }>('audit:log', token, entry),
 
   export: () =>
-    invoke<{ success: boolean; message?: string; error?: string }>('audit:export'),
+    invoke<{ success: boolean; csv?: string; error?: string }>('audit:export'),
 };
 
 // ---- Settings API ----

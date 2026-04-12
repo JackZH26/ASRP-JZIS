@@ -19,6 +19,7 @@ import * as openclawBridge from './openclaw-bridge';
 import { autoUpdater } from './auto-updater';
 import { openclawManager } from './openclaw-manager';
 import { hasConfig } from './openclaw-config-generator';
+import { appendAudit, flushAuditNow } from './audit-store';
 
 // Build metadata (generated during prebuild)
 let buildInfo = { commit: 'dev', date: 'dev' };
@@ -377,6 +378,16 @@ app.whenReady().then(() => {
   createAppMenu();
   registerIpcHandlers();
 
+  // Record startup in the audit log so the user can see when the app last booted
+  try {
+    const ver = app.getVersion();
+    appendAudit({
+      type: 'system',
+      agent: 'System',
+      message: `ASRP v${ver} started on ${os.platform()} ${os.release()}`,
+    });
+  } catch { /* ignore */ }
+
   // SRW-v1: Backfill workflow state for any existing researches that
   // don't yet have one. Runs once per startup, non-blocking. Migrated
   // workflows are marked so they don't auto-dispatch until user opts in.
@@ -474,6 +485,11 @@ app.on('before-quit', () => {
   stopWorkflowScheduler();
   // Stop all OpenClaw gateways on app quit
   openclawManager.stopAll();
+  // Record shutdown and flush any pending audit writes
+  try {
+    appendAudit({ type: 'system', agent: 'System', message: 'ASRP shutting down' });
+  } catch { /* ignore */ }
+  try { flushAuditNow(); } catch { /* ignore */ }
 });
 
 app.on('will-quit', () => {

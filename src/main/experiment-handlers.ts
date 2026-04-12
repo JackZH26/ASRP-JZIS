@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { getWorkspaceBase, atomicWriteJSON, withAuth } from './ipc-handlers';
 import { bootstrapWorkflow } from './research-workflow';
+import { appendAudit } from './audit-store';
 
 // ============================================================
 // RESEARCH HANDLERS (channel: 'experiments:*')
@@ -340,6 +341,13 @@ export function registerExperimentHandlers(): void {
     // Create per-research directory structure
     ensureResearchDirs(id);
 
+    appendAudit({
+      type: 'research',
+      agent: 'System',
+      research: code,
+      message: `Registered ${code}: ${record.title || '(untitled)'}`,
+    });
+
     return { success: true, id, code, title: record.title };
   }));
 
@@ -366,6 +374,13 @@ export function registerExperimentHandlers(): void {
     records.unshift(record);
     saveResearches(records);
     ensureResearchDirs(id);
+
+    appendAudit({
+      type: 'research',
+      agent: 'System',
+      research: code,
+      message: `Started ${code}: ${record.title || '(untitled)'}`,
+    });
 
     // Kick off SRW-v1 Phase 0 (bootstrap)
     try {
@@ -422,6 +437,7 @@ export function registerExperimentHandlers(): void {
     if (!record) {
       return { success: false, error: 'Research not found' };
     }
+    const prevStatus = record.status;
     if (typeof data.title === 'string') record.title = data.title.trim();
     if (typeof data.abstract === 'string') record.abstract = data.abstract.trim();
     if (Array.isArray(data.tags)) record.tags = data.tags.filter((t): t is string => typeof t === 'string');
@@ -429,6 +445,16 @@ export function registerExperimentHandlers(): void {
     if (typeof data.score === 'number') record.score = data.score;
     if (typeof data.result === 'string') record.result = data.result;
     saveResearches(records);
+
+    appendAudit({
+      type: 'research',
+      agent: 'System',
+      research: record.code,
+      message: prevStatus !== record.status
+        ? `Updated ${record.code} (${prevStatus} → ${record.status})`
+        : `Updated ${record.code} metadata`,
+    });
+
     return { success: true };
   }));
 
@@ -438,12 +464,29 @@ export function registerExperimentHandlers(): void {
     if (!record) {
       return { success: false, error: 'Research not found' };
     }
+    const prevStatus = record.status;
     record.status = status;
     if (extra) {
       if (typeof extra.score === 'number') record.score = extra.score;
       if (typeof extra.result === 'string') record.result = extra.result;
     }
     saveResearches(records);
+
+    const upper = status.toUpperCase();
+    let msg: string;
+    if (status === 'confirmed') msg = `${record.code} CONFIRMED${record.title ? ': ' + record.title : ''}`;
+    else if (status === 'refuted') msg = `${record.code} REFUTED${record.title ? ': ' + record.title : ''}`;
+    else if (status === 'archived') msg = `Archived ${record.code}`;
+    else msg = `${record.code} status: ${prevStatus} → ${upper}`;
+
+    appendAudit({
+      type: 'research',
+      agent: 'System',
+      research: record.code,
+      message: msg,
+      severity: status === 'refuted' ? 'warn' : 'info',
+    });
+
     return { success: true, expId, status };
   }));
 }
