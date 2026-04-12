@@ -15,6 +15,7 @@ import { registerAuthorHandlers } from './author-handlers';
 import { registerAuditHandlers } from './audit-handlers';
 import { registerSystemHandlers, registerSettingsHandlers, registerUpdaterHandlers, registerSelfTestHandlers, registerGatewayHandlers } from './system-handlers';
 import { registerOllamaHandlers } from './ollama-handlers';
+import { registerToolsHandlers } from './tools-handlers';
 
 // ---- Issue #1 (CRITICAL): Path resolution — works in dev and packaged ASAR builds ----
 export const RESOURCES_PATH = app.isPackaged
@@ -187,4 +188,5 @@ export function registerIpcHandlers(): void {
   registerSelfTestHandlers();
   registerDiscordHandlers();
   registerGatewayHandlers();
+  registerToolsHandlers();
 }

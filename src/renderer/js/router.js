@@ -11,6 +11,7 @@ const Router = (() => {
     '/setup':       { file: 'pages/setup.html',        title: 'Setup',       titleKey: 'nav.setup',       sidebar: false, section: null },
     '/dashboard':   { file: 'pages/dashboard.html',    title: 'Dashboard',   titleKey: 'nav.dashboard',   sidebar: true,  section: 'overview' },
     '/agents':      { file: 'pages/agents.html',       title: 'Agents',      titleKey: 'nav.agents',      sidebar: true,  section: 'agents' },
+    '/tools':       { file: 'pages/tools.html',        title: 'Tools',       titleKey: 'nav.tools',       sidebar: true,  section: 'tools' },
     '/files':       { file: 'pages/files.html',        title: 'Files',       titleKey: 'nav.files',       sidebar: true,  section: 'files' },
     '/papers':      { file: 'pages/papers.html',       title: 'Papers',      titleKey: 'nav.papers',      sidebar: true,  section: 'papers' },
     '/researches':  { file: 'pages/researches.html',   title: 'Researches',  titleKey: 'nav.researches',  sidebar: true,  section: 'researches' },

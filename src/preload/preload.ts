@@ -243,6 +243,47 @@ const audit = {
     invoke<{ success: boolean; csv?: string; error?: string }>('audit:export'),
 };
 
+// ---- Tools API ----
+const tools = {
+  list: () =>
+    invoke<{
+      categories: Array<{ id: string; name: string; nameZh: string }>;
+      tools: Array<Record<string, unknown>>;
+    }>('tools:list'),
+
+  checkAll: () =>
+    invoke<{
+      statuses: Array<{ id: string; installed: boolean; version?: string; error?: string }>;
+    }>('tools:check-all'),
+
+  checkOne: (toolId: string) =>
+    invoke<{
+      status: { id: string; installed: boolean; version?: string; error?: string };
+    }>('tools:check-one', toolId),
+
+  install: (token: string, toolId: string) =>
+    invoke<{
+      success: boolean;
+      version?: string;
+      error?: string;
+      manual?: boolean;
+      instructions?: string;
+    }>('tools:install', token, toolId),
+
+  installRequired: (token: string) =>
+    invoke<{
+      success: boolean;
+      results: Array<{ id: string; success: boolean; error?: string }>;
+      installed: number;
+      failed: number;
+    }>('tools:install-required', token),
+
+  onInstallProgress: (callback: (data: { toolId: string; status: string; message: string }) => void) => {
+    const { ipcRenderer } = require('electron');
+    ipcRenderer.on('tools:install-progress', (_e: unknown, data: { toolId: string; status: string; message: string }) => callback(data));
+  },
+};
+
 // ---- Settings API ----
 const settings = {
   get: () =>
@@ -571,6 +612,7 @@ contextBridge.exposeInMainWorld('asrp', {
   experiments,
   workflows,
   audit,
+  tools,
   settings,
   auth,
   keys,

@@ -1,0 +1,488 @@
+<div class="page-header">
+  <div>
+    <h1 data-i18n="tools.title">Tools</h1>
+    <p data-i18n="tools.subtitle">Manage research tools for AI agents — detect, install, and configure</p>
+  </div>
+  <div class="actions">
+    <button class="btn btn-outline btn-sm" onclick="checkAllTools()" id="tl-check-btn" data-i18n="tools.check_all">Check All</button>
+    <button class="btn btn-primary btn-sm" onclick="installRequiredTools()" id="tl-auto-btn" data-i18n="tools.install_required">Auto-install Required</button>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="tl-filter-bar">
+  <div class="tl-priority-tabs" id="tl-priority-tabs">
+    <button class="tl-tab active" data-priority="all" onclick="setToolFilter('all')" data-i18n="tools.filter_all">All</button>
+    <button class="tl-tab" data-priority="required" onclick="setToolFilter('required')" data-i18n="tools.filter_required">Required</button>
+    <button class="tl-tab" data-priority="highly-recommended" onclick="setToolFilter('highly-recommended')" data-i18n="tools.filter_highly_recommended">Highly Recommended</button>
+    <button class="tl-tab" data-priority="recommended" onclick="setToolFilter('recommended')" data-i18n="tools.filter_recommended">Recommended</button>
+    <button class="tl-tab" data-priority="optional" onclick="setToolFilter('optional')" data-i18n="tools.filter_optional">Optional</button>
+  </div>
+  <div class="tl-filter-row">
+    <input type="text" id="tl-search" class="tl-input" data-i18n-placeholder="tools.search_placeholder"
+      placeholder="Search tools..." oninput="renderTools()" aria-label="Search tools">
+    <select id="tl-category" class="tl-select" onchange="renderTools()">
+      <option value="all" data-i18n="tools.category_all">All Categories</option>
+    </select>
+  </div>
+</div>
+
+<!-- Tool Cards -->
+<div id="tl-grid" class="tl-grid">
+  <div class="loading" style="text-align:center;padding:40px;grid-column:1/-1"><div class="spinner"></div>
+    <span data-i18n="tools.checking_all">Checking tool status...</span></div>
+</div>
+
+<style>
+.tl-filter-bar { margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px; }
+.tl-priority-tabs {
+  display: flex; gap: 2px; border-bottom: 1px solid var(--border); overflow-x: auto;
+}
+.tl-tab {
+  padding: 8px 16px; background: transparent; border: none;
+  border-bottom: 2px solid transparent; color: var(--text-secondary);
+  font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+}
+.tl-tab:hover { color: var(--text); }
+.tl-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tl-filter-row { display: flex; gap: 10px; }
+.tl-input, .tl-select {
+  padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 12px; background: var(--bg-secondary); color: var(--text); outline: none;
+}
+.tl-input { flex: 1; min-width: 180px; }
+.tl-input:focus, .tl-select:focus { border-color: var(--accent); }
+.tl-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px;
+}
+.tl-section-header {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 10px;
+  margin-top: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border);
+}
+.tl-section-title {
+  font-size: 13px; font-weight: 700; color: var(--text);
+}
+.tl-section-count {
+  font-size: 11px; color: var(--text-tertiary); font-weight: 600;
+  padding: 1px 8px; border-radius: 10px; background: var(--accent-light, rgba(74,140,106,0.1));
+}
+.tl-card {
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg-secondary);
+  padding: 14px; display: flex; flex-direction: column; gap: 8px; transition: border-color 0.15s;
+}
+.tl-card:hover { border-color: var(--accent); }
+.tl-card-head {
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.tl-card-icon {
+  width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; color: #fff;
+}
+.tl-card-icon.pip     { background: #3572A5; }
+.tl-card-icon.system  { background: #64748b; }
+.tl-card-icon.cargo   { background: #dea584; color: #333; }
+.tl-card-icon.clawhub { background: #4a8c6a; }
+.tl-card-icon.manual  { background: #a855f7; }
+.tl-card-info { flex: 1; min-width: 0; }
+.tl-card-name {
+  font-size: 14px; font-weight: 700; color: var(--text);
+  display: flex; align-items: center; gap: 6px;
+}
+.tl-card-name a { color: var(--accent); text-decoration: none; font-size: 11px; }
+.tl-card-name a:hover { text-decoration: underline; }
+.tl-card-version {
+  font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono);
+}
+.tl-card-desc {
+  font-size: 12px; color: var(--text-secondary); line-height: 1.45;
+}
+.tl-card-meta {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 11px;
+  color: var(--text-tertiary);
+}
+.tl-card-meta .tl-agent-badge {
+  padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 600;
+  background: var(--accent-light, rgba(74,140,106,0.1)); color: var(--accent);
+  text-transform: capitalize;
+}
+.tl-card-meta .tl-type-badge {
+  padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 600;
+  background: rgba(100,116,139,0.1); color: #64748b;
+}
+.tl-card-footer {
+  display: flex; align-items: center; justify-content: space-between; margin-top: auto; gap: 8px;
+}
+.tl-status { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+.tl-status.installed { color: #16a34a; }
+.tl-status.not-installed { color: var(--text-tertiary); }
+.tl-status.installing { color: var(--accent); }
+.tl-status.error { color: #dc2626; }
+.tl-status.manual { color: #a855f7; }
+.tl-progress-msg {
+  font-size: 10px; color: var(--text-tertiary); max-width: 200px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tl-empty {
+  grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-tertiary); font-size: 13px;
+}
+.tl-priority-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.tl-priority-dot.required            { background: #dc2626; }
+.tl-priority-dot.highly-recommended  { background: #f97316; }
+.tl-priority-dot.recommended         { background: #eab308; }
+.tl-priority-dot.optional            { background: #22c55e; }
+</style>
+
+<script>
+(function() {
+  var allTools = [];
+  var categories = [];
+  var statusMap = {};      // toolId -> { installed, version, error }
+  var progressMap = {};    // toolId -> { status, message }
+  var currentPriority = 'all';
+
+  function tSafe(key, fb) {
+    if (typeof window.t === 'function') { try { var v = window.t(key); if (v && v !== key) return v; } catch(e){} }
+    return fb != null ? fb : key;
+  }
+  function escHtml(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+
+  var PRIORITY_ORDER = ['required', 'highly-recommended', 'recommended', 'optional'];
+  var PRIORITY_LABELS = {
+    'required': 'tools.priority_required',
+    'highly-recommended': 'tools.priority_highly_recommended',
+    'recommended': 'tools.priority_recommended',
+    'optional': 'tools.priority_optional',
+  };
+  var ICON_LETTERS = { pip:'Py', system:'SYS', cargo:'Rs', clawhub:'OC', manual:'?' };
+
+  // ---- Load ----
+  async function init() {
+    if (!window.asrp) return;
+    try {
+      var reg = await window.asrp.tools.list();
+      allTools = reg.tools || [];
+      categories = reg.categories || [];
+      populateCategoryFilter();
+    } catch(e) { console.warn('[tools] list failed:', e); }
+
+    // Listen for install progress
+    try {
+      window.asrp.tools.onInstallProgress(function(data) {
+        progressMap[data.toolId] = data;
+        if (data.status === 'installed' || data.status === 'error') {
+          // Re-check this tool
+          checkOneTool(data.toolId);
+        }
+        updateCardStatus(data.toolId);
+      });
+    } catch(e) { /* ignore */ }
+
+    await checkAllToolsQuiet();
+    renderTools();
+  }
+
+  function populateCategoryFilter() {
+    var sel = document.getElementById('tl-category');
+    if (!sel) return;
+    sel.innerHTML = '<option value="all">' + escHtml(tSafe('tools.category_all', 'All Categories')) + '</option>';
+    for (var i = 0; i < categories.length; i++) {
+      var c = categories[i];
+      sel.innerHTML += '<option value="' + escHtml(c.id) + '">' + escHtml(c.name) + '</option>';
+    }
+  }
+
+  // ---- Status checks ----
+  async function checkAllToolsQuiet() {
+    if (!window.asrp) return;
+    try {
+      var res = await window.asrp.tools.checkAll();
+      var statuses = res.statuses || [];
+      for (var i = 0; i < statuses.length; i++) {
+        statusMap[statuses[i].id] = statuses[i];
+      }
+    } catch(e) { console.warn('[tools] check-all failed:', e); }
+  }
+
+  async function checkOneTool(toolId) {
+    if (!window.asrp) return;
+    try {
+      var res = await window.asrp.tools.checkOne(toolId);
+      if (res.status) statusMap[res.status.id] = res.status;
+    } catch(e) { /* ignore */ }
+  }
+
+  window.checkAllTools = async function() {
+    var btn = document.getElementById('tl-check-btn');
+    if (btn) btn.disabled = true;
+    // Show checking state on all cards
+    for (var i = 0; i < allTools.length; i++) {
+      progressMap[allTools[i].id] = { status: 'checking', message: '' };
+    }
+    renderTools();
+    await checkAllToolsQuiet();
+    progressMap = {};
+    renderTools();
+    if (btn) btn.disabled = false;
+  };
+
+  // ---- Filter ----
+  window.setToolFilter = function(priority) {
+    currentPriority = priority;
+    var tabs = document.querySelectorAll('.tl-tab');
+    tabs.forEach(function(tab) {
+      tab.classList.toggle('active', tab.getAttribute('data-priority') === priority);
+    });
+    renderTools();
+  };
+
+  function getFilteredTools() {
+    var search = (document.getElementById('tl-search')?.value || '').trim().toLowerCase();
+    var catFilter = document.getElementById('tl-category')?.value || 'all';
+
+    return allTools.filter(function(t) {
+      if (currentPriority !== 'all' && t.priority !== currentPriority) return false;
+      if (catFilter !== 'all' && t.category !== catFilter) return false;
+      if (search) {
+        var hay = (t.name + ' ' + t.id + ' ' + (t.description || '') + ' ' +
+          (t.descriptionZh || '') + ' ' + ((t.tags || []).join(' ')) + ' ' +
+          ((t.agents || []).join(' '))).toLowerCase();
+        if (hay.indexOf(search) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  // ---- Render ----
+  window.renderTools = function() {
+    var grid = document.getElementById('tl-grid');
+    if (!grid) return;
+
+    var filtered = getFilteredTools();
+    if (!filtered.length) {
+      grid.innerHTML = '<div class="tl-empty">' + escHtml(tSafe('tools.no_results', 'No tools match your filters.')) + '</div>';
+      return;
+    }
+
+    // Group by priority
+    var grouped = {};
+    for (var i = 0; i < PRIORITY_ORDER.length; i++) grouped[PRIORITY_ORDER[i]] = [];
+    for (var j = 0; j < filtered.length; j++) {
+      var p = filtered[j].priority || 'optional';
+      if (!grouped[p]) grouped[p] = [];
+      grouped[p].push(filtered[j]);
+    }
+
+    var html = '';
+    for (var k = 0; k < PRIORITY_ORDER.length; k++) {
+      var pri = PRIORITY_ORDER[k];
+      var group = grouped[pri];
+      if (!group || !group.length) continue;
+
+      // Section header
+      html += '<div class="tl-section-header">';
+      html += '  <span class="tl-priority-dot ' + pri + '"></span>';
+      html += '  <span class="tl-section-title">' + escHtml(tSafe(PRIORITY_LABELS[pri], capitalize(pri))) + '</span>';
+      html += '  <span class="tl-section-count">' + group.length + '</span>';
+      html += '</div>';
+
+      for (var m = 0; m < group.length; m++) {
+        html += buildCardHtml(group[m]);
+      }
+    }
+    grid.innerHTML = html;
+  };
+
+  function buildCardHtml(tool) {
+    var st = statusMap[tool.id] || {};
+    var prog = progressMap[tool.id];
+    var iconType = tool.installType || 'pip';
+    var iconLetter = ICON_LETTERS[iconType] || '?';
+
+    var html = '<div class="tl-card" data-tool-id="' + escHtml(tool.id) + '">';
+    html += '  <div class="tl-card-head">';
+    html += '    <div class="tl-card-icon ' + escHtml(iconType) + '">' + escHtml(iconLetter) + '</div>';
+    html += '    <div class="tl-card-info">';
+    html += '      <div class="tl-card-name">';
+    html += escHtml(tool.name);
+    html += '        <a href="#" onclick="openHomepage(\'' + escHtml(tool.homepage || '') + '\');return false" title="' + escHtml(tSafe('tools.homepage', 'Homepage')) + '">↗</a>';
+    html += '      </div>';
+    html += '      <div class="tl-card-version">' + escHtml(tool.version || '');
+    if (st.installed && st.version) html += ' → v' + escHtml(st.version);
+    html += '</div>';
+    html += '    </div>';
+    html += '  </div>';
+
+    html += '  <div class="tl-card-desc">' + escHtml(tool.description || '') + '</div>';
+
+    // Meta: agents + type
+    html += '  <div class="tl-card-meta">';
+    var agents = tool.agents || [];
+    for (var i = 0; i < agents.length; i++) {
+      html += '<span class="tl-agent-badge">' + escHtml(capitalize(agents[i])) + '</span>';
+    }
+    html += '    <span class="tl-type-badge">' + escHtml(tool.installType || 'pip') + '</span>';
+    html += '  </div>';
+
+    // Footer: status + action
+    html += '  <div class="tl-card-footer">';
+    html += buildStatusHtml(tool, st, prog);
+    html += buildActionHtml(tool, st, prog);
+    html += '  </div>';
+
+    html += '</div>';
+    return html;
+  }
+
+  function buildStatusHtml(tool, st, prog) {
+    if (prog && prog.status === 'checking') {
+      return '<span class="tl-status installing"><span class="spinner" style="width:12px;height:12px"></span> ' + escHtml(tSafe('tools.btn_checking', 'Checking...')) + '</span>';
+    }
+    if (prog && prog.status === 'installing') {
+      return '<span class="tl-status installing"><span class="spinner" style="width:12px;height:12px"></span> ' + escHtml(tSafe('tools.status_installing', 'Installing...')) + '</span>' +
+        '<span class="tl-progress-msg">' + escHtml(prog.message || '') + '</span>';
+    }
+    if (prog && prog.status === 'error') {
+      return '<span class="tl-status error">✗ ' + escHtml(tSafe('tools.status_error', 'Install Failed')) + '</span>';
+    }
+    if (st.installed) {
+      return '<span class="tl-status installed">✓ ' + escHtml(tSafe('tools.status_installed', 'Installed')) +
+        (st.version ? ' v' + escHtml(st.version) : '') + '</span>';
+    }
+    return '<span class="tl-status not-installed">○ ' + escHtml(tSafe('tools.status_not_installed', 'Not Installed')) + '</span>';
+  }
+
+  function buildActionHtml(tool, st, prog) {
+    if (prog && (prog.status === 'installing' || prog.status === 'checking')) return '';
+    if (st.installed) return '';
+    if (tool.installType === 'manual') {
+      return '<button class="btn btn-outline btn-sm" onclick="showManualInstructions(\'' + escHtml(tool.id) + '\')">' +
+        escHtml(tSafe('tools.btn_manual', 'Instructions')) + '</button>';
+    }
+    if (prog && prog.status === 'error') {
+      return '<button class="btn btn-primary btn-sm" onclick="installOneTool(\'' + escHtml(tool.id) + '\')">' +
+        escHtml(tSafe('tools.btn_retry', 'Retry')) + '</button>';
+    }
+    return '<button class="btn btn-primary btn-sm" onclick="installOneTool(\'' + escHtml(tool.id) + '\')">' +
+      escHtml(tSafe('tools.btn_install', 'Install')) + '</button>';
+  }
+
+  function updateCardStatus(toolId) {
+    // Quick DOM update without full re-render
+    var card = document.querySelector('.tl-card[data-tool-id="' + toolId + '"]');
+    if (!card) return;
+    var footer = card.querySelector('.tl-card-footer');
+    if (!footer) return;
+    var tool = allTools.find(function(t) { return t.id === toolId; });
+    if (!tool) return;
+    var st = statusMap[toolId] || {};
+    var prog = progressMap[toolId];
+    footer.innerHTML = buildStatusHtml(tool, st, prog) + buildActionHtml(tool, st, prog);
+  }
+
+  // ---- Actions ----
+  window.installOneTool = async function(toolId) {
+    if (!window.asrp) return;
+    progressMap[toolId] = { status: 'installing', message: 'Starting...' };
+    updateCardStatus(toolId);
+    var token = localStorage.getItem('asrp_token') || '';
+    try {
+      var result = await window.asrp.tools.install(token, toolId);
+      if (result.success) {
+        statusMap[toolId] = { id: toolId, installed: true, version: result.version };
+        delete progressMap[toolId];
+        if (typeof Toast !== 'undefined') {
+          var tool = allTools.find(function(t) { return t.id === toolId; });
+          Toast.show(tSafe('tools.install_success', '{name} installed').replace('{name}', tool ? tool.name : toolId), 'success');
+        }
+      } else if (result.manual) {
+        progressMap[toolId] = { status: 'manual', message: result.instructions || '' };
+        showManualInstructions(toolId);
+      } else {
+        progressMap[toolId] = { status: 'error', message: result.error || '' };
+        if (typeof Toast !== 'undefined') {
+          Toast.show(tSafe('tools.install_fail', 'Failed').replace('{name}', toolId).replace('{error}', result.error || ''), 'error');
+        }
+      }
+    } catch(e) {
+      progressMap[toolId] = { status: 'error', message: String(e) };
+    }
+    updateCardStatus(toolId);
+  };
+
+  window.installRequiredTools = async function() {
+    if (!window.asrp) return;
+    var btn = document.getElementById('tl-auto-btn');
+    if (btn) btn.disabled = true;
+    var required = allTools.filter(function(t) { return t.priority === 'required'; });
+    for (var i = 0; i < required.length; i++) {
+      var st = statusMap[required[i].id];
+      if (st && st.installed) continue;
+      progressMap[required[i].id] = { status: 'installing', message: 'Queued...' };
+    }
+    renderTools();
+
+    var token = localStorage.getItem('asrp_token') || '';
+    try {
+      var result = await window.asrp.tools.installRequired(token);
+      // Refresh all statuses
+      await checkAllToolsQuiet();
+      progressMap = {};
+      renderTools();
+      if (typeof Toast !== 'undefined') {
+        Toast.show(
+          tSafe('tools.install_required_done', 'Done')
+            .replace('{installed}', String(result.installed || 0))
+            .replace('{failed}', String(result.failed || 0)),
+          result.failed > 0 ? 'warning' : 'success'
+        );
+      }
+    } catch(e) {
+      console.warn('[tools] install-required failed:', e);
+      progressMap = {};
+      renderTools();
+    }
+    if (btn) btn.disabled = false;
+  };
+
+  window.showManualInstructions = function(toolId) {
+    var tool = allTools.find(function(t) { return t.id === toolId; });
+    if (!tool || !tool.manualInstructions) {
+      if (tool && tool.homepage) openHomepage(tool.homepage);
+      return;
+    }
+    var platform = navigator.platform.toLowerCase().includes('mac') ? 'darwin'
+      : navigator.platform.toLowerCase().includes('win') ? 'win32' : 'linux';
+    var instr = tool.manualInstructions[platform] || tool.manualInstructions['darwin'] || '';
+    var msg = tool.name + ' requires manual installation:\n\n' + instr + '\n\nHomepage: ' + tool.homepage;
+    alert(msg);
+  };
+
+  window.openHomepage = function(url) {
+    if (!url) return;
+    if (window.asrp && window.asrp.system && window.asrp.system.openExternal) {
+      window.asrp.system.openExternal(url);
+    } else {
+      window.open(url, '_blank');
+    }
+  };
+
+  // ---- Language change ----
+  function _toolsOnLang() {
+    if (typeof translatePage === 'function') try { translatePage(); } catch(e){}
+    populateCategoryFilter();
+    renderTools();
+  }
+  window.addEventListener('language-changed', _toolsOnLang);
+  if (window.Utils && typeof window.Utils.onPageUnload === 'function') {
+    window.Utils.onPageUnload(function() {
+      window.removeEventListener('language-changed', _toolsOnLang);
+    });
+  }
+
+  init();
+})();
+</script>
