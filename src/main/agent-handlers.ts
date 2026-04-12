@@ -142,8 +142,14 @@ export function registerAgentHandlers(): void {
       return { success: false, error: 'An agent with this name already exists' };
     }
 
-    // Determine index and guildId
-    const index = configs.length;
+    // Determine stable port slot and guildId
+    const usedSlots = configs
+      .filter(c => c && typeof c.portSlot === 'number')
+      .map(c => c.portSlot as number);
+    const index = openclawManager.allocatePortSlot(usedSlots);
+    if (index < 0) {
+      return { success: false, error: 'No free port slot available' };
+    }
     const guildId = (settings.guildId || settings.discordGuildId || '') as string;
     const workspace = (settings.workspace || path.join(require('os').homedir(), 'asrp-workspace')) as string;
 
@@ -167,7 +173,7 @@ export function registerAgentHandlers(): void {
       return { success: false, error: result.error };
     }
 
-    // Persist to settings.json
+    // Persist to settings.json with stable portSlot
     configs.push({
       agentId: opts.name,
       role: opts.role,
@@ -176,6 +182,7 @@ export function registerAgentHandlers(): void {
       discordBotName: opts.discordBotName,
       customName: opts.discordBotName,
       isCustom: true,
+      portSlot: index,
     });
     settings.agentConfigs = configs;
     atomicWriteJSON(settingsPath, settings);
@@ -227,35 +234,10 @@ export function registerAgentHandlers(): void {
       openclawManager.removeAgent(cfgAgentId);
     }
 
-    // Remove from settings
+    // Remove from settings — remaining agents keep their portSlot unchanged
     configs.splice(idx, 1);
     settings.agentConfigs = configs;
     atomicWriteJSON(settingsPath, settings);
-
-    // Reload manager instances from updated settings so in-memory state is consistent
-    // Clear all instances and re-register from the updated configs
-    for (const [name] of Array.from(((openclawManager as any).instances as Map<string, unknown>) || new Map())) {
-      // Only remove non-running agents to avoid killing live processes
-      const inst = openclawManager.getAgentInstance(name);
-      if (inst && !inst.running) {
-        openclawManager.removeAgent(name);
-      }
-    }
-    // Re-register remaining agents from settings
-    const updatedConfigs = configs as Array<Record<string, unknown>>;
-    updatedConfigs.forEach((c, i) => {
-      if (c && c.agentId) {
-        const existingInst = openclawManager.getAgentInstance(c.agentId as string);
-        if (!existingInst) {
-          openclawManager.registerAgent(
-            c.agentId as string,
-            (c.role as string) || 'Custom',
-            i,
-            c.discordBotName as string,
-          );
-        }
-      }
-    });
 
     appendAudit({
       type: 'config',

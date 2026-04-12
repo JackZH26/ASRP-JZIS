@@ -234,7 +234,7 @@ export function generateAllConfigs(
         fs.writeFileSync(envPath, envLines.join('\n') + '\n', { encoding: 'utf-8', mode: 0o600 });
       }
 
-      // Register with manager
+      // Register with manager (index is also the portSlot for initial setup)
       openclawManager.registerAgent(agent.name, agent.role, index);
 
     } catch (err) {

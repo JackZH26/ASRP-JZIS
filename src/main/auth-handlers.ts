@@ -153,6 +153,14 @@ export function registerSetupHandlers(): void {
           settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
         }
       } catch { /* use empty */ }
+      // Ensure each config has a stable portSlot (0-based, one per agent)
+      if (Array.isArray(agentConfigs)) {
+        agentConfigs.forEach((cfg: any, i: number) => {
+          if (cfg && typeof cfg.portSlot !== 'number') {
+            cfg.portSlot = i;
+          }
+        });
+      }
       settings.agentConfigs = agentConfigs;
       atomicWriteJSON(settingsPath, settings);
       return { success: true };

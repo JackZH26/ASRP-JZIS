@@ -1,7 +1,11 @@
 // ============================================================
 // OpenClaw Manager — Multi-instance Gateway lifecycle
-// Manages 5 independent OpenClaw gateway processes, one per agent.
+// Manages up to 6 independent OpenClaw gateway processes, one per agent.
 // Each agent gets its own profile, port, config, and SOUL.
+//
+// Port allocation: Each agent is assigned a stable "port slot" (0-5)
+// persisted in settings.json.  Port = BASE_PORT + slot * PORT_STRIDE.
+// Slots survive agent deletion/re-creation so ports never shift.
 // ============================================================
 
 import { ChildProcess, spawn, execSync, SpawnOptionsWithoutStdio } from 'child_process';
@@ -14,9 +18,11 @@ import { EventEmitter } from 'events';
 import { selfHealAgentWorkspaces } from './workspace-shared-dirs';
 
 const BASE_PORT = 18801;
-// OpenClaw gateway uses 2+ ports per instance (main port + internal ports at offset +2).
-// Stride of 4 ensures no overlap between agents.
-const PORT_STRIDE = 4;
+// OpenClaw gateway uses multiple ports per instance (main, internal REST,
+// internal WS, debug, etc.).  Stride of 10 gives generous headroom so even
+// if a future OpenClaw version adds ports we won't collide.
+const PORT_STRIDE = 10;
+const MAX_AGENTS = 6;
 const MAX_RESTART_ATTEMPTS = 3;
 const HEALTH_POLL_INTERVAL_MS = 15000;
 
@@ -198,14 +204,69 @@ class OpenClawManager extends EventEmitter {
   }
 
   /**
+   * Allocate the first free port slot (0..MAX_AGENTS-1) that isn't already
+   * used by a registered agent.  Returns -1 if all slots are taken.
+   */
+  allocatePortSlot(usedSlots?: number[]): number {
+    const taken = new Set<number>(usedSlots || []);
+    // Also include slots of currently registered agents
+    for (const inst of this.instances.values()) {
+      const slot = Math.round((inst.port - BASE_PORT) / PORT_STRIDE);
+      taken.add(slot);
+    }
+    for (let s = 0; s < MAX_AGENTS; s++) {
+      if (!taken.has(s)) return s;
+    }
+    return -1;
+  }
+
+  /**
+   * Check if a TCP port is already in use (LISTEN state).
+   */
+  private isPortListening(port: number): boolean {
+    try {
+      const cmd = process.platform === 'win32'
+        ? `netstat -ano | findstr :${port}`
+        : `lsof -ti TCP:${port} -sTCP:LISTEN`;
+      const output = execSync(cmd, { timeout: 3000, stdio: 'pipe' }).toString().trim();
+      return output.length > 0;
+    } catch {
+      return false; // no listener — port is free
+    }
+  }
+
+  /**
+   * Synchronize the port in an agent's on-disk openclaw.json with the expected
+   * port from its slot.  Called at startup to heal stale configs left by
+   * previous delete/re-index bugs.
+   */
+  syncConfigPort(agentName: string, expectedPort: number): void {
+    const configPath = this.getConfigPath(agentName);
+    try {
+      if (!fs.existsSync(configPath)) return;
+      const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      const currentPort = raw?.gateway?.port;
+      if (currentPort !== expectedPort) {
+        console.log(`[OpenClaw] Syncing ${agentName} config port ${currentPort} → ${expectedPort}`);
+        if (!raw.gateway) raw.gateway = {};
+        raw.gateway.port = expectedPort;
+        fs.writeFileSync(configPath, JSON.stringify(raw, null, 2), { encoding: 'utf-8', mode: 0o600 });
+      }
+    } catch (err) {
+      console.warn(`[OpenClaw] Failed to sync config port for ${agentName}:`, err);
+    }
+  }
+
+  /**
    * Kill any stale process listening on the given port or nearby ports.
    * OpenClaw uses multiple ports per instance (main + internal at offset +2),
    * so we clear the entire port range for this agent slot.
    */
   private async killProcessOnPort(port: number): Promise<void> {
     try {
-      // Check main port and internal ports (offset +1, +2, +3)
-      const portsToCheck = [port, port + 1, port + 2, port + 3];
+      // Check main port and all internal ports up to PORT_STRIDE-1
+      const portsToCheck: number[] = [];
+      for (let i = 0; i < PORT_STRIDE; i++) portsToCheck.push(port + i);
       const allPids = new Set<number>();
 
       for (const p of portsToCheck) {
@@ -224,7 +285,7 @@ class OpenClawManager extends EventEmitter {
       }
 
       for (const pid of allPids) {
-        console.log(`[OpenClaw] Killing stale process ${pid} on port range ${port}-${port + 3}`);
+        console.log(`[OpenClaw] Killing stale process ${pid} on port range ${port}-${port + PORT_STRIDE - 1}`);
         try { process.kill(pid, 'SIGTERM'); } catch { /* already dead */ }
       }
 
@@ -246,28 +307,56 @@ class OpenClawManager extends EventEmitter {
       const settingsPath = path.join(app.getPath('userData'), 'settings.json');
       if (!fs.existsSync(settingsPath)) return;
       const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-      const configs = settings.agentConfigs as Array<{ agentId?: string; discordBotName?: string; role?: string }> | undefined;
+      const configs = settings.agentConfigs as Array<{
+        agentId?: string; discordBotName?: string; role?: string; portSlot?: number;
+      }> | undefined;
       if (!Array.isArray(configs)) return;
 
-      // Migration: ensure every agent config has a role field
+      // Migration: ensure every agent has a role and a stable portSlot
       let needsSave = false;
+      const usedSlots = new Set<number>();
+
+      // First pass: collect already-assigned slots
       for (const cfg of configs) {
-        if (cfg && cfg.agentId && !cfg.role) {
+        if (cfg && typeof cfg.portSlot === 'number' && cfg.portSlot >= 0 && cfg.portSlot < MAX_AGENTS) {
+          usedSlots.add(cfg.portSlot);
+        }
+      }
+
+      // Second pass: assign missing portSlots and roles
+      for (const cfg of configs) {
+        if (!cfg || !cfg.agentId) continue;
+
+        if (!cfg.role) {
           cfg.role = 'Assistant';
           needsSave = true;
         }
+        // Migrate old configs that don't have a portSlot: assign first free slot
+        if (typeof cfg.portSlot !== 'number' || cfg.portSlot < 0 || cfg.portSlot >= MAX_AGENTS) {
+          for (let s = 0; s < MAX_AGENTS; s++) {
+            if (!usedSlots.has(s)) {
+              cfg.portSlot = s;
+              usedSlots.add(s);
+              needsSave = true;
+              break;
+            }
+          }
+        }
       }
+
       if (needsSave) {
         try {
-          // P2-fix: Use atomic write to prevent settings corruption
           const { atomicWriteJSON } = require('./ipc-handlers');
           atomicWriteJSON(settingsPath, settings);
         } catch { /* ignore write errors */ }
       }
 
-      configs.forEach((cfg, idx) => {
-        if (cfg && cfg.agentId) {
-          this.registerAgent(cfg.agentId, cfg.role || 'Assistant', idx, cfg.discordBotName);
+      // Register agents using their stable portSlot (NOT array index)
+      configs.forEach((cfg) => {
+        if (cfg && cfg.agentId && typeof cfg.portSlot === 'number') {
+          this.registerAgent(cfg.agentId, cfg.role || 'Assistant', cfg.portSlot, cfg.discordBotName);
+          // Sync on-disk config port to match the slot-based port
+          this.syncConfigPort(cfg.agentId, this.getPortForAgent(cfg.portSlot));
         }
       });
     } catch { /* ignore */ }
@@ -345,6 +434,14 @@ class OpenClawManager extends EventEmitter {
 
     // Kill any stale process on this port from a previous unclean exit
     await this.killProcessOnPort(inst.port);
+
+    // Verify port is actually free after cleanup
+    if (this.isPortListening(inst.port)) {
+      const errMsg = `Port ${inst.port} still in use after cleanup — another process holds it`;
+      console.error(`[OpenClaw] ${errMsg}`);
+      inst.lastError = errMsg;
+      return { success: false, error: errMsg };
+    }
 
     // Collect early stderr output for error diagnosis
     let earlyStderr = '';
@@ -437,11 +534,10 @@ class OpenClawManager extends EventEmitter {
         inst.lastError = err.message;
       });
 
-      // Wait for health. 35s gives a fresh OpenClaw process plenty of time
-      // even on slow disks / cold-cache Discord token validation. Used to be
-      // 20s, but with 3 agents starting in parallel some tokens occasionally
-      // missed the window during fan-out.
-      const healthy = await this.waitForHealth(inst.port, 35000);
+      // Wait for health. 45s gives a fresh OpenClaw process plenty of time
+      // even on slow disks / cold-cache Discord token validation. Increased
+      // from 35s to accommodate up to 6 agents with staggered startup.
+      const healthy = await this.waitForHealth(inst.port, 45000);
       if (healthy) {
         inst.running = true;
         inst.restartCount = 0;
@@ -453,7 +549,7 @@ class OpenClawManager extends EventEmitter {
         const detail = earlyStderr.trim()
           ? `\nProcess output:\n${earlyStderr.trim().slice(0, 500)}`
           : '';
-        inst.lastError = `Gateway did not become healthy within 35s` + detail;
+        inst.lastError = `Gateway did not become healthy within 45s` + detail;
         console.error(`[OpenClaw] ${name} failed health check. stderr: ${earlyStderr.trim().slice(0, 500)}`);
         this.stopAgent(name);
         return { success: false, error: inst.lastError };
@@ -491,14 +587,18 @@ class OpenClawManager extends EventEmitter {
       console.warn('[OpenClaw] workspace self-heal failed:', err);
     }
 
-    // Parallel startup: previously this loop was serial with 20s waitForHealth
-    // each, so 3 agents could take up to 60s and any per-agent jitter pushed
-    // the third agent past its budget, manifesting as "1 of 3 failed". Each
-    // gateway listens on a distinct port and writes to its own profile dir,
-    // so there is no shared mutable state to race over — Promise.all is safe.
+    // Staggered parallel startup: launch agents with small delays between
+    // them to reduce I/O contention and Discord rate-limit pressure.
+    // Each gateway still runs on its own port/profile, so there is no
+    // shared mutable state — the stagger is purely to ease resource pressure
+    // when 4-6 agents start simultaneously.
     const names = Array.from(this.instances.keys());
+    const STAGGER_MS = 800; // delay between each agent launch
     const settled = await Promise.all(
-      names.map(async (name) => ({ name, ...(await this.startAgent(name)) })),
+      names.map(async (name, i) => {
+        if (i > 0) await new Promise(r => setTimeout(r, i * STAGGER_MS));
+        return { name, ...(await this.startAgent(name)) };
+      }),
     );
     const results: Array<{ name: string; success: boolean; error?: string }> = settled;
 
